@@ -53,45 +53,18 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     transition: all 0.2s ease-in-out;
     outline: none;
 }
-.modeBtn:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.2);
-}
-.modeBtn.active {
-    color: #fff;
-    background: rgba(0, 85, 255, 0.6);
-    box-shadow: inset 0 0 10px rgba(0, 85, 255, 0.5);
-}
-.modeBtn:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ddd;
-}
+.modeBtn:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, 0.2); }
+.modeBtn.active { color: #fff; background: rgba(0, 85, 255, 0.6); box-shadow: inset 0 0 10px rgba(0, 85, 255, 0.5); }
+.modeBtn:hover:not(.active) { background: rgba(255, 255, 255, 0.1); color: #ddd; }
 
 /* --- 震度カラー凡例 --- */
 #shindoLegend {
-    position: absolute;
-    bottom: 140px; 
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 4px;
-    background: rgba(10, 10, 10, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    padding: 6px;
-    z-index: 1000;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
-    pointer-events: none;
+    position: absolute; bottom: 140px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px; background: rgba(10, 10, 10, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; padding: 6px;
+    z-index: 1000; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8); pointer-events: none;
 }
-.legendItem {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 900;
-    border-radius: 4px;
-}
+.legendItem { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border-radius: 4px; }
 
 /* --- サイドパネル共通 --- */
 .side-panel {
@@ -105,29 +78,17 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 #latestPanel{
  position:fixed;top:10px;left:10px;width:420px;
  background:rgba(20,20,20,0.95); border:2px solid rgba(255,255,255,0.4);
- border-radius:0;padding:12px; backdrop-filter:blur(10px); z-index:101;
- box-sizing: border-box;
+ border-radius:0;padding:12px; backdrop-filter:blur(10px); z-index:101; box-sizing: border-box;
 }
 .latestWrap{display:flex; align-items: center; gap:15px;}
 .latestLeft{flex:1;color:#fff;overflow:hidden;}
 .latestTitle{font-size:26px;font-weight:900;margin-bottom:4px; color:#fff; line-height:1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .latestSub{font-size:16px; opacity:0.9; margin-bottom:8px;}
 .latestScale{
-    width:100px;height:100px;border-radius:0;
-    display:flex;align-items:center;justify-content:center;
-    font-size:58px;font-weight:900;flex-shrink:0;
-    overflow: hidden; white-space: nowrap; line-height: 1;
+    width:100px;height:100px;border-radius:0; display:flex;align-items:center;justify-content:center;
+    font-size:58px;font-weight:900;flex-shrink:0; overflow: hidden; white-space: nowrap; line-height: 1;
 }
-
-.tag-checking {
-    background: #ff8c00;
-    color: #fff;
-    padding: 2px 10px;
-    font-weight: 900;
-    font-size: 14px;
-    margin-left: 8px;
-    border: 1px solid #fff;
-}
+.tag-checking { background: #ff8c00; color: #fff; padding: 2px 10px; font-weight: 900; font-size: 14px; margin-left: 8px; border: 1px solid #fff; }
 
 /* --- 震度詳細 (左側) --- */
 #detailPanel{ top:150px; height:200px; }
@@ -146,22 +107,13 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .noTsunami{height:100%; display:flex; align-items:center; justify-content:center; color:#aaa; font-weight:bold; font-size:18px; text-align:center; padding:0 10px;}
 
 /* --- EEW関連 --- */
-#eewContainer { 
-    position: fixed; top: 550px; left: 10px; width: 410px; z-index: 200; 
-    display: flex; flex-direction: column; gap: 8px; pointer-events: none; 
-}
+#eewContainer { position: fixed; top: 550px; left: 10px; width: 410px; z-index: 200; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 #eewPopup {
- position:fixed; top:55px; left:440px; 
- background: #ff0000; color:#fff; border:4px double #fff;
+ position:fixed; top:55px; left:440px; background: #ff0000; color:#fff; border:4px double #fff;
  padding:15px 40px; font-size:28px; font-weight:900; display:none; z-index:9999;
- box-shadow: 0 0 20px rgba(255,0,0,0.8);
- letter-spacing: 2px; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%);
+ box-shadow: 0 0 20px rgba(255,0,0,0.8); letter-spacing: 2px; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%);
 }
-.eewCard {
- display: none; background: rgba(20, 20, 20, 0.95); border: 4px solid #ff4500;
- border-radius: 0; backdrop-filter: blur(15px); pointer-events: auto;
- box-shadow: 0 0 30px rgba(255, 69, 0, 0.6); color: #fff; padding: 12px;
-}
+.eewCard { display: none; background: rgba(20, 20, 20, 0.95); border: 4px solid #ff4500; border-radius: 0; backdrop-filter: blur(15px); pointer-events: auto; box-shadow: 0 0 30px rgba(255, 69, 0, 0.6); color: #fff; padding: 12px; }
 .eewCard.active { display: block; }
 .eewCard.warning { border-color: #ff0000; animation: blink 0.5s infinite alternate; }
 .eewCard.cancel { border-color: #777; background: rgba(50, 50, 50, 0.8); }
@@ -255,8 +207,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
  position:fixed; bottom:10px; right:10px; width:340px; height:80px;
  background:rgba(0,0,0,0.8); border:1px solid rgba(0,255,0,0.3);
  border-radius:0; color:#0f0; font-family:monospace; font-size:11px;
- padding:8px; overflow-y:auto; z-index:150; opacity: 0.8;
- box-sizing: border-box;
+ padding:8px; overflow-y:auto; z-index:150; opacity: 0.8; box-sizing: border-box;
 }
 
 /* --- 設定ウィンドウ --- */
@@ -340,9 +291,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 <div id="commentPanel">
     <div class="commentHeader">自由付随コメント (FREE FORM COMMENT)</div>
-    <div id="commentScrollArea">
-        <div class="noComment">付随コメントなし。</div>
-    </div>
+    <div id="commentScrollArea"><div class="noComment">付随コメントなし。</div></div>
 </div>
 
 <div id="lpgmPanel">
@@ -357,23 +306,17 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 <div id="meteorologyPanel">
     <div class="axisHeader meteorologyHeader">気象情報 (JMX METEOROLOGY)</div>
-    <div id="meteorologyScrollArea" class="axisScrollArea">
-        <div class="noDataText">情報を受信していません。</div>
-    </div>
+    <div id="meteorologyScrollArea" class="axisScrollArea"><div class="noDataText">情報を受信していません。</div></div>
 </div>
 
 <div id="volcanologyPanel">
     <div class="axisHeader volcanologyHeader">火山情報 (JMX VOLCANOLOGY)</div>
-    <div id="volcanologyScrollArea" class="axisScrollArea">
-        <div class="noDataText">情報を受信していません。</div>
-    </div>
+    <div id="volcanologyScrollArea" class="axisScrollArea"><div class="noDataText">情報を受信していません。</div></div>
 </div>
 
 <div id="newsPanel">
     <div class="axisHeader newsHeader">ニュース速報 (BREAKING NEWS)</div>
-    <div id="newsScrollArea" class="axisScrollArea">
-        <div class="noDataText">ニュース速報を受信していません。</div>
-    </div>
+    <div id="newsScrollArea" class="axisScrollArea"><div class="noDataText">ニュース速報を受信していません。</div></div>
 </div>
 
 <div id="clockPanel">--/--/-- --:--:--</div>
@@ -456,58 +399,29 @@ window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
 let userSettings = {
-    volume: 0.5,
-    alarmPitch: 1500,
-    speechPitch: 1.0,
-    speechRate: 1.5,
-    volFirst: 0.5,
-    volLast: 0.5,
-    volTsunami: 0.5,
-    volUpdateApi: 0.5,
-    volUpdateEew: 0.5,
-    volWarning: 0.5,
-    volBgm: 0.3,
-    axisToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiYXR1a2l5YXlvaS1zdmciLCJ0eXBlIjowLCJjb25uZWN0aW9uIjoyfSwiY2hhbm5lbHMiOlsiam14LW1ldGVvcm9sb2d5Iiwiam14LXZvbGNhbm9sb2d5IiwiYnJlYWtpbmctbmV3cyIsImVldyJdLCJleHAiOjE3Nzc1OTM1OTl9.59vKvBz_wo78yYL326SrbxwUttHHGK7cQcGPxG0dYAk",
-    axisEewEnabled: false
+    volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5,
+    volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3,
+    axisToken: "", axisEewEnabled: false
 };
 
 // LocalStorageの読み書き
 function loadSettings() {
     try {
         const saved = localStorage.getItem('earthquakeAppMapSettings');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            // デフォルトのトークンが空で上書きされないよう配慮
-            if (parsed.axisToken !== undefined && parsed.axisToken !== "") {
-                userSettings = { ...userSettings, ...parsed };
-            } else {
-                let tempToken = userSettings.axisToken;
-                userSettings = { ...userSettings, ...parsed };
-                userSettings.axisToken = tempToken;
-            }
-        }
+        if (saved) { const parsed = JSON.parse(saved); userSettings = { ...userSettings, ...parsed }; }
     } catch(e) { console.error("設定の読み込みに失敗", e); }
     
     document.getElementById('axisTokenInput').value = userSettings.axisToken || "";
     document.getElementById('axisEewCheckbox').checked = userSettings.axisEewEnabled || false;
 }
 function saveSettings() {
-    try {
-        localStorage.setItem('earthquakeAppMapSettings', JSON.stringify(userSettings));
-    } catch(e) { console.error("設定の保存に失敗", e); }
+    try { localStorage.setItem('earthquakeAppMapSettings', JSON.stringify(userSettings)); } catch(e) { console.error("設定の保存に失敗", e); }
 }
 
-// 音声アセット
-let seFirst = new Audio('First.mp3');
-let seLast = new Audio('Last.mp3');
-let seTsunami = new Audio('Tsunami.mp3');
-let seUpdateApi = new Audio('UpdateAPI.mp3');
-let seUpdateEew = new Audio('UpdateEEW.mp3');
-let seWarning = new Audio('Warning.mp3');
-
-let bgmFiles = {
-    '朝.wav': new Audio('朝.wav'), '昼.wav': new Audio('昼.wav'), '夕方.wav': new Audio('夕方.wav'), '夜.wav': new Audio('夜.wav')
-};
+// 音声アセット (仮パス)
+let seFirst = new Audio('First.mp3'); let seLast = new Audio('Last.mp3'); let seTsunami = new Audio('Tsunami.mp3');
+let seUpdateApi = new Audio('UpdateAPI.mp3'); let seUpdateEew = new Audio('UpdateEEW.mp3'); let seWarning = new Audio('Warning.mp3');
+let bgmFiles = { '朝.wav': new Audio('朝.wav'), '昼.wav': new Audio('昼.wav'), '夕方.wav': new Audio('夕方.wav'), '夜.wav': new Audio('夜.wav') };
 for (let key in bgmFiles) { bgmFiles[key].loop = true; }
 
 function updateSeVolumes() {
@@ -537,7 +451,7 @@ settingKeys.forEach(key => {
 
 document.getElementById('axisTokenInput').addEventListener('change', (e) => { userSettings.axisToken = e.target.value; saveSettings(); });
 document.getElementById('axisEewCheckbox').addEventListener('change', (e) => { userSettings.axisEewEnabled = e.target.checked; saveSettings(); });
-document.getElementById('btnAxisConnect').addEventListener('click', () => { connectAxisWS(); document.getElementById('settingsModal').style.display = 'none'; });
+document.getElementById('btnAxisConnect').addEventListener('click', () => { initAxisAPI(); document.getElementById('settingsModal').style.display = 'none'; });
 
 /* ================= 初期化実行 ================= */
 loadSettings();
@@ -596,7 +510,7 @@ const initAudio = () => {
     for (let key in bgmFiles) bgmFiles[key].load(); updateSeVolumes();
     if(!speechEnabled && 'speechSynthesis' in window) { let u = new SpeechSynthesisUtterance(""); u.volume = 0; speechSynthesis.speak(u); speechEnabled = true; }
     document.removeEventListener('click', initAudio); document.removeEventListener('touchstart', initAudio);
-    
+    // UIの設定値もここで反映
     settingKeys.forEach(key => {
         const slider = document.getElementById(key + 'Slider');
         if (slider) slider.value = userSettings[key === 'vol' ? 'volume' : key];
@@ -1095,195 +1009,180 @@ function connectWS() {
     wolfx.onopen = () => addLog("📡 Wolfx EEW Connected"); wolfx.onclose = () => setTimeout(connectWS, 5000);
 }
 
-/* ================= AXIS API 関連 ================= */
+// ================= AXIS API 関連 =================
 let axisWs = null;
 let axisRetrySec = 1000;
 let axisRetryCount = 0;
-const AXIS_MAX_RETRY = 10;
+const axisRetryMax = 10;
 let axisHbTimer = null;
 
-async function connectAxisWS() {
+async function initAxisAPI() {
     if (!userSettings.axisToken) { addLog("⚠ AXIS Token is not set."); return; }
-    if (axisWs && axisWs.readyState !== WebSocket.CLOSED) { axisWs.close(); axisWs = null; }
-    if (axisHbTimer) { clearTimeout(axisHbTimer); axisHbTimer = null; }
-
+    if (axisWs) { axisWs.close(); axisWs = null; }
+    
     try {
+        // Available Servers List API を使用して接続先を取得
         const res = await fetch("https://axis.prioris.jp/api/server/list/", {
-            headers: { "Authorization": `Bearer ${userSettings.axisToken}` }
+            headers: { "Authorization": "Bearer " + userSettings.axisToken }
         });
-        if (!res.ok) throw new Error("Server list fetch failed");
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
         
-        const listData = await res.json();
-        if (!listData.servers || listData.servers.length === 0) throw new Error("No available servers");
-        
-        const baseUrl = listData.servers[0];
-        const wsUrl = `${baseUrl}/socket?token=${userSettings.axisToken}`;
-        
-        axisWs = new WebSocket(wsUrl);
-        
-        axisWs.onopen = () => {
-            addLog("📡 AXIS Socket Opened");
-            axisWs.send("hello");
-            
-            const heartbeat = () => {
-                if (axisWs && axisWs.readyState === WebSocket.OPEN) {
-                    axisWs.send("hb");
-                    axisHbTimer = setTimeout(heartbeat, 30000);
-                }
-            };
-            heartbeat();
-        };
-
-        axisWs.onmessage = (e) => {
-            if (typeof e.data === 'string') {
-                if (e.data === "hello") {
-                    axisRetrySec = 1000;
-                    axisRetryCount = 0;
-                    addLog("✅ AXIS Connected (Hello Received)");
-                    return;
-                } else if (e.data === "hb") {
-                    return; // Heartbeat ack
-                } else if (e.data.startsWith("error:")) {
-                    addLog("❌ AXIS Server Error: " + e.data);
-                    return;
-                }
-            }
-            
-            try { 
-                const msg = JSON.parse(e.data); 
-                handleAxisMessage(msg); 
-            } catch (err) { 
-                console.error("AXIS parse error", err); 
-            }
-        };
-
-        axisWs.onclose = () => {
-            addLog("⚠ AXIS Disconnected.");
-            retryAxisConnection();
-        };
-
-        axisWs.onerror = () => {
-            addLog("❌ AXIS Connection Error.");
-        };
-
-    } catch(err) { 
+        if (data.servers && data.servers.length > 0) {
+            connectAxisWS(data.servers[0]);
+        } else {
+            throw new Error("No servers available from API.");
+        }
+    } catch(err) {
         addLog("❌ AXIS Init Error: " + err.message);
         retryAxisConnection();
     }
 }
 
+function connectAxisWS(serverUrl) {
+    const wsUrl = `${serverUrl}/socket?token=${userSettings.axisToken}`;
+    axisWs = new WebSocket(wsUrl);
+
+    axisWs.onopen = () => {
+        addLog("📡 AXIS API Connected");
+        axisWs.send("hello"); // 接続成功を通知
+        
+        if(axisHbTimer) clearInterval(axisHbTimer);
+        axisHbTimer = setInterval(() => {
+            if (axisWs && axisWs.readyState === WebSocket.OPEN) {
+                axisWs.send("hb");
+            }
+        }, 60000); // 60秒に1回Heartbeat
+    };
+
+    axisWs.onmessage = (e) => {
+        const msg = e.data;
+        if (msg === "hello") {
+            // hello受信で再接続カウンターリセット
+            axisRetrySec = 1000;
+            axisRetryCount = 0;
+            addLog("📡 AXIS API 'hello' received.");
+        } else if (msg === "hb") {
+            // Heartbeatエコー (何もしない)
+        } else {
+            try { 
+                const jsonMsg = JSON.parse(msg);
+                handleAxisMessage(jsonMsg);
+            } catch (err) {
+                // Parse Error
+            }
+        }
+    };
+
+    axisWs.onclose = () => {
+        addLog("⚠ AXIS Disconnected.");
+        if(axisHbTimer) clearInterval(axisHbTimer);
+        retryAxisConnection();
+    };
+
+    axisWs.onerror = () => { addLog("❌ AXIS Connection Error."); };
+}
+
 function retryAxisConnection() {
-    if (axisWs && axisWs.readyState !== WebSocket.CLOSED) { axisWs.close(); }
-    axisWs = null;
-    if (axisHbTimer) { clearTimeout(axisHbTimer); axisHbTimer = null; }
-    
-    if (axisRetryCount < AXIS_MAX_RETRY) {
+    if (axisRetryCount < axisRetryMax) {
         axisRetryCount++;
-        axisRetrySec = axisRetrySec * 2;
-        addLog(`⏳ AXIS Reconnecting in ${axisRetrySec/1000}s (Retry ${axisRetryCount}/${AXIS_MAX_RETRY})`);
-        setTimeout(connectAxisWS, axisRetrySec);
+        axisRetrySec = axisRetrySec * 2; // Exponential Backoff
+        addLog(`↻ AXIS Reconnecting in ${axisRetrySec/1000}s (Attempt ${axisRetryCount})`);
+        setTimeout(initAxisAPI, axisRetrySec);
     } else {
-        addLog("❌ AXIS Max retries reached. Connection abandoned.");
+        addLog("❌ AXIS Max retry reached. Stop reconnecting.");
     }
 }
 
 function handleAxisMessage(data) {
     if (!data || !data.channel || !data.message) return;
-    
-    const channel = data.channel;
+    const ch = data.channel;
     const msg = data.message;
 
-    if (channel === "eew" && userSettings.axisEewEnabled) {
-        if (Date.now() - lastWolfxEewTime < 60000) return; // Wolfx優先
+    // EEW処理 (Wolfx優先ロジック)
+    if (ch === "eew" && userSettings.axisEewEnabled) {
+        if (Date.now() - lastWolfxEewTime < 60000) { return; } // Wolfxが1分以内に受信していれば無視
         const wData = convertAxisEewToWolfx(msg);
         if (wData) { lastWolfxEewTime = Date.now(); updateWolfxEEW(wData); addLog("⚡ AXIS EEW Processing"); }
     }
-    else if (channel === "jmx-meteorology") { addAxisInfo("meteorologyScrollArea", msg, "meteorology"); }
-    else if (channel === "jmx-volcanology") { addAxisInfo("volcanologyScrollArea", msg, "volcanology"); }
-    else if (channel === "breaking-news") { addAxisInfo("newsScrollArea", msg, "news"); }
+    else if (ch === "jmx-meteorology") { addAxisMeteorology(msg); }
+    else if (ch === "jmx-volcanology") { addAxisVolcanology(msg); }
+    else if (ch === "breaking-news") { addAxisNews(msg); }
 }
 
 function convertAxisEewToWolfx(msg) {
     try {
-        let eventId = msg.EventID || "AXIS_EEW_" + Date.now();
-        let title = msg.Title || "緊急地震速報"; 
-        let serial = msg.Serial ? String(msg.Serial) : "1"; 
+        const eventId = msg.EventID || "AXIS_EEW_" + Date.now();
+        const title = msg.Title || "緊急地震速報";
+        const serial = String(msg.Serial || 1);
+        const isFinal = msg.Flag?.is_final || false;
+        const isCancel = msg.Flag?.is_cancel || false;
+        const isTraining = msg.Flag?.is_training || false;
+        const isWarn = title.includes("警報");
         
-        let isFinal = msg.Flag ? !!msg.Flag.is_final : false;
-        let isCancel = msg.Flag ? !!msg.Flag.is_cancel : false;
-        let isTraining = msg.Flag ? !!msg.Flag.is_training : false;
-        let isWarn = title.includes("警報");
-
-        const formatTime = (isoStr) => {
-            if(!isoStr) return new Date().toISOString().replace("T", " ").substring(0, 19);
-            return isoStr.replace("T", " ").substring(0, 19).replace(/-/g, "/");
-        };
-
-        let announcedTime = formatTime(msg.ReportDateTime);
-        let originTime = formatTime(msg.OriginDateTime);
-
-        let hypocenter = msg.Hypocenter?.Name || "不明";
-        let lat = msg.Hypocenter?.Coordinate?.[1] || 0;
-        let lng = msg.Hypocenter?.Coordinate?.[0] || 0;
-        let depthStr = msg.Hypocenter?.Depth || "0";
-        let depth = convertAxisDepth(depthStr);
-        let mag = msg.Magnitude || "0";
-        let maxInt = convertAxisIntensity(msg.Intensity || "0");
+        const announcedTime = msg.ReportDateTime ? msg.ReportDateTime.replace("T", " ").substring(0, 19) : new Date().toISOString().replace("T", " ").substring(0, 19);
+        const originTime = msg.OriginDateTime ? msg.OriginDateTime.replace("T", " ").substring(0, 19) : announcedTime;
         
-        let warnArea = "";
+        let hypocenter = "不明", lat = 0, lng = 0, depth = "0";
+        if (msg.Hypocenter) {
+            hypocenter = msg.Hypocenter.Name || "不明";
+            if (msg.Hypocenter.Coordinate && msg.Hypocenter.Coordinate.length === 2) {
+                lng = msg.Hypocenter.Coordinate[0];
+                lat = msg.Hypocenter.Coordinate[1];
+            }
+            if (msg.Hypocenter.Depth) {
+                depth = msg.Hypocenter.Depth.replace("km", "");
+            }
+        }
+        
+        const mag = msg.Magnitude || "0";
+        let maxInt = msg.Intensity || "0";
+        if (maxInt === "0" && isCancel) maxInt = "0";
+        
+        let warnAreaStr = "";
         if (msg.Forecast && Array.isArray(msg.Forecast)) {
-            warnArea = msg.Forecast.map(f => f.Name).join("、");
+            warnAreaStr = msg.Forecast.map(f => f.Name).join("、");
         }
-
+        
         return {
-            "type": "jma_eew", "EventID": eventId, "Title": title, "Serial": serial, 
-            "isFinal": isFinal, "isCancel": isCancel, "isWarn": isWarn, 
-            "isTraining": isTraining, "isAssumption": false, "isSea": false,
-            "AnnouncedTime": announcedTime, "OriginTime": originTime, 
-            "Hypocenter": hypocenter, "Latitude": lat, "Longitude": lng, 
-            "Magunitude": mag, "Depth": depth, "MaxIntensity": maxInt, 
-            "WarnArea": { "Chiiki": warnArea },
-            "OriginalText": msg.Text || ""
+            "type": "jma_eew", "EventID": eventId, "Title": title, "Serial": serial,
+            "isFinal": isFinal, "isCancel": isCancel, "isWarn": isWarn, "isTraining": isTraining,
+            "isAssumption": false, "isSea": false,
+            "AnnouncedTime": announcedTime, "OriginTime": originTime,
+            "Hypocenter": hypocenter, "Latitude": lat, "Longitude": lng,
+            "Magunitude": String(mag), "Depth": String(depth), "MaxIntensity": String(maxInt),
+            "WarnArea": { "Chiiki": warnAreaStr }
         };
-    } catch(err) {
-        console.error("AXIS EEW convert error", err);
-        return null; 
+    } catch (e) {
+        console.error("AXIS EEW convert error", e);
+        return null;
     }
 }
 
-function convertAxisIntensity(intStr) {
-    if (intStr === "5-") return "5弱";
-    if (intStr === "5+") return "5強";
-    if (intStr === "6-") return "6弱";
-    if (intStr === "6+") return "6強";
-    return String(intStr);
+function addAxisMeteorology(msg) {
+    let title = msg.Head?.Title || msg.Control?.Title || "気象情報";
+    let text = msg.Head?.Headline?.Text || "詳細情報が発表されました。";
+    addAxisInfoDOM("meteorologyScrollArea", title, text);
 }
 
-function convertAxisDepth(depthStr) {
-    if (!depthStr || depthStr === "ごく浅い") return "0";
-    return depthStr.replace(/[^0-9]/g, "");
+function addAxisVolcanology(msg) {
+    let title = msg.Head?.Title || msg.Control?.Title || "火山情報";
+    let text = msg.Head?.Headline?.Text || "詳細情報が発表されました。";
+    addAxisInfoDOM("volcanologyScrollArea", title, text);
 }
 
-function addAxisInfo(areaId, msg, type) {
+function addAxisNews(msg) {
+    let title = msg.Title || "ニュース速報";
+    let text = Array.isArray(msg.Text) ? msg.Text.join("<br>") : (msg.Text || "");
+    addAxisInfoDOM("newsScrollArea", title, text);
+}
+
+function addAxisInfoDOM(areaId, title, text) {
     const area = document.getElementById(areaId); if (!area) return;
-    let title = "情報", text = "";
-    
-    try {
-        if (type === "meteorology" || type === "volcanology") {
-            title = msg.Head?.Title || msg.Control?.Title || title;
-            text = msg.Head?.Headline?.Text || "詳細データを受信しました。";
-        } else if (type === "news") {
-            title = msg.Title || title;
-            text = Array.isArray(msg.Text) ? msg.Text.join("<br>") : (msg.Text || "詳細データを受信しました。");
-        } else {
-            text = JSON.stringify(msg);
-        }
-    } catch(e) {
-        text = JSON.stringify(msg);
-    }
-    
     const div = document.createElement("div"); div.className = "axisInfoItem";
-    div.innerHTML = `<div class="axisInfoTitle">${title}</div><div class="axisInfoText">${text}</div>`;
+    // テキスト内の改行文字を<br>タグに変換して表示
+    const formattedText = text.replace(/\n/g, '<br>');
+    div.innerHTML = `<div class="axisInfoTitle">${title}</div><div class="axisInfoText">${formattedText}</div>`;
     
     const noData = area.querySelector('.noDataText'); if(noData) noData.remove();
     area.prepend(div); while (area.children.length > 15) { area.removeChild(area.lastChild); }
@@ -1294,7 +1193,7 @@ function addAxisInfo(areaId, msg, type) {
     await loadSites(); await initLeaflet();
     setInterval(async()=>{ const d=await fetchKyoshin(); if(d) drawKyoshin(d); }, 1000);
     loadQuakes(); connectWS(); 
-    if(userSettings.axisToken) connectAxisWS();
+    if(userSettings.axisToken) initAxisAPI();
 })();
 </script>
 </body>
