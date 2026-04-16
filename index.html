@@ -189,6 +189,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 /* --- AXIS API 情報ウィンドウ --- */
 #weatherPanel { height: 120px; display: none; }
 #volcanoPanel { height: 120px; display: none; }
+#dailySummaryPanel { height: 120px; display: none; }
 
 #newsPanel {
     position: fixed;
@@ -241,8 +242,9 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .setting-group { margin-bottom: 20px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 10px; }
 .setting-group-title { font-size: 14px; color: #aaa; margin-bottom: 10px; font-weight: bold; }
 .setting-item { margin-bottom: 15px; display:flex; flex-direction: column; gap: 8px; }
-.setting-item label { font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; }
+.setting-item label { font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; }
 .setting-item input[type=range] { width: 100%; cursor: pointer; }
+.setting-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
 .setting-value { font-size: 13px; color: #00ffcc; }
 
 @keyframes blink{from{opacity:0.5}to{opacity:1}}
@@ -331,6 +333,10 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div class="axisHeader">火山情報 (VOLCANOLOGY)</div>
         <div id="volcanoScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
     </div>
+    <div id="dailySummaryPanel" class="base-panel" style="border-top: 4px solid #cc00ff;">
+        <div class="axisHeader" style="color: #ff66ff;">本日のまとめ (DAILY SUMMARY)</div>
+        <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">待機中...</div></div>
+    </div>
 </div>
 
 <div id="eewPopup"></div>
@@ -366,6 +372,13 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 <div id="settingsModal">
     <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
     <div class="settingsBody">
+        <div class="setting-group">
+            <div class="setting-group-title">拡張機能</div>
+            <div class="setting-item">
+                <label>EEW受信時の震度予測マップ表示 <input type="checkbox" id="chkEewPrediction"></label>
+            </div>
+        </div>
+
         <div class="setting-group">
             <div class="setting-group-title">AXIS API 連携設定 (Subscriber)</div>
             <div class="setting-item">
@@ -435,6 +448,7 @@ window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
 let userSettings = {
+    eewPrediction: false, // 震度予測マップ表示 (デフォルトOFF)
     volume: 0.5,
     alarmPitch: 1500,
     speechPitch: 1.0,
@@ -447,6 +461,10 @@ let userSettings = {
     volWarning: 0.5,
     volBgm: 0.3
 };
+
+// AXIS情報保持用
+const axisHistory = { weather: [], volcano: [], news: [] };
+const MAX_AXIS_HISTORY = 10;
 
 // 音声アセット
 let seFirst = new Audio('First.mp3');
@@ -482,6 +500,12 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'none';
 });
 
+// EEW震度予測トグル制御
+document.getElementById('chkEewPrediction').checked = userSettings.eewPrediction;
+document.getElementById('chkEewPrediction').addEventListener('change', (e) => {
+    userSettings.eewPrediction = e.target.checked;
+});
+
 const settingKeys = [
     'vol', 'alarmPitch', 'speechPitch', 'speechRate', 
     'volFirst', 'volLast', 'volTsunami', 'volUpdateApi', 'volUpdateEew', 'volWarning', 'volBgm'
@@ -505,16 +529,15 @@ let yureEpicenterMarker = null;
 let lastYureDetectTime = 0;
 let yureBeepInterval = 0;
 
-// 【高度化用】過去10秒間の履歴蓄積 (リングバッファ)
 const HISTORY_LEN = 10;
-let intensityHistory = []; // siteIndex -> [history]
+let intensityHistory = []; 
 let historyIndex = 0;
 
-let siteDetectedLevel = new Map(); // siteIndex -> 強さレベル (Weaker, Weak, Medium, Strong, Stronger)
-let siteDetectedTime = new Map();  // siteIndex -> 揺れ検知時刻(ms)
+let siteDetectedLevel = new Map(); 
+let siteDetectedTime = new Map();  
 
-let calculatedEpicenter = null; // ガイガー法ベースによる推定震央 {lat, lng, depth, originTime}
-let pastEpicenters = [];        // 【追加】S波の誤検知防止用：過去の震央履歴の保持
+let calculatedEpicenter = null; 
+let pastEpicenters = [];        
 
 /* ================= BGM・時間帯管理 ================= */
 let currentBgmSrc = null;
@@ -575,7 +598,9 @@ function updateBgmState() {
 }
 setInterval(updateBgmState, 100);
 
-/* ================= 時計表示機能 & 定期クリーンアップ ================= */
+/* ================= 時計表示・1日のまとめ機能 ================= */
+let summaryPlayedForToday = "";
+
 function updateClock() {
     const now = new Date();
     const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0'); const d = String(now.getDate()).padStart(2, '0');
@@ -583,6 +608,7 @@ function updateClock() {
     const clock = document.getElementById("clockPanel");
     if(clock) clock.innerText = `${y}/${m}/${d}　${hh}:${mm}:${ss}`;
     
+    // コメントリストの有効期限管理
     const timestamp = now.getTime();
     let changed = false;
     window.eewOriginalTextList = window.eewOriginalTextList.filter(item => {
@@ -590,9 +616,65 @@ function updateClock() {
         return true;
     });
     if (changed) updateCommentDisplay(window.latestFullQuakeList);
+
+    // 23:50:00 の本日のまとめトリガー
+    const todayStr = `${y}-${m}-${d}`;
+    if (now.getHours() === 23 && now.getMinutes() === 50 && now.getSeconds() === 0 && summaryPlayedForToday !== todayStr) {
+        summaryPlayedForToday = todayStr;
+        generateDailySummary(todayStr, now);
+    }
 }
 setInterval(updateClock, 1000);
 updateClock();
+
+async function generateDailySummary(todayStr, now) {
+    try {
+        const res = await fetch("https://api.p2pquake.net/v2/history?codes=551&limit=100");
+        const data = await res.json();
+        
+        const todaysQuakes = data.filter(q => {
+            if (q.code !== 551 || q.earthquake.hypocenter.magnitude === -1) return false;
+            const timeStr = q.earthquake.time.replace(/\//g, "-").replace(" ", "T");
+            const qTime = new Date(timeStr);
+            return qTime.getFullYear() === now.getFullYear() && qTime.getMonth() === now.getMonth() && qTime.getDate() === now.getDate();
+        });
+
+        let count = todaysQuakes.length;
+        let maxScaleNum = -1;
+        let maxScaleStr = "";
+        let maxScaleName = "";
+
+        todaysQuakes.forEach(q => {
+            const sStr = fmt.shindo(q.earthquake.maxScale, q.earthquake.hypocenter.depth);
+            const num = fmt.intensityToNum(sStr);
+            if (num > maxScaleNum) {
+                maxScaleNum = num;
+                maxScaleStr = sStr;
+                maxScaleName = q.earthquake.hypocenter.name;
+            }
+        });
+
+        let textHtml = "";
+        let speechText = "本日の地震情報まとめ。";
+
+        if (count === 0) {
+            textHtml = "本日は、震度1以上を観測する地震はありませんでした。";
+            speechText += textHtml;
+        } else {
+            textHtml = `本日は合計 <b style="color:#ff4500;font-size:16px;">${count}</b> 回の地震が観測されました。<br>最大震度は <b style="color:${scaleColor(maxScaleStr)};font-size:18px;background:#222;padding:0 4px;">${maxScaleStr}</b> (${maxScaleName}) でした。`;
+            speechText += `本日は合計、${count}回の地震が観測されました。最大震度は、${maxScaleStr.replace("強", "きょう").replace("弱", "じゃく")}、震央は、${maxScaleName}、でした。`;
+        }
+
+        const panel = document.getElementById("dailySummaryPanel");
+        if(panel) panel.style.display = "block";
+        updatePanelScroll("summaryScrollArea", `<div style="padding:10px;"><div class="info-title">本日(${todayStr.replace(/-/g, "/")})の地震まとめ</div><div class="info-text">${textHtml}</div></div>`);
+
+        speakText(speechText);
+
+    } catch (e) {
+        console.error("Daily summary error", e);
+    }
+}
 
 /* ================= 音声・アラート管理 ================= */
 let audioCtx = null;
@@ -819,11 +901,11 @@ let eewPollTimers = new Map(); let eewTimeoutTimers = new Map(); let eewOffsets 
 const MAP_BORDER_COLOR = "rgba(255,255,255,0.3)"; const MAP_BORDER_WEIGHT = 1.0;
 
 const KYOSHIN_COLORS = [
-    "#000033", "#000066", "#000099", "#0000cc", "#0000ff", // 青系
-    "#0066ff", "#00ccff", "#00ffff", "#66ffcc", "#99ff99", // 水色〜緑系
-    "#ccff66", "#ffff00", "#ffcc00", "#ff9900", "#ff6600", // 黄色〜オレンジ
-    "#ff3300", "#ff0000", "#cc0000", "#990000", "#660000", // 赤系
-    "#800080", "#cc00cc", "#ff00ff", "#990099", "#660066"  // 紫系
+    "#000033", "#000066", "#000099", "#0000cc", "#0000ff", 
+    "#0066ff", "#00ccff", "#00ffff", "#66ffcc", "#99ff99", 
+    "#ccff66", "#ffff00", "#ffcc00", "#ff9900", "#ff6600", 
+    "#ff3300", "#ff0000", "#cc0000", "#990000", "#660000", 
+    "#800080", "#cc00cc", "#ff00ff", "#990099", "#660066"  
 ];
 
 const PREF_ARV = { "北海道": 1.6, "青森県": 1.8, "岩手県": 1.4, "宮城県": 2.0, "秋田県": 1.9, "山形県": 1.8, "福島県": 1.8, "茨城県": 2.1, "栃木県": 1.7, "群馬県": 1.6, "埼玉県": 2.4, "千葉県": 2.3, "東京都": 2.2, "神奈川県": 2.1, "新潟県": 2.2, "富山県": 1.8, "石川県": 1.9, "福井県": 1.8, "山梨県": 1.4, "長野県": 1.5, "岐阜県": 1.8, "静岡県": 1.9, "愛知県": 2.2, "三重県": 2.0, "滋賀県": 1.8, "京都府": 1.7, "大阪府": 2.4, "兵庫県": 2.1, "奈良県": 1.8, "和歌山県": 1.6, "鳥取県": 1.7, "島根県": 1.5, "岡山県": 1.9, "広島県": 1.6, "山口県": 1.6, "徳島県": 1.8, "香川県": 1.9, "愛媛県": 1.7, "高知県": 1.8, "福岡県": 1.9, "佐賀県": 2.2, "長崎県": 1.5, "熊本県": 1.8, "大分県": 1.7, "宮崎県": 1.8, "鹿児島県": 1.7, "沖縄県": 1.6 };
@@ -1036,7 +1118,6 @@ function updateLeafletMap(earthquake, points, skipFlyTo = false) {
         if (latestQuakeMarker) latestQuakeMarker.setLatLng([lat, lng]);
         else latestQuakeMarker = L.marker([lat, lng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[50,50], iconAnchor:[25,25]}) }).addTo(lMap);
         
-        // EEW受信時はAPIのマーカーを非表示にする制御
         let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake) || isEEWActive;
         latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
     }
@@ -1082,8 +1163,6 @@ function clearEEWDisplay(eventId = null) {
             const popup = document.getElementById("eewPopup"); if(popup) popup.style.display = "none";
             if(geojsonLayer) geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
             if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
-            
-            // APIマーカーの再表示
             if (latestQuakeMarker) {
                 let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake);
                 latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
@@ -1104,8 +1183,6 @@ function clearEEWDisplay(eventId = null) {
         epicenterMarkers.forEach(m => lMap.removeLayer(m)); epicenterMarkers.clear();
         if(geojsonLayer) geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
         if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
-        
-        // APIマーカーの再表示
         if (latestQuakeMarker) {
             let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake);
             latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
@@ -1139,7 +1216,6 @@ async function updateWolfxEEW(data) {
     if (data.MaxIntensity === "7") { seWarning.currentTime = 0; seWarning.play().catch(e=>{}); }
 
     isEEWActive = true; 
-    // EEW受信時はAPIのマーカーを確実に非表示にする
     if (latestQuakeMarker) latestQuakeMarker.setOpacity(0);
     
     if(isYureDetecting) clearYureDetection(); 
@@ -1161,33 +1237,44 @@ async function updateWolfxEEW(data) {
     if (eLat && eLng) {
         let bounds = L.latLngBounds([eLat, eLng], [eLat, eLng]); let hasWarnArea = false;
         if (epicenterMarkers.has(id)) { epicenterMarkers.get(id).setLatLng([eLat, eLng]); } else { const m = L.marker([eLat, eLng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[60,60], iconAnchor:[30,30]}) }).addTo(lMap); epicenterMarkers.set(id, m); }
+        
         if (geojsonLayer) {
-            const updateStyles = prefData.features.map(async f => {
-                const prefName = f.properties.name || f.properties.nam_ja; const coords = f.geometry.coordinates[0][0]; 
-                const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
-                let maxShindoNum = 0, maxShindoStrResult = "0";
-                for (let [eewId, eew] of activeEEWs.entries()) {
-                    const eewLat = parseFloat(eew.Latitude), eewLng = parseFloat(eew.Longitude), eewMag = parseFloat(eew.Magunitude), eewDepth = parseInt(eew.Depth), eewMaxStr = eew.MaxIntensity || "0";
-                    if(eewLat && eewLng) {
-                        const currentOffset = eewOffsets.get(eewId) || 0;
-                        const rawShindo = await calcPredictedIntensity(eewMag, eewDepth, eewLat, eewLng, pLat, pLng, prefName, currentOffset);
-                        const limitedShindo = limitIntensity(rawShindo, eewMaxStr); const num = fmt.intensityToNum(limitedShindo);
-                        if (num > maxShindoNum) { maxShindoNum = num; maxShindoStrResult = limitedShindo; }
+            // ユーザー設定により震度予測をONにしている場合のみ計算と塗りつぶしを行う
+            if (userSettings.eewPrediction) {
+                const updateStyles = prefData.features.map(async f => {
+                    const prefName = f.properties.name || f.properties.nam_ja; const coords = f.geometry.coordinates[0][0]; 
+                    const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
+                    let maxShindoNum = 0, maxShindoStrResult = "0";
+                    for (let [eewId, eew] of activeEEWs.entries()) {
+                        const eewLat = parseFloat(eew.Latitude), eewLng = parseFloat(eew.Longitude), eewMag = parseFloat(eew.Magunitude), eewDepth = parseInt(eew.Depth), eewMaxStr = eew.MaxIntensity || "0";
+                        if(eewLat && eewLng) {
+                            const currentOffset = eewOffsets.get(eewId) || 0;
+                            const rawShindo = await calcPredictedIntensity(eewMag, eewDepth, eewLat, eewLng, pLat, pLng, prefName, currentOffset);
+                            const limitedShindo = limitIntensity(rawShindo, eewMaxStr); const num = fmt.intensityToNum(limitedShindo);
+                            if (num > maxShindoNum) { maxShindoNum = num; maxShindoStrResult = limitedShindo; }
+                        }
                     }
-                }
-                return { id: f.id || prefName, shindo: maxShindoStrResult };
-            });
-            const results = await Promise.all(updateStyles);
-            geojsonLayer.eachLayer(layer => {
-                const prefName = layer.feature.properties.name || layer.feature.properties.nam_ja; const res = results.find(r => r.id === (layer.feature.id || prefName));
-                if (res && fmt.intensityToNum(res.shindo) >= 1) { bounds.extend(layer.getBounds()); hasWarnArea = true; }
-            });
-            geojsonLayer.setStyle(f => {
-                const prefName = f.properties.name || f.properties.nam_ja; const res = results.find(r => r.id === (f.id || prefName));
-                return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: scaleColor(res ? res.shindo : "0"), fillOpacity: 0.7 };
-            });
+                    return { id: f.id || prefName, shindo: maxShindoStrResult };
+                });
+                const results = await Promise.all(updateStyles);
+                geojsonLayer.eachLayer(layer => {
+                    const prefName = layer.feature.properties.name || layer.feature.properties.nam_ja; const res = results.find(r => r.id === (layer.feature.id || prefName));
+                    if (res && fmt.intensityToNum(res.shindo) >= 1) { bounds.extend(layer.getBounds()); hasWarnArea = true; }
+                });
+                geojsonLayer.setStyle(f => {
+                    const prefName = f.properties.name || f.properties.nam_ja; const res = results.find(r => r.id === (f.id || prefName));
+                    return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: scaleColor(res ? res.shindo : "0"), fillOpacity: 0.7 };
+                });
+            } else {
+                // 震度予測OFF時は色を消す
+                geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
+            }
         }
-        if (activeEEWs.size === 1) { if (hasWarnArea) lMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 8, duration: 1.5 }); else lMap.flyTo([eLat, eLng], 8, { duration: 1.5 }); }
+
+        if (activeEEWs.size === 1) { 
+            if (hasWarnArea && userSettings.eewPrediction) lMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 8, duration: 1.5 }); 
+            else lMap.flyTo([eLat, eLng], 8, { duration: 1.5 }); 
+        }
         if (!eewWaveTimer) drawWaves();
     }
     if (data.isFinal && !isDebugNankai) {
@@ -1208,7 +1295,6 @@ const loadSites=async()=>{
         const parseLoc=v=>typeof v==="number"?v:Number(v.replace(/[NSEW]/g,m=>({N:"+",S:"-",E:"+",W:"-"}[m])));
         sites = items.map(item => ({ lat: parseLoc(item[0]), lng: parseLoc(item[1]) }));
         
-        // 履歴用配列初期化
         for(let i=0; i<sites.length; i++) intensityHistory.push(new Array(HISTORY_LEN).fill(null));
     } catch(e) { console.error("Sitelist load error", e); }
 };
@@ -1222,9 +1308,7 @@ async function fetchKyoshin(){
     try{const r=await fetch(url); if(!r.ok) throw new Error(); return await r.json();}catch{offsetSec++;return null;}
 }
 
-/* ================= 【高度化】揺れ検知ロジック & 震央推定 ================= */
-
-// リアルタイム震度からレベルを計算
+/* ================= 揺れ検知ロジック & 震央推定 ================= */
 function getRtLevelStr(rtInt) {
     if (rtInt >= 4.5) return "Stronger";
     if (rtInt >= 2.5) return "Strong";
@@ -1238,16 +1322,12 @@ function levelValue(lvl) {
     return lvls[lvl] || 0;
 }
 
-// 簡易走時計算 (JMA2001近似: Vp=6.5km/s)
 function calcTravelTime(dist, depth) {
     return Math.sqrt(dist*dist + depth*depth) / 6.5;
 }
 
-// ガイガー法ベース ゴリ押し探索
 function estimateEpicenter(detectSites, nowMs) {
     if (detectSites.length === 0) return null;
-    
-    // 最初に検知した点を仮震源とする
     let firstSite = detectSites[0];
     let minTime = siteDetectedTime.get(firstSite);
     for(let i=1; i<detectSites.length; i++) {
@@ -1261,9 +1341,6 @@ function estimateEpicenter(detectSites, nowMs) {
     
     const calcError = (lat, lng, depth) => {
         let origins = [];
-        let totalWeight = 0;
-        let weightedSum = 0;
-        
         let firstDist = getDistance(lat, lng, sites[firstSite].lat, sites[firstSite].lng);
         
         for (let idx of detectSites) {
@@ -1284,7 +1361,6 @@ function estimateEpicenter(detectSites, nowMs) {
             errorSum += err * weight;
         }
         
-        // 未検知ペナルティ
         let timeSinceFirst = nowMs - minTime;
         if (timeSinceFirst <= 3000 || (timeSinceFirst <= 10000 && detectSites.length < 30)) {
             let maxDist = 0;
@@ -1297,7 +1373,7 @@ function estimateEpicenter(detectSites, nowMs) {
                         let tt = calcTravelTime(d, depth);
                         let expectedReach = avgOrigin + (tt * 1000);
                         if (expectedReach < nowMs) {
-                            errorSum += 1000000; // ペナルティ
+                            errorSum += 1000000; 
                         }
                     }
                 }
@@ -1306,7 +1382,6 @@ function estimateEpicenter(detectSites, nowMs) {
         return { error: errorSum, originTime: avgOrigin };
     };
     
-    // 探索フェーズ
     const phases = [
         { dLat: 0.5, dLng: 0.5, dDepth: 0 },
         { dLat: 0.1, dLng: 0.1, dDepth: 0 },
@@ -1347,7 +1422,6 @@ function estimateEpicenter(detectSites, nowMs) {
             }
         }
     }
-    
     return { lat: currentLat, lng: currentLng, depth: currentDepth, originTime: currentRes.originTime };
 }
 
@@ -1362,15 +1436,12 @@ function processYureDetection(intens) {
         let rtInt = null;
         if(raw !== undefined && raw !== null) {
             let code = isDebugNankai ? raw + 100 : String(raw).charCodeAt(0);
-            if(!isNaN(code)) rtInt = (code - 100) / 10 - 3; // 内部値からリアルタイム震度へ概算復元 (-3〜+7)
+            if(!isNaN(code)) rtInt = (code - 100) / 10 - 3; 
         }
         
-        // 履歴更新
         intensityHistory[i][historyIndex] = rtInt;
-        
         if (rtInt === null) continue;
         
-        // ノイズ除外判定
         let maxChange = 0;
         let validHistCount = 0;
         for(let h=0; h<HISTORY_LEN; h++) {
@@ -1379,7 +1450,7 @@ function processYureDetection(intens) {
                 maxChange = Math.max(maxChange, Math.abs(rtInt - intensityHistory[i][h]));
             }
         }
-        let isIsolated = true; // 周囲(50km以内)の点が存在するか
+        let isIsolated = true; 
         for(let j=0; j<sites.length; j++){
             if(i!==j && getDistance(sites[i].lat, sites[i].lng, sites[j].lat, sites[j].lng) <= 50) { isIsolated = false; break; }
         }
@@ -1393,61 +1464,41 @@ function processYureDetection(intens) {
             }
         }
 
-        // --- 【追加】P/S波の到達範囲（走時円）に基づく除外ロジック ---
-        // 期限切れの履歴をクリーンアップ
         pastEpicenters = pastEpicenters.filter(ep => now < ep.expireAt);
 
         if (!excluded && validHistCount > 0) {
             let currentLvlStr = getRtLevelStr(rtInt);
             let prevLvlStr = siteDetectedLevel.get(i) || "None";
             
-            // 揺れレベルが上昇（新規トリガーの可能性がある）場合のみ走時円をチェック
             if (levelValue(currentLvlStr) > levelValue(prevLvlStr)) {
                 let isWaveTailOrNoise = false;
                 
                 if (!isYureDetecting) {
-                    // 非検知時：過去の地震のS波（遅れて到達する揺れ）による「新規の複数回トリガー」を防止
                     for (let ep of pastEpicenters) {
                         let dist = getDistance(sites[i].lat, sites[i].lng, ep.lat, ep.lng);
                         let dist3D = Math.sqrt(dist*dist + ep.depth*ep.depth);
                         let elapsedSec = (now - ep.originTime) / 1000;
-                        
-                        // Vp=6.5km/sを基準とし、余裕を持たせた到達半径 (例: +50kmのマージン)
                         let maxReach = elapsedSec * 6.5 + 50; 
-                        
-                        // 過去の地震の波の伝播圏内であれば、S波等の余波とみなして新規トリガーから除外
-                        if (elapsedSec > 0 && dist3D <= maxReach) {
-                            isWaveTailOrNoise = true;
-                            break;
-                        }
+                        if (elapsedSec > 0 && dist3D <= maxReach) { isWaveTailOrNoise = true; break; }
                     }
                 } else if (calculatedEpicenter) {
-                    // 検知時：現在の地震の波の到達範囲から物理的にあり得ない遠方の突発ノイズを除外
                     let ep = calculatedEpicenter;
                     let dist = getDistance(sites[i].lat, sites[i].lng, ep.lat, ep.lng);
                     let dist3D = Math.sqrt(dist*dist + ep.depth*ep.depth);
                     let elapsedSec = (now - ep.originTime) / 1000;
-                    
-                    let maxReach = elapsedSec * 6.5 + 100; // 検知中は少し広めのマージンを取る
-                    
-                    if (elapsedSec > 0 && dist3D > maxReach) {
-                        isWaveTailOrNoise = true;
-                    }
+                    let maxReach = elapsedSec * 6.5 + 100; 
+                    if (elapsedSec > 0 && dist3D > maxReach) { isWaveTailOrNoise = true; }
                 }
                 
-                if (isWaveTailOrNoise) {
-                    excluded = true;
-                }
+                if (isWaveTailOrNoise) { excluded = true; }
             }
         }
-        // -------------------------------------------------------------
 
         if(!excluded) {
             let currentLvlStr = getRtLevelStr(rtInt);
             let prevLvlStr = siteDetectedLevel.get(i) || "None";
             
             if (levelValue(currentLvlStr) > levelValue(prevLvlStr)) {
-                // 上昇を検知、周囲を確認
                 let neighborUp = false;
                 for(let j=0; j<sites.length; j++) {
                     if (i===j) continue;
@@ -1458,7 +1509,6 @@ function processYureDetection(intens) {
                     }
                 }
                 
-                // 孤立点か周囲も揺れていれば検知
                 if (isIsolated || neighborUp) {
                     siteDetectedLevel.set(i, currentLvlStr);
                     if(!siteDetectedTime.has(i)) siteDetectedTime.set(i, now);
@@ -1467,7 +1517,6 @@ function processYureDetection(intens) {
             }
         }
         
-        // 検知中状態の維持
         if (siteDetectedLevel.has(i) && levelValue(siteDetectedLevel.get(i)) > 0) {
             currentHighPoints.push(i);
         }
@@ -1480,14 +1529,12 @@ function processYureDetection(intens) {
         return;
     }
 
-    // 揺れ検知状態のトリガー (全体で4点以上)
     if (!isYureDetecting) {
         if (currentHighPoints.length >= 4) {
             isYureDetecting = true; isRealtimeOnlyMode = true;
             document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active');
             lastYureDetectTime = now;
             
-            // 震央推定
             calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
             if (calculatedEpicenter) {
                 lMap.flyTo([calculatedEpicenter.lat, calculatedEpicenter.lng], 7, { duration: 1.0 });
@@ -1504,7 +1551,6 @@ function processYureDetection(intens) {
     } else {
         if (detectedThisTick.length > 0) {
             lastYureDetectTime = now;
-            // 震央再計算
             calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
             if (calculatedEpicenter && yureEpicenterMarker) {
                 yureEpicenterMarker.setLatLng([calculatedEpicenter.lat, calculatedEpicenter.lng]);
@@ -1512,7 +1558,6 @@ function processYureDetection(intens) {
         }
         
         if (now - lastYureDetectTime > 15000) {
-            // 15秒間新規検知がなければ終了
             clearYureDetection();
             isRealtimeOnlyMode = false;
             document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active');
@@ -1525,7 +1570,6 @@ function processYureDetection(intens) {
     }
 
     if (isYureDetecting) {
-        // グリッドサイズを大きく (0.1 -> 0.25)
         const GRID_SIZE = 0.25; 
         let currentGrids = new Map();
         for (let id of currentHighPoints) {
@@ -1551,7 +1595,6 @@ function updateYureGrids(activeGrids, gridSize) {
         let sLat = latIdx * gridSize; let sLng = lngIdx * gridSize;
         let nLat = sLat + gridSize; let nLng = sLng + gridSize;
         
-        // レベルに応じた色 (Weaker~Stronger)
         let colorHex = "#00ffff";
         if(maxLv===1) colorHex = "#0000ff";
         else if(maxLv===2) colorHex = "#00ff00";
@@ -1567,7 +1610,6 @@ function updateYureGrids(activeGrids, gridSize) {
 }
 
 function clearYureDetection() {
-    // 【追加】検知終了時、直前の震央情報を履歴に保存（3分間）し、遅れてくるS波の誤検知を防ぐ
     if (calculatedEpicenter) {
         pastEpicenters.push({
             lat: calculatedEpicenter.lat,
@@ -1607,7 +1649,6 @@ function renderKyoshinCanvas(d) {
         if (isNaN(code)) continue;
         
         let lv = Math.max(0, code - 100);
-        // 新しいカラーマップ適用
         const colorIdx = Math.floor(Math.min(Math.max(0, lv), KYOSHIN_COLORS.length - 1)) || 0;
         const colorStr = KYOSHIN_COLORS[colorIdx];
         if(!colorStr) continue;
@@ -1862,19 +1903,28 @@ function handleAxisMessage(data) {
         const time = msg?.Head?.ReportDateTime ? msg.Head.ReportDateTime.slice(0,16).replace("T", " ") : "";
         let text = msg?.Head?.Headline?.Text || "";
         if(!text && msg?.Body?.Comment?.Text) text = msg.Body.Comment.Text[0]?.valueOf_ || "";
-        updatePanelScroll("weatherScrollArea", `<div class="info-title">${title} <small>${time}</small></div><div class="info-text">${text}</div>`);
+        
+        axisHistory.weather.unshift({title, time, text});
+        if(axisHistory.weather.length > MAX_AXIS_HISTORY) axisHistory.weather.pop();
+        renderAxisPanel("weatherScrollArea", axisHistory.weather);
     } 
     else if (channel === 'jmx-volcanology') {
         const title = msg?.Head?.Title || "火山情報";
         const time = msg?.Head?.ReportDateTime ? msg.Head.ReportDateTime.slice(0,16).replace("T", " ") : "";
         let text = msg?.Head?.Headline?.Text || "";
-        updatePanelScroll("volcanoScrollArea", `<div class="info-title">${title} <small>${time}</small></div><div class="info-text">${text}</div>`);
+        
+        axisHistory.volcano.unshift({title, time, text});
+        if(axisHistory.volcano.length > MAX_AXIS_HISTORY) axisHistory.volcano.pop();
+        renderAxisPanel("volcanoScrollArea", axisHistory.volcano);
     }
     else if (channel === 'breaking-news') {
         const title = msg?.Title || "ニュース速報";
         const time = msg?.ReportDateTime ? msg.ReportDateTime.slice(0,16).replace("T", " ") : "";
         const text = (msg?.Text || []).join("<br>");
-        updatePanelScroll("newsScrollArea", `<div class="info-title">${title} <small>${time}</small></div><div class="info-text">${text}</div>`);
+        
+        axisHistory.news.unshift({title, time, text});
+        if(axisHistory.news.length > MAX_AXIS_HISTORY) axisHistory.news.pop();
+        renderAxisPanel("newsScrollArea", axisHistory.news);
     }
     else if (channel === 'eew') {
         if (!isWolfxConnected) {
@@ -1882,6 +1932,16 @@ function handleAxisMessage(data) {
             if (wolfxFormat) updateWolfxEEW(wolfxFormat);
         }
     }
+}
+
+function renderAxisPanel(areaId, historyArray) {
+    const html = historyArray.map(item => `
+        <div style="border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 10px; margin-bottom: 10px;">
+            <div class="info-title">${item.title} <small>${item.time}</small></div>
+            <div class="info-text">${item.text}</div>
+        </div>
+    `).join("");
+    updatePanelScroll(areaId, html);
 }
 
 function updatePanelScroll(areaId, html) {
