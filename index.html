@@ -12,7 +12,43 @@
 <style>
 body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;color:#fff}
 
-/* --- サイドバーコンテナ (レイアウト重なり・バランス崩れ修正用) --- */
+/* --- 起動画面 (Startup Screen) --- */
+#startupScreen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #050505; z-index: 20000; display: flex;
+    align-items: center; justify-content: center; flex-direction: column;
+}
+#startupContent { text-align: center; }
+.loader {
+    border: 8px solid rgba(255, 255, 255, 0.1); border-top: 8px solid #0055ff;
+    border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;
+    margin: 0 auto 20px auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+#startupStatus { font-size: 18px; color: #ccc; font-weight: bold; margin-bottom: 20px; }
+.app-title { font-size: 38px; font-weight: 900; color: #fff; margin-bottom: 5px; text-shadow: 0 0 15px rgba(0,85,255,0.8); }
+.app-version { font-size: 18px; color: #00ffcc; margin-bottom: 40px; letter-spacing: 3px; font-weight: bold; }
+.btn-group { display: flex; gap: 20px; justify-content: center; }
+.startup-btn {
+    padding: 15px 40px; font-size: 18px; font-weight: bold; color: #fff;
+    background: rgba(0, 85, 255, 0.6); border: 2px solid #0055ff; border-radius: 6px;
+    cursor: pointer; transition: all 0.2s; box-shadow: 0 0 15px rgba(0,85,255,0.4);
+}
+.startup-btn:hover { background: rgba(0, 85, 255, 0.9); box-shadow: 0 0 25px rgba(0,85,255,0.8); transform: translateY(-2px); }
+
+/* --- 仕様確認モーダル --- */
+#siyouModal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 80%; height: 85%; background: rgba(20, 20, 20, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 0 40px rgba(0,0,0,1);
+    z-index: 21000; border-radius: 8px; display: none; flex-direction: column; overflow: hidden;
+}
+.siyouHeader { padding: 15px 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #555; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); }
+.siyouHeader button { background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; line-height: 1; transition: color 0.2s; }
+.siyouHeader button:hover { color: #ff4444; }
+#siyouIframe { flex: 1; width: 100%; border: none; background: #fff; }
+
+/* --- サイドバーコンテナ --- */
 #leftSidebar {
     position: fixed; top: 10px; left: 10px; bottom: 60px; width: 420px;
     display: flex; flex-direction: column; gap: 10px;
@@ -299,6 +335,26 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 <body>
 
+<div id="startupScreen">
+    <div id="startupContent">
+        <div class="loader"></div>
+        <div id="startupStatus">システム初期化中...</div>
+        <div id="startupReady" style="display: none;">
+            <div class="app-title">日本2D地震地図：官制版</div>
+            <div class="app-version">V4.1.0</div>
+            <div class="btn-group">
+                <button id="btnStart" class="startup-btn">スタート</button>
+                <button id="btnSiyou" class="startup-btn">仕様確認</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="siyouModal">
+    <div class="siyouHeader">仕様確認 <button id="btnCloseSiyou">×</button></div>
+    <iframe id="siyouIframe" src=""></iframe>
+</div>
+
 <div id="leftSidebar">
     <div id="latestPanel"></div>
     <div id="detailPanel" class="base-panel"><div id="detailScrollArea"></div></div>
@@ -369,7 +425,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 <div id="clockPanel">--/--/-- --:--:--</div>
 
-<div id="wsLogPanel">-- SYSTEM READY --<br>※「1」キーで南海トラフ地震テスト開始<br>※画面内を一度クリックすると、音声通知が有効になります。</div>
+<div id="wsLogPanel">-- SYSTEM READY --<br>※「1」キーで南海トラフ地震テスト開始</div>
 
 <div id="settingsModal">
     <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
@@ -381,6 +437,9 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
             </div>
             <div class="setting-item">
                 <label>観測点アイコンの表示 <input type="checkbox" id="chkShowObsPoints"></label>
+            </div>
+            <div class="setting-item">
+                <label>震央推定機能 (リアルタイム揺れ検知時) <input type="checkbox" id="chkEnableEpicenter"></label>
             </div>
         </div>
 
@@ -453,8 +512,9 @@ window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
 let userSettings = {
-    eewPrediction: false, // 震度予測マップ表示 (デフォルトOFF)
-    showObsPoints: false, // 観測点アイコン表示 (デフォルトOFF)
+    eewPrediction: false,
+    showObsPoints: false,
+    enableEpicenterEstimate: true,
     volume: 0.5,
     alarmPitch: 1500,
     speechPitch: 1.0,
@@ -506,17 +566,25 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'none';
 });
 
-// EEW震度予測トグル制御
+// 各種トグル制御
 document.getElementById('chkEewPrediction').checked = userSettings.eewPrediction;
 document.getElementById('chkEewPrediction').addEventListener('change', (e) => {
     userSettings.eewPrediction = e.target.checked;
 });
 
-// 観測点描画トグル制御
 document.getElementById('chkShowObsPoints').checked = userSettings.showObsPoints;
 document.getElementById('chkShowObsPoints').addEventListener('change', (e) => {
     userSettings.showObsPoints = e.target.checked;
-    refreshMapDisplay(); // 表示切替時にマップ再描画
+    refreshMapDisplay();
+});
+
+document.getElementById('chkEnableEpicenter').checked = userSettings.enableEpicenterEstimate;
+document.getElementById('chkEnableEpicenter').addEventListener('change', (e) => {
+    userSettings.enableEpicenterEstimate = e.target.checked;
+    if (!e.target.checked && yureEpicenterMarker) {
+        lMap.removeLayer(yureEpicenterMarker);
+        yureEpicenterMarker = null;
+    }
 });
 
 const settingKeys = [
@@ -712,9 +780,7 @@ const initAudio = () => {
     if(!speechEnabled && 'speechSynthesis' in window) {
         let u = new SpeechSynthesisUtterance(""); u.volume = 0; speechSynthesis.speak(u); speechEnabled = true;
     }
-    document.removeEventListener('click', initAudio); document.removeEventListener('touchstart', initAudio);
 };
-document.addEventListener('click', initAudio); document.addEventListener('touchstart', initAudio);
 
 function speakText(text) {
     if (!speechEnabled || !('speechSynthesis' in window)) return;
@@ -990,15 +1056,26 @@ class Formatter {
 const fmt = new Formatter();
 
 /* ================= ジオメトリ共通処理 ================= */
+// 修正：GeoJSONのポリゴンから代表点（バウンディングボックスの中心）を取得するよう改善
 function getPolygonPoint(f) {
     let geom = f.geometry;
     if (!geom || !geom.coordinates) return {lat: 0, lng: 0};
-    let c = geom.coordinates;
-    while(Array.isArray(c[0]) && Array.isArray(c[0][0])) {
-        c = c[0];
-    }
-    let pt = Array.isArray(c[0]) ? c[0] : c;
-    return { lat: pt[1], lng: pt[0] };
+    
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    
+    const extractCoords = (coords) => {
+        if (typeof coords[0] === 'number') {
+            if(coords[1] < minLat) minLat = coords[1];
+            if(coords[1] > maxLat) maxLat = coords[1];
+            if(coords[0] < minLng) minLng = coords[0];
+            if(coords[0] > maxLng) maxLng = coords[0];
+        } else {
+            coords.forEach(extractCoords);
+        }
+    };
+    
+    extractCoords(geom.coordinates);
+    return { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 };
 }
 
 /* ================= J-SHIS API 連携機能 (最適化・キャッシュ付き) ================= */
@@ -1691,18 +1768,20 @@ function processYureDetection(intens) {
         if (currentHighPoints.length >= 4) {
             isYureDetecting = true; isRealtimeOnlyMode = true;
             document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active');
-            if(obsLayer) obsLayer.clearLayers(); // 揺れ検知開始時にマーカーを隠す
+            if(obsLayer) obsLayer.clearLayers(); 
             lastYureDetectTime = now;
             
-            calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
-            if (calculatedEpicenter) {
-                lMap.flyTo([calculatedEpicenter.lat, calculatedEpicenter.lng], 7, { duration: 1.0 });
-                if(!yureEpicenterMarker) {
-                    yureEpicenterMarker = L.marker([calculatedEpicenter.lat, calculatedEpicenter.lng], { 
-                        icon: L.divIcon({ className: 'epicenter-icon', html: '<div style="color:#00ffff;text-shadow:0 0 8px #00f;font-size:40px;font-weight:bold;">＋</div>', iconSize: [40,40], iconAnchor: [20,20] }), pane: 'wavePane'
-                    }).addTo(lMap);
-                } else {
-                    yureEpicenterMarker.setLatLng([calculatedEpicenter.lat, calculatedEpicenter.lng]);
+            if (userSettings.enableEpicenterEstimate) {
+                calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
+                if (calculatedEpicenter) {
+                    lMap.flyTo([calculatedEpicenter.lat, calculatedEpicenter.lng], 7, { duration: 1.0 });
+                    if(!yureEpicenterMarker) {
+                        yureEpicenterMarker = L.marker([calculatedEpicenter.lat, calculatedEpicenter.lng], { 
+                            icon: L.divIcon({ className: 'epicenter-icon', html: '<div style="color:#00ffff;text-shadow:0 0 8px #00f;font-size:40px;font-weight:bold;">＋</div>', iconSize: [40,40], iconAnchor: [20,20] }), pane: 'wavePane'
+                        }).addTo(lMap);
+                    } else {
+                        yureEpicenterMarker.setLatLng([calculatedEpicenter.lat, calculatedEpicenter.lng]);
+                    }
                 }
             }
             if(now - yureBeepInterval > 1000) { playYureBeep(); yureBeepInterval = now; }
@@ -1710,9 +1789,11 @@ function processYureDetection(intens) {
     } else {
         if (detectedThisTick.length > 0) {
             lastYureDetectTime = now;
-            calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
-            if (calculatedEpicenter && yureEpicenterMarker) {
-                yureEpicenterMarker.setLatLng([calculatedEpicenter.lat, calculatedEpicenter.lng]);
+            if (userSettings.enableEpicenterEstimate) {
+                calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
+                if (calculatedEpicenter && yureEpicenterMarker) {
+                    yureEpicenterMarker.setLatLng([calculatedEpicenter.lat, calculatedEpicenter.lng]);
+                }
             }
         }
         
@@ -1720,7 +1801,7 @@ function processYureDetection(intens) {
             clearYureDetection();
             isRealtimeOnlyMode = false;
             document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active');
-            refreshMapDisplay(); // 終了時にマーカー等再描画
+            refreshMapDisplay();
         } else {
             if (currentHighPoints.length >= 4 && now - yureBeepInterval > 1000) {
                  playYureBeep(); yureBeepInterval = now;
@@ -2155,14 +2236,67 @@ function convertAxisEewToWolfx(msg) {
 }
 
 
-(async()=>{
-    await loadSites(); await initLeaflet();
-    setInterval(async()=>{ const d=await fetchKyoshin(); if(d) drawKyoshin(d); }, 1000);
-    loadQuakes(); 
-    connectP2P();
-    connectWolfx();
-    connectAxis();
-})();
+/* ================= アプリケーション初期化ロジック ================= */
+function updateStartupStatus(msg) {
+    const el = document.getElementById("startupStatus");
+    if (el) el.innerText = msg;
+}
+
+function showStartupReady() {
+    document.querySelector(".loader").style.display = "none";
+    document.getElementById("startupStatus").style.display = "none";
+    document.getElementById("startupReady").style.display = "block";
+}
+
+async function startApp() {
+    try {
+        updateStartupStatus("観測点データ読み込み中...");
+        await loadSites();
+        
+        updateStartupStatus("地図データ読み込み中...");
+        await initLeaflet();
+        
+        updateStartupStatus("地震情報取得中...");
+        await loadQuakes();
+        
+        connectP2P();
+        connectWolfx();
+        connectAxis();
+        
+        updateStartupStatus("リアルタイムデータ取得中...");
+        const d = await fetchKyoshin();
+        if(d) drawKyoshin(d);
+        
+        setInterval(async()=>{ const res=await fetchKyoshin(); if(res) drawKyoshin(res); }, 1000);
+        
+        showStartupReady();
+    } catch(e) {
+        console.error(e);
+        updateStartupStatus("初期化エラーが発生しました: " + e.message);
+        showStartupReady(); // エラー時でも強制起動を許可
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    startApp();
+    
+    document.getElementById("btnStart").addEventListener("click", () => {
+        document.getElementById("startupScreen").style.display = "none";
+        initAudio(); // ユーザーのアクションでAudioContextを安全に初期化
+    });
+    
+    document.getElementById("btnSiyou").addEventListener("click", () => {
+        const modal = document.getElementById("siyouModal");
+        document.getElementById("siyouIframe").src = "siyou.html";
+        modal.style.display = "flex";
+    });
+    
+    document.getElementById("btnCloseSiyou").addEventListener("click", () => {
+        document.getElementById("siyouModal").style.display = "none";
+        document.getElementById("siyouIframe").src = "";
+    });
+});
+
 </script>
 </body>
 </html>
