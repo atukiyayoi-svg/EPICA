@@ -897,10 +897,11 @@ async function applyNankaiMockData() {
 
     if (prefData && prefData.features) {
         const scaleStrToNum = { "0":0, "1":10, "2":20, "3":30, "4":40, "5弱":45, "5強":50, "6弱":55, "6強":60, "7":70 };
-        const promises = prefData.features.map(async f => {
-            const prefName = f.properties.name || f.properties.nam_ja; const coords = f.geometry.coordinates[0][0];
-            const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
-            const rawShindo = await calcPredictedIntensity(mag, depth, eLat, eLng, pLat, pLng, prefName);
+        const promises = prefData.features.map(async (f, idx) => {
+            const prefName = f.properties.name || f.properties.nam_ja || f.properties.code; 
+            const pt = getPolygonPoint(f);
+            const featureId = f.id || prefName || `feat_${idx}`;
+            const rawShindo = await calcPredictedIntensity(mag, depth, eLat, eLng, pt.lat, pt.lng, prefName, 0, featureId);
             if (rawShindo !== "0") return { pref: prefName, addr: prefName, scale: scaleStrToNum[rawShindo] || 0 };
             return null;
         });
@@ -924,6 +925,12 @@ async function applyNankaiMockData() {
         latest.innerHTML=`<div class="latestWrap"><div class="latestScale" style="background:${scBg};color:${getContrastColor(scBg)};font-size:58px">${s0}</div><div class="latestLeft"><div class="latestTitle">${e0.hypocenter.name}</div><div class="latestSub">${e0.time.slice(5, 16).replace("-", "/")} 発生</div><div><span class="tag" style="background:${mc0}; color:${getContrastColor(mc0)}">M${e0.hypocenter.magnitude.toFixed(1)}</span><span class="tag" style="background:${dc0}; color:${getContrastColor(dc0)}">${fmt.depth(e0.hypocenter.depth)}</span></div></div></div>`;
     }
     
+    // デバッグ完了時は確実に通常モードへリセットし、マーカーが見えるようにする
+    clearYureDetection();
+    isRealtimeOnlyMode = false;
+    document.getElementById('btnNormalMode').classList.add('active'); 
+    document.getElementById('btnRealtimeMode').classList.remove('active');
+
     window.currentEarthquakeData = mockEarthquake.earthquake; window.currentEarthquakePoints = mockEarthquake.points; window.currentEarthquakeIssue = mockEarthquake.issue; selectedHistoryQuake = null;
     updateLeafletMap(mockEarthquake.earthquake, mockEarthquake.points, mockEarthquake.issue);
     currentQuakeList = mockList.filter(x => x.code === 551 && x.earthquake.maxScale !== -1 && x.earthquake.maxScale !== "-1").slice(0, 6); renderHistoryPanel();
@@ -982,26 +989,58 @@ class Formatter {
 }
 const fmt = new Formatter();
 
-/* ================= J-SHIS API 連携機能 ================= */
-async function fetchARVFromJSHIS(lat, lon) {
+/* ================= ジオメトリ共通処理 ================= */
+function getPolygonPoint(f) {
+    let geom = f.geometry;
+    if (!geom || !geom.coordinates) return {lat: 0, lng: 0};
+    let c = geom.coordinates;
+    while(Array.isArray(c[0]) && Array.isArray(c[0][0])) {
+        c = c[0];
+    }
+    let pt = Array.isArray(c[0]) ? c[0] : c;
+    return { lat: pt[1], lng: pt[0] };
+}
+
+/* ================= J-SHIS API 連携機能 (最適化・キャッシュ付き) ================= */
+const arvCache = new Map();
+async function fetchARVFromJSHIS(lat, lon, cacheKey) {
+    if (cacheKey && arvCache.has(cacheKey)) return arvCache.get(cacheKey);
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 800); // フリーズ防止のための短時間タイムアウト
         const url = `https://www.j-shis.bosai.go.jp/map/api/sstrct/V4/meshinfo.geojson?position=${lon},${lat}&epsg=4326`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`APIリクエスト失敗: ${response.status}`);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error();
         const data = await response.json();
         if (data && data.features && data.features.length > 0) {
-            const arv = data.features[0].properties.ARV;
-            if (arv !== undefined && arv !== null) return parseFloat(arv);
+            const arv = parseFloat(data.features[0].properties.ARV);
+            if (!isNaN(arv)) {
+                if (cacheKey) arvCache.set(cacheKey, arv);
+                return arv;
+            }
         }
-    } catch (e) {} return null;
+    } catch (e) {} 
+    if (cacheKey) arvCache.set(cacheKey, null);
+    return null;
 }
 
 /* ================= 高精度予測震度計算 ================= */
-async function calcPredictedIntensityRaw(mag, depth, eLat, eLng, pLat, pLng, prefName) {
+async function calcPredictedIntensityRaw(mag, depth, eLat, eLng, pLat, pLng, prefName, featureId = null) {
     const d = getDistance(eLat, eLng, pLat, pLng); const X = Math.sqrt(Math.pow(d, 2) + Math.pow(depth, 2)); 
     const logPGV600 = 0.58 * mag + 0.0038 * depth - 1.29 - Math.log10(X + 0.0028 * Math.pow(10, 0.50 * mag)) - 0.002 * X;
-    const pgv600 = Math.pow(10, logPGV600); let amp = await fetchARVFromJSHIS(pLat, pLng);
-    if (!amp) amp = PREF_ARV[prefName] || 1.8;
+    const pgv600 = Math.pow(10, logPGV600); 
+    
+    let amp = await fetchARVFromJSHIS(pLat, pLng, featureId);
+    if (!amp) {
+        let fallback = 1.8;
+        if (prefName) {
+            for (let key in PREF_ARV) {
+                if (prefName.includes(key)) { fallback = PREF_ARV[key]; break; }
+            }
+        }
+        amp = fallback;
+    }
     const pgv = pgv600 * amp; return 2.68 + 1.72 * Math.log10(pgv);
 }
 function instrumentalToScale(intensity) {
@@ -1009,8 +1048,8 @@ function instrumentalToScale(intensity) {
     if (intensity < 3.5) return "3"; if (intensity < 4.5) return "4"; if (intensity < 5.0) return "5弱";
     if (intensity < 5.5) return "5強"; if (intensity < 6.0) return "6弱"; if (intensity < 6.5) return "6強"; return "7";
 }
-async function calcPredictedIntensity(mag, depth, eLat, eLng, pLat, pLng, prefName, offset = 0) {
-    const raw = await calcPredictedIntensityRaw(mag, depth, eLat, eLng, pLat, pLng, prefName); return instrumentalToScale(raw + offset);
+async function calcPredictedIntensity(mag, depth, eLat, eLng, pLat, pLng, prefName, offset = 0, featureId = null) {
+    const raw = await calcPredictedIntensityRaw(mag, depth, eLat, eLng, pLat, pLng, prefName, featureId); return instrumentalToScale(raw + offset);
 }
 function limitIntensity(calcS, maxS) {
     const cNum = fmt.intensityToNum(calcS); const mNum = fmt.intensityToNum(maxS); return cNum > mNum ? String(maxS) : String(calcS);
@@ -1038,16 +1077,16 @@ async function calculateEewOffset(eew) {
     if (!eew.isSea || !eew.MaxIntensity) return 0;
     const eLat = parseFloat(eew.Latitude), eLng = parseFloat(eew.Longitude), mag = parseFloat(eew.Magunitude), depth = parseInt(eew.Depth);
     if (isNaN(eLat) || isNaN(eLng)) return 0;
-    let minDist = Infinity, nLat = eLat, nLng = eLng, nearestPrefName = "";
+    let minDist = Infinity, nLat = eLat, nLng = eLng, nearestPrefName = "", nearestId = null;
     if (prefData && prefData.features) {
-        prefData.features.forEach(f => {
-            const prefName = f.properties.name || f.properties.nam_ja; const coords = f.geometry.coordinates[0][0];
-            const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
-            const d = getDistance(eLat, eLng, pLat, pLng);
-            if (d < minDist) { minDist = d; nLat = pLat; nLng = pLng; nearestPrefName = prefName; }
+        prefData.features.forEach((f, idx) => {
+            const prefName = f.properties.name || f.properties.nam_ja || f.properties.code; 
+            const pt = getPolygonPoint(f);
+            const d = getDistance(eLat, eLng, pt.lat, pt.lng);
+            if (d < minDist) { minDist = d; nLat = pt.lat; nLng = pt.lng; nearestPrefName = prefName; nearestId = f.id || prefName || `feat_${idx}`; }
         });
     }
-    const maxRaw = await calcPredictedIntensityRaw(mag, depth, eLat, eLng, nLat, nLng, nearestPrefName);
+    const maxRaw = await calcPredictedIntensityRaw(mag, depth, eLat, eLng, nLat, nLng, nearestPrefName, nearestId);
     const targetRaw = getMinInstrumental(eew.MaxIntensity);
     if (targetRaw > maxRaw) return targetRaw - maxRaw; return 0;
 }
@@ -1142,7 +1181,6 @@ function drawWaves() {
 
 async function initLeaflet() {
     try {
-        // 都道府県境界ではなく細分区域(saibun.geojson)を使用
         const res = await fetch("saibun.geojson"); prefData = await res.json();
         geojsonLayer = L.geoJSON(prefData, { style: () => ({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "#222", fillOpacity: 0.5 }) }).addTo(lMap);
     } catch(e) { console.error("saibun.geojson load error", e); }
@@ -1183,21 +1221,22 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
         
         points.forEach(p => { 
             let areaName = p.isArea ? p.addr : null;
-            // 観測点(isArea: false)の場合、JMAstationsから該当する細分区域名を引く
             if (!p.isArea && typeof JMAPoints !== 'undefined' && window.jmaStationsJson) {
                 let idx = JMAPoints.indexOf(p.addr);
                 if (idx !== -1 && window.jmaStationsJson[idx].area) {
                     areaName = window.jmaStationsJson[idx].area.name;
                 }
             }
-            if(!areaName) areaName = p.addr; // フォールバック
+            if(!areaName) areaName = p.addr;
 
             if(!areaMax[areaName] || p.scale > areaMax[areaName]) {
                 areaMax[areaName] = p.scale;
             }
 
-            // 観測点描画（設定でONの場合のみ）
-            if (userSettings.showObsPoints && !p.isArea && typeof JMAPoints !== 'undefined' && window.jmaStationsJson) {
+            // --- 観測点描画の非表示条件(揺れ検知時・EEW中・リアルタイム揺れモード中) ---
+            let hideObs = isYureDetecting || isEEWActive || (isRealtimeOnlyMode && !selectedHistoryQuake);
+            
+            if (userSettings.showObsPoints && !hideObs && !p.isArea && typeof JMAPoints !== 'undefined' && window.jmaStationsJson) {
                 let idx = JMAPoints.indexOf(p.addr);
                 if (idx !== -1) {
                     let stLat = window.jmaStationsJson[idx].lat;
@@ -1215,7 +1254,6 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
             }
         });
 
-        // 震度速報(ScalePrompt)や詳細情報による細分区域の塗りつぶし・バウンダリ拡張
         geojsonLayer.eachLayer(layer => {
             const name = layer.feature.properties.name || layer.feature.properties.nam_ja || layer.feature.properties.code;
             const scale = areaMax[name];
@@ -1271,6 +1309,7 @@ function clearEEWDisplay(eventId = null) {
                 let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake);
                 latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
             }
+            refreshMapDisplay(); // 終了時にマーカー等再描画
         } else {
             let hasWarn = Array.from(activeEEWs.values()).some(e => e.isWarn);
             const popup = document.getElementById("eewPopup");
@@ -1291,6 +1330,7 @@ function clearEEWDisplay(eventId = null) {
             let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake);
             latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
         }
+        refreshMapDisplay();
     }
 }
 
@@ -1321,11 +1361,13 @@ async function updateWolfxEEW(data) {
 
     isEEWActive = true; 
     if (latestQuakeMarker) latestQuakeMarker.setOpacity(0);
-    
+    if(obsLayer) obsLayer.clearLayers(); // EEW開始時に観測点を非表示
     if(isYureDetecting) clearYureDetection(); 
 
-    activeEEWs.set(id, data); const offset = await calculateEewOffset(data); eewOffsets.set(id, offset); updateLPGMDisplay(data.Magunitude, data.Depth);
-    if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
+    // --- UI 即時反映 (API待機によるフリーズ回避) ---
+    activeEEWs.set(id, data); 
+    updateLPGMDisplay(data.Magunitude, data.Depth);
+
     let card = document.getElementById(id); if (!card && container) { card = document.createElement("div"); card.id = id; container.prepend(card); }
     if(card) {
         card.classList.add("active"); const isWarn = data.isWarn; card.className = "eewCard active" + (isWarn ? " warning" : "");
@@ -1334,53 +1376,65 @@ async function updateWolfxEEW(data) {
         let tagsHTML = ""; if (data.isTraining) tagsHTML += `<span class="tag" style="background:#800080; color:#fff;">訓練報</span>`; if (data.isAssumption) tagsHTML += `<span class="tag" style="background:#000080; color:#fff;">PLUM法</span>`;
         card.innerHTML = `<div class="eewHeader"><span style="display:flex; align-items:center;">${tagsHTML}${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報</span><span>${data.AnnouncedTime.slice(11,19)}</span></div><div class="eewBody"><div class="eewScaleBox" style="color:${scCol}; border-color:${scCol}; font-size:${eewFontSize};">${maxShindoStr}</div><div class="eewInfoBox"><div class="eewEpicenter">${data.Hypocenter}</div><div class="eewSubInfo"><span>M${data.Magunitude}</span><span>${fmt.depth(data.Depth)}</span></div></div></div>${data.WarnArea?.Chiiki ? `<div class="eewAreas">【予測地域】<br>${data.WarnArea.Chiiki}</div>` : ''}`;
     }
+    
     const popup = document.getElementById("eewPopup");
     if(popup) { let hasWarnAny = Array.from(activeEEWs.values()).some(e => e.isWarn); popup.innerText = hasWarnAny ? (activeEEWs.size > 1 ? "複数の緊急地震速報 (警報)" : "緊急地震速報 (警報)") : (activeEEWs.size > 1 ? "複数の緊急地震速報 (予報)" : "緊急地震速報 (予報)"); popup.style.display = "block"; }
     
     const eLat = parseFloat(data.Latitude), eLng = parseFloat(data.Longitude);
     if (eLat && eLng) {
-        let bounds = L.latLngBounds([eLat, eLng], [eLat, eLng]); let hasWarnArea = false;
         if (epicenterMarkers.has(id)) { epicenterMarkers.get(id).setLatLng([eLat, eLng]); } else { const m = L.marker([eLat, eLng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[60,60], iconAnchor:[30,30]}) }).addTo(lMap); epicenterMarkers.set(id, m); }
-        
-        if (geojsonLayer) {
-            // ユーザー設定により震度予測をONにしている場合のみ計算と塗りつぶしを行う
-            if (userSettings.eewPrediction) {
-                const updateStyles = prefData.features.map(async f => {
-                    const prefName = f.properties.name || f.properties.nam_ja || f.properties.code; const coords = f.geometry.coordinates[0][0]; 
-                    const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
-                    let maxShindoNum = 0, maxShindoStrResult = "0";
-                    for (let [eewId, eew] of activeEEWs.entries()) {
-                        const eewLat = parseFloat(eew.Latitude), eewLng = parseFloat(eew.Longitude), eewMag = parseFloat(eew.Magunitude), eewDepth = parseInt(eew.Depth), eewMaxStr = eew.MaxIntensity || "0";
-                        if(eewLat && eewLng) {
-                            const currentOffset = eewOffsets.get(eewId) || 0;
-                            const rawShindo = await calcPredictedIntensity(eewMag, eewDepth, eewLat, eewLng, pLat, pLng, prefName, currentOffset);
-                            const limitedShindo = limitIntensity(rawShindo, eewMaxStr); const num = fmt.intensityToNum(limitedShindo);
-                            if (num > maxShindoNum) { maxShindoNum = num; maxShindoStrResult = limitedShindo; }
-                        }
-                    }
-                    return { id: f.id || prefName, shindo: maxShindoStrResult };
-                });
-                const results = await Promise.all(updateStyles);
-                geojsonLayer.eachLayer(layer => {
-                    const prefName = layer.feature.properties.name || layer.feature.properties.nam_ja || layer.feature.properties.code; const res = results.find(r => r.id === (layer.feature.id || prefName));
-                    if (res && fmt.intensityToNum(res.shindo) >= 1) { bounds.extend(layer.getBounds()); hasWarnArea = true; }
-                });
-                geojsonLayer.setStyle(f => {
-                    const prefName = f.properties.name || f.properties.nam_ja || f.properties.code; const res = results.find(r => r.id === (f.id || prefName));
-                    return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: scaleColor(res ? res.shindo : "0"), fillOpacity: 0.7 };
-                });
-            } else {
-                // 震度予測OFF時は色を消す
-                geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
-            }
-        }
-
-        if (activeEEWs.size === 1) { 
-            if (hasWarnArea && userSettings.eewPrediction) lMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 8, duration: 1.5 }); 
-            else lMap.flyTo([eLat, eLng], 8, { duration: 1.5 }); 
-        }
         if (!eewWaveTimer) drawWaves();
     }
+
+    // --- 非同期処理群 (APIリクエスト等) ---
+    calculateEewOffset(data).then(async offset => {
+        eewOffsets.set(id, offset);
+        if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
+
+        if (eLat && eLng) {
+            let bounds = L.latLngBounds([eLat, eLng], [eLat, eLng]); let hasWarnArea = false;
+            
+            if (geojsonLayer) {
+                if (userSettings.eewPrediction && prefData && prefData.features) {
+                    const updateStyles = await Promise.all(prefData.features.map(async (f, idx) => {
+                        const prefName = f.properties.name || f.properties.nam_ja || f.properties.code; 
+                        const pt = getPolygonPoint(f);
+                        const featureId = f.id || prefName || `feat_${idx}`;
+                        f.properties._tempFeatureId = featureId;
+
+                        let maxShindoNum = 0, maxShindoStrResult = "0";
+                        for (let [eewId, eew] of activeEEWs.entries()) {
+                            const eewLat = parseFloat(eew.Latitude), eewLng = parseFloat(eew.Longitude), eewMag = parseFloat(eew.Magunitude), eewDepth = parseInt(eew.Depth), eewMaxStr = eew.MaxIntensity || "0";
+                            if(eewLat && eewLng) {
+                                const currentOffset = eewOffsets.get(eewId) || 0;
+                                const rawShindo = await calcPredictedIntensity(eewMag, eewDepth, eewLat, eewLng, pt.lat, pt.lng, prefName, currentOffset, featureId);
+                                const limitedShindo = limitIntensity(rawShindo, eewMaxStr); const num = fmt.intensityToNum(limitedShindo);
+                                if (num > maxShindoNum) { maxShindoNum = num; maxShindoStrResult = limitedShindo; }
+                            }
+                        }
+                        return { id: featureId, shindo: maxShindoStrResult };
+                    }));
+                    
+                    geojsonLayer.eachLayer(layer => {
+                        const res = updateStyles.find(r => r.id === layer.feature.properties._tempFeatureId);
+                        if (res && fmt.intensityToNum(res.shindo) >= 1) { bounds.extend(layer.getBounds()); hasWarnArea = true; }
+                    });
+                    geojsonLayer.setStyle(f => {
+                        const res = updateStyles.find(r => r.id === f.properties._tempFeatureId);
+                        return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: scaleColor(res ? res.shindo : "0"), fillOpacity: 0.7 };
+                    });
+                } else {
+                    geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
+                }
+            }
+
+            if (activeEEWs.size === 1) { 
+                if (hasWarnArea && userSettings.eewPrediction) lMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 8, duration: 1.5 }); 
+                else lMap.flyTo([eLat, eLng], 8, { duration: 1.5 }); 
+            }
+        }
+    });
+
     if (data.isFinal && !isDebugNankai) {
         if (eewPollTimers.has(id)) clearInterval(eewPollTimers.get(id));
         let pollCount = 0;
@@ -1637,6 +1691,7 @@ function processYureDetection(intens) {
         if (currentHighPoints.length >= 4) {
             isYureDetecting = true; isRealtimeOnlyMode = true;
             document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active');
+            if(obsLayer) obsLayer.clearLayers(); // 揺れ検知開始時にマーカーを隠す
             lastYureDetectTime = now;
             
             calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
@@ -1665,7 +1720,7 @@ function processYureDetection(intens) {
             clearYureDetection();
             isRealtimeOnlyMode = false;
             document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active');
-            refreshMapDisplay();
+            refreshMapDisplay(); // 終了時にマーカー等再描画
         } else {
             if (currentHighPoints.length >= 4 && now - yureBeepInterval > 1000) {
                  playYureBeep(); yureBeepInterval = now;
