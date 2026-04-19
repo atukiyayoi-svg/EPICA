@@ -542,7 +542,8 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
-let userSettings = {
+// デフォルト設定
+const defaultSettings = {
     eewPrediction: false,
     showObsPoints: false,
     eewSource: 'wolfx',
@@ -558,6 +559,20 @@ let userSettings = {
     volWarning: 0.5,
     volBgm: 0.3
 };
+
+// ローカルストレージから設定を読み込む、なければデフォルト
+let userSettings = { ...defaultSettings };
+try {
+    const saved = localStorage.getItem('epicaUserSettings');
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        userSettings = { ...defaultSettings, ...parsed };
+    }
+} catch(e) { console.warn("Failed to load settings", e); }
+
+function saveSettings() {
+    localStorage.setItem('epicaUserSettings', JSON.stringify(userSettings));
+}
 
 // AXIS情報保持用
 const axisHistory = { weather: [], volcano: [], news: [] };
@@ -589,7 +604,7 @@ function updateSeVolumes() {
     seWarning.volume = userSettings.volWarning;
 }
 
-// 設定UI制御
+// 設定UI制御と同期
 document.getElementById('btnSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'block';
 });
@@ -601,17 +616,20 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => {
 document.getElementById('chkEewPrediction').checked = userSettings.eewPrediction;
 document.getElementById('chkEewPrediction').addEventListener('change', (e) => {
     userSettings.eewPrediction = e.target.checked;
+    saveSettings();
 });
 
 document.getElementById('chkShowObsPoints').checked = userSettings.showObsPoints;
 document.getElementById('chkShowObsPoints').addEventListener('change', (e) => {
     userSettings.showObsPoints = e.target.checked;
+    saveSettings();
     refreshMapDisplay();
 });
 
 document.getElementById('selEewSource').value = userSettings.eewSource;
 document.getElementById('selEewSource').addEventListener('change', (e) => {
     userSettings.eewSource = e.target.value;
+    saveSettings();
 });
 
 const settingKeys = [
@@ -622,10 +640,16 @@ settingKeys.forEach(key => {
     const slider = document.getElementById(key + 'Slider');
     const valDisp = document.getElementById(key + 'Val');
     if (slider && valDisp) {
+        // ロード時にUIへ反映
+        const mappedKey = key === 'vol' ? 'volume' : key;
+        slider.value = userSettings[mappedKey];
+        valDisp.innerText = userSettings[mappedKey];
+        
         slider.addEventListener('input', (e) => {
             valDisp.innerText = e.target.value;
-            userSettings[key === 'vol' ? 'volume' : key] = parseFloat(e.target.value);
+            userSettings[mappedKey] = parseFloat(e.target.value);
             updateSeVolumes();
+            saveSettings();
         });
     }
 });
@@ -803,7 +827,11 @@ function processSpeechQueue() {
     let text = speechQueue.shift();
     text = text.replace(/km/g, "キロメートル").replace(/m/g, "メートル");
     const uttr = new SpeechSynthesisUtterance(text);
-    uttr.lang = "ja-JP"; uttr.volume = userSettings.volume; uttr.rate = userSettings.speechRate; uttr.pitch = userSettings.speechPitch;
+    uttr.lang = "ja-JP"; 
+    // 発話音量を可能な限り最大化するよう調整（設定音量に依存させるが基本最大）
+    uttr.volume = Math.min(1, userSettings.volume * 1.5); 
+    uttr.rate = userSettings.speechRate; 
+    uttr.pitch = userSettings.speechPitch;
     uttr.onend = () => { isSpeaking = false; processSpeechQueue(); };
     uttr.onerror = () => { isSpeaking = false; processSpeechQueue(); };
     isSpeaking = true; speechSynthesis.speak(uttr);
@@ -1006,12 +1034,30 @@ let eewPollTimers = new Map(); let eewTimeoutTimers = new Map(); let eewOffsets 
 
 const MAP_BORDER_COLOR = "rgba(255,255,255,0.3)"; const MAP_BORDER_WEIGHT = 1.0;
 
+// Yahoo独自21段階震度(0〜20)をNIED強震モニタ(-3〜7)にマッピングするためのカラーテーブル
+// NIEDカラーマップに準拠。0が-3.0、20が7.0相当
 const KYOSHIN_COLORS = [
-    "#000033", "#000066", "#000099", "#0000cc", "#0000ff", 
-    "#0066ff", "#00ccff", "#00ffff", "#66ffcc", "#99ff99", 
-    "#ccff66", "#ffff00", "#ffcc00", "#ff9900", "#ff6600", 
-    "#ff3300", "#ff0000", "#cc0000", "#990000", "#660000", 
-    "#800080", "#cc00cc", "#ff00ff", "#990099", "#660066"  
+    "#000033", // 0: -3.0
+    "#000066", // 1: -2.5
+    "#000099", // 2: -2.0
+    "#0000cc", // 3: -1.5
+    "#0000ff", // 4: -1.0
+    "#0066ff", // 5: -0.5
+    "#00ccff", // 6: 0.0
+    "#00ffff", // 7: 0.5
+    "#66ffcc", // 8: 1.0
+    "#99ff99", // 9: 1.5
+    "#ccff66", // 10: 2.0
+    "#ffff00", // 11: 2.5
+    "#ffcc00", // 12: 3.0
+    "#ff9900", // 13: 3.5
+    "#ff6600", // 14: 4.0
+    "#ff3300", // 15: 4.5
+    "#ff0000", // 16: 5.0
+    "#cc0000", // 17: 5.5
+    "#990000", // 18: 6.0
+    "#660000", // 19: 6.5
+    "#800080"  // 20: 7.0
 ];
 
 const PREF_ARV = { "北海道": 1.6, "青森県": 1.8, "岩手県": 1.4, "宮城県": 2.0, "秋田県": 1.9, "山形県": 1.8, "福島県": 1.8, "茨城県": 2.1, "栃木県": 1.7, "群馬県": 1.6, "埼玉県": 2.4, "千葉県": 2.3, "東京都": 2.2, "神奈川県": 2.1, "新潟県": 2.2, "富山県": 1.8, "石川県": 1.9, "福井県": 1.8, "山梨県": 1.4, "長野県": 1.5, "岐阜県": 1.8, "静岡県": 1.9, "愛知県": 2.2, "三重県": 2.0, "滋賀県": 1.8, "京都府": 1.7, "大阪府": 2.4, "兵庫県": 2.1, "奈良県": 1.8, "和歌山県": 1.6, "鳥取県": 1.7, "島根県": 1.5, "岡山県": 1.9, "広島県": 1.6, "山口県": 1.6, "徳島県": 1.8, "香川県": 1.9, "愛媛県": 1.7, "高知県": 1.8, "福岡県": 1.9, "佐賀県": 2.2, "長崎県": 1.5, "熊本県": 1.8, "大分県": 1.7, "宮崎県": 1.8, "鹿児島県": 1.7, "沖縄県": 1.6 };
@@ -1615,11 +1661,21 @@ function renderKyoshinCanvas(d) {
     const zoom = lMap.getZoom(); const baseRadius = Math.max(0.8, Math.pow(zoom, 2) * 0.08);
     for(let i=0; i<sites.length; i++){
         if(intens[i] === undefined || intens[i] === null) continue;
-        const rawIntensity = intens[i];
-        let code = isDebugNankai ? rawIntensity + 100 : String(rawIntensity).charCodeAt(0);
-        if (isNaN(code)) continue;
         
-        let lv = Math.max(0, code - 100);
+        let lv = 0;
+        if (isDebugNankai) {
+            lv = Math.max(0, intens[i]);
+        } else {
+            // 文字コードからYahoo独自の0〜20の震度インデックスを取得
+            const charCode = intens[i].charCodeAt(0);
+            const intensityIndex = charCode - 100;
+            
+            if (intensityIndex < 0 || intensityIndex > 20) continue;
+            
+            // KYOSHIN_COLORS (NIED準拠: -3〜7) にマッピング
+            lv = intensityIndex; 
+        }
+
         const colorIdx = Math.floor(Math.min(Math.max(0, lv), KYOSHIN_COLORS.length - 1)) || 0;
         const colorStr = KYOSHIN_COLORS[colorIdx];
         if(!colorStr) continue;
@@ -1627,7 +1683,11 @@ function renderKyoshinCanvas(d) {
         let alpha = 1.0;
         if (!isEEWActive) {
             if (isRealtimeOnlyMode) alpha = 1.0;
-            else { alpha = Math.max(0.05, Math.min(1.0, lv / 8)); if (alpha < 0.1) continue; }
+            else { 
+                // 非EEW時は小さい揺れ(lv<8 つまり震度1.0未満)を透過させる
+                alpha = Math.max(0.05, Math.min(1.0, lv / 8)); 
+                if (alpha < 0.1) continue; 
+            }
         }
         const pt = lMap.latLngToContainerPoint([sites[i].lat, sites[i].lng]);
         if (pt.x < -baseRadius || pt.x > kyoshinCanvas.width + baseRadius || pt.y < -baseRadius || pt.y > kyoshinCanvas.height + baseRadius) continue;
@@ -1768,17 +1828,48 @@ async function loadQuakes(){
             lastEqTime = latestEQ.earthquake.time;
             if (!isInitialLoad) {
                 playUpdateApi = true;
+                
+                // 発生時刻の差分計算
+                const eqTimeStr = latestEQ.earthquake.time.replace(/\//g, "-").replace(" ", "T");
+                const eqDate = new Date(eqTimeStr);
+                const now = new Date();
+                const diffMs = now - eqDate;
+                const diffMin = Math.floor(diffMs / 60000);
+                const timePrefix = diffMin > 0 ? `先ほど、${diffMin}分前に発生した` : `先ほど発生した`;
+
                 const s = fmt.shindo(latestEQ.earthquake.maxScale, latestEQ.earthquake.hypocenter.depth);
                 const depth = latestEQ.earthquake.hypocenter.depth;
-                const depthStr = depth === 0 ? "ごく浅い" : (depth === -1 ? "不明" : depth + "キロ");
+                const depthStr = depth === 0 ? "ごく浅い" : (depth === -1 ? "不明" : depth + "キロメートル");
+                const mag = latestEQ.earthquake.hypocenter.magnitude;
+                const eqName = latestEQ.earthquake.hypocenter.name || "不明";
                 
                 let speechText = "";
+                
                 if (latestEQ.issue.type === "ScalePrompt") {
-                    speechText = `震度速報です。最大震度${s.replace("強", "きょう").replace("弱", "じゃく")}を観測する地震がありました。今後の情報に注意してください。`;
+                    speechText = `震度速報です。最大震度${s.replace("強", "きょう").replace("弱", "じゃく")}の地震が発生しました。`;
+                    // 震度の大きい順に地域を読み上げ（上位3件程度まで）
+                    if (latestEQ.points && latestEQ.points.length > 0) {
+                        let sortedPoints = [...latestEQ.points].sort((a,b) => b.scale - a.scale).slice(0, 3);
+                        let pointsText = sortedPoints.map(p => `${p.addr}で震度${fmt.shindo(p.scale).replace("強","きょう").replace("弱","じゃく")}`).join("、");
+                        speechText += `${pointsText}などを観測しています。`;
+                    }
                 } else if (latestEQ.issue.type === "Destination") {
-                    speechText = `震源に関する情報です。震央は${latestEQ.earthquake.hypocenter.name}、マグニチュードは${latestEQ.earthquake.hypocenter.magnitude}、深さは${depthStr}、です。`;
+                    speechText = `先ほどの地震の震源位置が更新されました。震源地は、${eqName}。マグニチュードは、${mag}。深さは、${depthStr}、です。`;
                 } else {
-                    speechText = `${latestEQ.earthquake.hypocenter.name}で地震が発生。最大震度は${s.replace("強", "きょう").replace("弱", "じゃく")}。マグニチュードは${latestEQ.earthquake.hypocenter.magnitude}。深さは、${depthStr}、です。`;
+                    // 確定報
+                    speechText = `地震情報が更新されました。${timePrefix}地震情報の詳細です。震源地は、${eqName}。最大震度は、${s.replace("強", "きょう").replace("弱", "じゃく")}。マグニチュードは、${mag}で、深さは、${depthStr}、です。`;
+                    
+                    // 津波情報の読み上げ追加
+                    const dt = latestEQ.earthquake.domesticTsunami;
+                    if (dt === "None") {
+                        speechText += `この地震による津波の心配はありません。`;
+                    } else if (dt === "Checking") {
+                        speechText += `この地震による津波については、現在調査中です。`;
+                    } else if (dt === "NonEffective") {
+                        speechText += `若干の海面変動が予想されますが、被害の心配はありません。`;
+                    } else if (dt === "Watch" || dt === "Warning" || dt === "MajorWarning") {
+                        speechText += `津波警報、または注意報が発表されています。海岸から離れてください。`;
+                    }
                 }
                 speakText(speechText);
             }
@@ -1859,7 +1950,15 @@ function connectP2P() {
     p2p.onmessage = e => { 
         if(isDebugNankai) return; 
         const d = JSON.parse(e.data); 
-        if(d.code===551||d.code===552) { addLog(`P2P WS 受信: Code ${d.code}`); if(d.code===551) clearEEWDisplay(); loadQuakes(); } 
+        if(d.code===551||d.code===552) { 
+            addLog(`P2P WS 受信: Code ${d.code}`); 
+            if(d.code===551) {
+                // EEW表示中でかつ、P2Pから情報(確定報など)が届いた場合はEEWを終了し地図描画などを戻す
+                if (isEEWActive) clearEEWDisplay(); 
+                loadQuakes(); 
+            }
+            if(d.code===552) loadQuakes();
+        } 
     };
     p2p.onopen = () => addLog("📡 P2Pquake Connected"); 
     p2p.onclose = () => { setTimeout(connectP2P, 5000); };
