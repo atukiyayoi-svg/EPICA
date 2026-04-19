@@ -207,15 +207,11 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 /* --- 地震情報ウィンドウ --- */
 #quakePanel { 
-    display: flex; 
-    flex-direction: column; 
-    max-height: 380px; 
-    overflow-y: auto; 
-    padding-right: 5px; 
+    display: flex; flex-direction: column; 
+    max-height: 500px; overflow-y: auto; 
 }
 #quakePanel::-webkit-scrollbar { width: 6px; }
-#quakePanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
-
+#quakePanel::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
 .qItem{display:flex;margin-bottom:8px;background:rgba(25,25,25,0.95); border:1px solid rgba(255,255,255,.3);border-radius:0;overflow:hidden;backdrop-filter:blur(5px); cursor:pointer; transition: all 0.2s;}
 .qItem:hover { background:rgba(50,50,50,0.95); }
 .qItem.selected { border: 2px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); transform: scale(1.02); margin-left: -5px; }
@@ -301,7 +297,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .setting-item label { font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; align-items: center; }
 .setting-item input[type=range] { width: 100%; cursor: pointer; }
 .setting-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
-.setting-item select { border-radius: 4px; outline: none; }
 .setting-value { font-size: 13px; color: #00ffcc; }
 
 @keyframes blink{from{opacity:0.5}to{opacity:1}}
@@ -360,7 +355,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div id="startupStatus">システム初期化中...</div>
         <div id="startupReady" style="display: none;">
             <div class="app-title">EPICA</div>
-            <div class="app-version">V4.1.0</div>
+            <div class="app-version">V4.2.0</div>
             <div class="btn-group">
                 <button id="btnStart" class="startup-btn">開始</button>
                 <button id="btnSiyou" class="startup-btn">仕様確認</button>
@@ -450,24 +445,20 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
     <div class="settingsBody">
         <div class="setting-group">
-            <div class="setting-group-title">緊急地震速報 (EEW) 受信設定</div>
-            <div class="setting-item">
-                <label>受信ソース (メイン)
-                    <select id="eewSourceSelect" style="background:#222; color:#fff; border:1px solid #555; padding:4px;">
-                        <option value="wolfx">Wolfx API (デフォルト)</option>
-                        <option value="axis">AXIS API</option>
-                    </select>
-                </label>
-            </div>
+            <div class="setting-group-title">拡張機能</div>
             <div class="setting-item">
                 <label>EEW受信時の震度予測マップ表示 <input type="checkbox" id="chkEewPrediction"></label>
             </div>
-        </div>
-
-        <div class="setting-group">
-            <div class="setting-group-title">拡張機能</div>
             <div class="setting-item">
                 <label>観測点アイコンの表示 <input type="checkbox" id="chkShowObsPoints"></label>
+            </div>
+            <div class="setting-item">
+                <label>EEW受信元
+                    <select id="selEewSource" style="background:#222; color:#fff; border:1px solid #555; padding:4px;">
+                        <option value="wolfx">Wolfx</option>
+                        <option value="axis">AXIS (要トークン接続)</option>
+                    </select>
+                </label>
             </div>
         </div>
 
@@ -540,9 +531,9 @@ window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
 let userSettings = {
-    eewSource: 'wolfx',
     eewPrediction: false,
     showObsPoints: false,
+    eewSource: 'wolfx',
     volume: 0.5,
     alarmPitch: 1500,
     speechPitch: 1.0,
@@ -595,14 +586,6 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => {
 });
 
 // 各種トグル制御
-const eewSelect = document.getElementById('eewSourceSelect');
-if (eewSelect) {
-    eewSelect.value = userSettings.eewSource;
-    eewSelect.addEventListener('change', (e) => {
-        userSettings.eewSource = e.target.value;
-    });
-}
-
 document.getElementById('chkEewPrediction').checked = userSettings.eewPrediction;
 document.getElementById('chkEewPrediction').addEventListener('change', (e) => {
     userSettings.eewPrediction = e.target.checked;
@@ -612,6 +595,11 @@ document.getElementById('chkShowObsPoints').checked = userSettings.showObsPoints
 document.getElementById('chkShowObsPoints').addEventListener('change', (e) => {
     userSettings.showObsPoints = e.target.checked;
     refreshMapDisplay();
+});
+
+document.getElementById('selEewSource').value = userSettings.eewSource;
+document.getElementById('selEewSource').addEventListener('change', (e) => {
+    userSettings.eewSource = e.target.value;
 });
 
 const settingKeys = [
@@ -751,7 +739,9 @@ async function generateDailySummary(todayStr, now) {
             textHtml = "本日は、震度1以上を観測する地震はありませんでした。";
             speechText += textHtml;
         } else {
-            textHtml = `本日は合計 <b style="color:#ff4500;font-size:16px;">${count}</b> 回の地震が観測されました。<br>最大震度は <b style="color:${scaleColor(maxScaleStr)};font-size:18px;background:#222;padding:0 4px;">${maxScaleStr}</b> (${maxScaleName}) でした。`;
+            const maxBg = scaleColor(maxScaleStr);
+            const maxColor = getContrastColor(maxBg);
+            textHtml = `本日は合計 <b style="color:#ff4500;font-size:16px;">${count}</b> 回の地震が観測されました。<br>最大震度は <b style="background:${maxBg};color:${maxColor};font-size:18px;padding:2px 6px;border-radius:4px;display:inline-block;">${maxScaleStr}</b> (${maxScaleName}) でした。`;
             speechText += `本日は合計、${count}回の地震が観測されました。最大震度は、${maxScaleStr.replace("強", "きょう").replace("弱", "じゃく")}、震央は、${maxScaleName}、でした。`;
         }
 
@@ -1211,8 +1201,7 @@ window.jmaStationsJson = null;
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex = 410; lMap.getPane('tsunamiPane').style.pointerEvents = 'none';
 lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex = 450; lMap.getPane('kyoshinPane').style.pointerEvents = 'none';
 lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex = 460; lMap.getPane('wavePane').style.pointerEvents = 'none';
-// 震源マーカー用の一番上のペイン
-lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex = 500; lMap.getPane('epicenterPane').style.pointerEvents = 'none';
+lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex = 650; lMap.getPane('epicenterPane').style.pointerEvents = 'none';
 
 const waveCanvas = document.createElement('canvas'); waveCanvas.style.pointerEvents = 'none'; waveCanvas.className = 'leaflet-zoom-animated';
 const WaveLayer = L.Layer.extend({
@@ -1277,16 +1266,11 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
         const {latitude: lat, longitude: lng} = earthquake.hypocenter;
         if (lat && lat !== -200 && (issue?.type !== "ScalePrompt")) {
             bounds = L.latLngBounds([lat, lng], [lat, lng]);
-            if (latestQuakeMarker) {
-                latestQuakeMarker.setLatLng([lat, lng]);
-                latestQuakeMarker.setZIndexOffset(10000);
-            } else {
-                latestQuakeMarker = L.marker([lat, lng], { 
-                    icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[50,50], iconAnchor:[25,25]}),
-                    pane: 'epicenterPane',
-                    zIndexOffset: 10000
-                }).addTo(lMap);
-            }
+            if (latestQuakeMarker) latestQuakeMarker.setLatLng([lat, lng]);
+            else latestQuakeMarker = L.marker([lat, lng], { 
+                icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[50,50], iconAnchor:[25,25]}),
+                pane: 'epicenterPane'
+            }).addTo(lMap);
             
             let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake) || isEEWActive;
             latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
@@ -1469,7 +1453,20 @@ async function updateWolfxEEW(data) {
         const maxShindoStr = data.MaxIntensity || "0"; const scCol = scaleColor(maxShindoStr);
         const eewFontSize = maxShindoStr.length > 1 ? (maxShindoStr === "不明" ? "24px" : "40px") : "48px";
         let tagsHTML = ""; if (data.isTraining) tagsHTML += `<span class="tag" style="background:#800080; color:#fff;">訓練報</span>`; if (data.isAssumption) tagsHTML += `<span class="tag" style="background:#000080; color:#fff;">PLUM法</span>`;
-        card.innerHTML = `<div class="eewHeader"><span style="display:flex; align-items:center;">${tagsHTML}${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報</span><span>${data.AnnouncedTime.slice(11,19)}</span></div><div class="eewBody"><div class="eewScaleBox" style="color:${scCol}; border-color:${scCol}; font-size:${eewFontSize};">${maxShindoStr}</div><div class="eewInfoBox"><div class="eewEpicenter">${data.Hypocenter}</div><div class="eewSubInfo"><span>M${data.Magunitude}</span><span>${fmt.depth(data.Depth)}</span></div></div></div>${data.WarnArea?.Chiiki ? `<div class="eewAreas">【予測地域】<br>${data.WarnArea.Chiiki}</div>` : ''}`;
+        
+        // ForecastArray の UI 表示
+        let areasHTML = "";
+        if (data.Forecast && data.Forecast.length > 0) {
+            let forecastList = data.Forecast.map(f => {
+                let toInt = f.Intensity?.To;
+                return toInt ? `${f.Name}(最大${toInt})` : f.Name;
+            }).join("、");
+            areasHTML = `<div class="eewAreas">【予測地域】<br>${forecastList}</div>`;
+        } else if (data.WarnArea?.Chiiki) {
+            areasHTML = `<div class="eewAreas">【予測地域】<br>${data.WarnArea.Chiiki}</div>`;
+        }
+
+        card.innerHTML = `<div class="eewHeader"><span style="display:flex; align-items:center;">${tagsHTML}${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報</span><span>${data.AnnouncedTime.slice(11,19)}</span></div><div class="eewBody"><div class="eewScaleBox" style="color:${scCol}; border-color:${scCol}; font-size:${eewFontSize};">${maxShindoStr}</div><div class="eewInfoBox"><div class="eewEpicenter">${data.Hypocenter}</div><div class="eewSubInfo"><span>M${data.Magunitude}</span><span>${fmt.depth(data.Depth)}</span></div></div></div>${areasHTML}`;
     }
     
     const popup = document.getElementById("eewPopup");
@@ -1478,20 +1475,18 @@ async function updateWolfxEEW(data) {
     const eLat = parseFloat(data.Latitude), eLng = parseFloat(data.Longitude);
     if (eLat && eLng) {
         if (epicenterMarkers.has(id)) { 
-            epicenterMarkers.get(id).setLatLng([eLat, eLng]);
-            epicenterMarkers.get(id).setZIndexOffset(10000);
+            epicenterMarkers.get(id).setLatLng([eLat, eLng]); 
         } else { 
             const m = L.marker([eLat, eLng], { 
                 icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[60,60], iconAnchor:[30,30]}),
-                pane: 'epicenterPane',
-                zIndexOffset: 10000
+                pane: 'epicenterPane'
             }).addTo(lMap); 
             epicenterMarkers.set(id, m); 
         }
         if (!eewWaveTimer) drawWaves();
     }
 
-    // --- 非同期処理群 ---
+    // --- 非同期処理群 (マップ予測・Forecast色付け) ---
     calculateEewOffset(data).then(async offset => {
         eewOffsets.set(id, offset);
         if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
@@ -1508,7 +1503,14 @@ async function updateWolfxEEW(data) {
                         f.properties._tempFeatureId = featureId;
 
                         let maxShindoNum = 0, maxShindoStrResult = "0";
+                        let isForecastTarget = false;
+
                         for (let [eewId, eew] of activeEEWs.entries()) {
+                            if (eew.Forecast) {
+                                if (eew.Forecast.some(fc => prefName === fc.Name || prefName.includes(fc.Name) || fc.Name.includes(prefName))) {
+                                    isForecastTarget = true;
+                                }
+                            }
                             const eewLat = parseFloat(eew.Latitude), eewLng = parseFloat(eew.Longitude), eewMag = parseFloat(eew.Magunitude), eewDepth = parseInt(eew.Depth), eewMaxStr = eew.MaxIntensity || "0";
                             if(eewLat && eewLng) {
                                 const currentOffset = eewOffsets.get(eewId) || 0;
@@ -1517,16 +1519,29 @@ async function updateWolfxEEW(data) {
                                 if (num > maxShindoNum) { maxShindoNum = num; maxShindoStrResult = limitedShindo; }
                             }
                         }
-                        return { id: featureId, shindo: maxShindoStrResult };
+
+                        // ForecastArrayに含まれる地域で予測が震度4未満なら震度4に補正
+                        if (isForecastTarget && maxShindoNum < 4) {
+                            maxShindoStrResult = "4";
+                            maxShindoNum = 4;
+                        }
+
+                        return { id: featureId, shindo: maxShindoStrResult, isForecastTarget: isForecastTarget };
                     }));
                     
                     geojsonLayer.eachLayer(layer => {
                         const res = updateStyles.find(r => r.id === layer.feature.properties._tempFeatureId);
                         if (res && fmt.intensityToNum(res.shindo) >= 1) { bounds.extend(layer.getBounds()); hasWarnArea = true; }
                     });
+                    
                     geojsonLayer.setStyle(f => {
                         const res = updateStyles.find(r => r.id === f.properties._tempFeatureId);
-                        return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: scaleColor(res ? res.shindo : "0"), fillOpacity: 0.7 };
+                        if (!res) return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 };
+                        let strokeColor = res.isForecastTarget ? "#ffff00" : MAP_BORDER_COLOR;
+                        let strokeWt = res.isForecastTarget ? 2.5 : MAP_BORDER_WEIGHT;
+                        let op = res.isForecastTarget ? 0.9 : 0.7;
+                        let fColor = scaleColor(res.shindo);
+                        return { color: strokeColor, weight: strokeWt, fillColor: fColor, fillOpacity: op };
                     });
                 } else {
                     geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
@@ -1689,7 +1704,7 @@ let isInitialLoad = true, lastEqTime = null, lastTsunamiIssueTime = null;
 async function loadQuakes(){
     if(isDebugNankai) return; 
     try {
-        const res=await fetch("https://api.p2pquake.net/v2/history?codes=551&codes=552&limit=30");
+        const res=await fetch("https://api.p2pquake.net/v2/history?codes=551&codes=552&limit=50");
         const fullList=await res.json(); if(!fullList?.length)return;
         window.latestFullQuakeList = fullList;
         
@@ -1792,9 +1807,8 @@ function connectWolfx() {
     const wolfx = new WebSocket("wss://ws-api.wolfx.jp/jma_eew");
     wolfx.onmessage = e => { 
         if(isDebugNankai) return; 
-        if(userSettings.eewSource !== 'wolfx') return;
         const d = JSON.parse(e.data); 
-        if(d.type==="jma_eew") updateWolfxEEW(d); 
+        if(d.type==="jma_eew" && userSettings.eewSource === 'wolfx') updateWolfxEEW(d); 
     };
     wolfx.onopen = () => { addLog("📡 Wolfx EEW Connected"); isWolfxConnected = true; };
     wolfx.onclose = () => { addLog("📡 Wolfx EEW Disconnected"); isWolfxConnected = false; setTimeout(connectWolfx, 5000); };
@@ -1912,10 +1926,8 @@ function handleAxisMessage(data) {
         renderAxisPanel("newsScrollArea", axisHistory.news);
     }
     else if (channel === 'eew') {
-        if (userSettings.eewSource === 'axis') {
-            const wolfxFormat = convertAxisEewToWolfx(msg);
-            if (wolfxFormat) updateWolfxEEW(wolfxFormat);
-        }
+        const wolfxFormat = convertAxisEewToWolfx(msg);
+        if (wolfxFormat && userSettings.eewSource === 'axis') updateWolfxEEW(wolfxFormat);
     }
 }
 
@@ -1944,11 +1956,27 @@ function convertAxisEewToWolfx(msg) {
     let depthNum = parseInt(depthStr.replace(/\D/g, '')) || 10;
     if (depthStr.includes("ごく浅い")) depthNum = 0;
 
+    const fixIntensity = (intStr) => {
+        if (!intStr) return "";
+        return intStr.replace("-", "弱").replace("+", "強").replace("over", "7");
+    };
+
     let chiiki = "";
-    if (msg.Forecast) chiiki = msg.Forecast.map(f => f.Name).join("、");
-    
-    let intensityStr = msg.Intensity || "0";
-    intensityStr = intensityStr.replace("-", "弱").replace("+", "強");
+    let forecastArray = [];
+    if (msg.Forecast) {
+        chiiki = msg.Forecast.map(f => f.Name).join("、");
+        forecastArray = msg.Forecast.map(f => ({
+            Code: f.Code,
+            Name: f.Name,
+            Intensity: {
+                From: fixIntensity(f.Intensity?.From),
+                To: fixIntensity(f.Intensity?.To),
+                Description: f.Intensity?.Description
+            }
+        }));
+    }
+
+    let maxInt = fixIntensity(msg.Intensity) || "0";
 
     return {
         "type": "jma_eew",
@@ -1968,9 +1996,10 @@ function convertAxisEewToWolfx(msg) {
         "Longitude": lng,
         "Magunitude": msg.Magnitude || "1.0",
         "Depth": String(depthNum),
-        "MaxIntensity": intensityStr,
+        "MaxIntensity": maxInt,
         "WarnArea": { "Chiiki": chiiki },
-        "OriginalText": msg.Text || ""
+        "OriginalText": msg.Text || "",
+        "Forecast": forecastArray
     };
 }
 
