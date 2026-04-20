@@ -1745,9 +1745,49 @@ let shakeDetectCooldown = null;
 let shakeDetectFirstSite = null; 
 let previousShakeDetectSites = new Map();
 
+function cancelShakeDetectImmediate() {
+    isShakeDetectActive = false;
+    shakeDetectFirstSite = null;
+    previousShakeDetectSites.clear(); 
+    if (shakeDetectCooldown) { clearTimeout(shakeDetectCooldown); shakeDetectCooldown = null; }
+    
+    if (!preShakeDetectMode && isRealtimeOnlyMode) {
+        setTimeout(() => {
+            isRealtimeOnlyMode = false;
+            document.getElementById('btnNormalMode').classList.add('active');
+            document.getElementById('btnRealtimeMode').classList.remove('active');
+            refreshMapDisplay();
+            if (window.currentEarthquakeData && window.currentEarthquakeData.hypocenter && window.currentEarthquakeData.hypocenter.latitude && window.currentEarthquakeData.hypocenter.latitude !== -200) {
+                lMap.flyTo([window.currentEarthquakeData.hypocenter.latitude, window.currentEarthquakeData.hypocenter.longitude], 8, {duration: 1.5});
+            } else {
+                lMap.flyTo([37.5, 137], 5.2, {duration: 1.5});
+            }
+        }, 10);
+    }
+    shakeDetectLayer.clearLayers();
+
+    let sdPanel = document.getElementById('shakeDetectPanel');
+    if (sdPanel) {
+        sdPanel.style.display = 'none';
+        document.getElementById('shakeDetectScrollArea').innerHTML = '<div class="info-text" style="color:#666;text-align:center;padding-top:20px;">検知待機中...</div>';
+    }
+}
+
 function handleShakeDetection(activeSites) {
     shakeDetectLayer.clearLayers();
-    if (isEEWActive || selectedHistoryQuake !== null) return; 
+    
+    // 確定報が出るまで（震度速報、震源速報受信中）は揺れ検知を行わない
+    let isWaitingForDetail = false;
+    if (window.currentEarthquakeIssue && (window.currentEarthquakeIssue.type === "ScalePrompt" || window.currentEarthquakeIssue.type === "Destination")) {
+        isWaitingForDetail = true;
+    }
+
+    if (isEEWActive || selectedHistoryQuake !== null || isWaitingForDetail) {
+        if (isShakeDetectActive) {
+            cancelShakeDetectImmediate();
+        }
+        return; 
+    }
 
     let validSites = [];
     for (let i = 0; i < activeSites.length; i++) {
@@ -1866,30 +1906,7 @@ function handleShakeDetection(activeSites) {
         if (isShakeDetectActive) {
             if (!shakeDetectCooldown) {
                 shakeDetectCooldown = setTimeout(() => {
-                    isShakeDetectActive = false;
-                    shakeDetectFirstSite = null;
-                    previousShakeDetectSites.clear(); 
-                    if (!preShakeDetectMode && isRealtimeOnlyMode) {
-                        setTimeout(() => {
-                            isRealtimeOnlyMode = false;
-                            document.getElementById('btnNormalMode').classList.add('active');
-                            document.getElementById('btnRealtimeMode').classList.remove('active');
-                            refreshMapDisplay();
-                            if (window.currentEarthquakeData && window.currentEarthquakeData.hypocenter && window.currentEarthquakeData.hypocenter.latitude && window.currentEarthquakeData.hypocenter.latitude !== -200) {
-                                lMap.flyTo([window.currentEarthquakeData.hypocenter.latitude, window.currentEarthquakeData.hypocenter.longitude], 8, {duration: 1.5});
-                            } else {
-                                lMap.flyTo([37.5, 137], 5.2, {duration: 1.5});
-                            }
-                        }, 10);
-                    }
-                    shakeDetectLayer.clearLayers();
-                    shakeDetectCooldown = null;
-
-                    let sdPanel = document.getElementById('shakeDetectPanel');
-                    if (sdPanel) {
-                        sdPanel.style.display = 'none';
-                        document.getElementById('shakeDetectScrollArea').innerHTML = '<div class="info-text" style="color:#666;text-align:center;padding-top:20px;">検知待機中...</div>';
-                    }
+                    cancelShakeDetectImmediate();
                 }, 5000); 
             }
         }
