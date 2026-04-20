@@ -1718,6 +1718,7 @@ function drawKyoshin(d){
 let isShakeDetectActive = false;
 let preShakeDetectMode = false;
 let shakeDetectCooldown = null;
+let shakeDetectFirstSite = null; // ★追加：最初に検知した観測点を保持
 
 function handleShakeDetection(activeSites) {
     shakeDetectLayer.clearLayers();
@@ -1743,6 +1744,9 @@ function handleShakeDetection(activeSites) {
 
         if (!isShakeDetectActive) {
             isShakeDetectActive = true;
+            // ★追加: 最初に検知した際、最も揺れが強い観測点を基準点として記録
+            shakeDetectFirstSite = validSites.reduce((max, site) => site.lv > max.lv ? site : max, validSites[0]);
+
             preShakeDetectMode = isRealtimeOnlyMode;
             if (!isRealtimeOnlyMode) {
                 setTimeout(() => {
@@ -1757,7 +1761,6 @@ function handleShakeDetection(activeSites) {
 
         let grid = {};
         let gridSize = 0.2; 
-        let bounds = L.latLngBounds();
         let detectedRegions = new Set();
 
         validSites.forEach(s => {
@@ -1782,11 +1785,11 @@ function handleShakeDetection(activeSites) {
                 opacity: 0.9 
             });
             shakeDetectLayer.addLayer(rect);
-            bounds.extend(cell.sw); bounds.extend(cell.ne);
         });
 
-        if (bounds.isValid()) {
-            lMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 8, duration: 1.5 });
+        // ★変更: 従来の flyToBounds を廃止し、記録した最初に検知した観測点へ flyTo
+        if (shakeDetectFirstSite) {
+            lMap.flyTo([shakeDetectFirstSite.lat, shakeDetectFirstSite.lng], 8, { duration: 1.5 });
         }
 
         let regionsStr = Array.from(detectedRegions).join("、 ");
@@ -1805,6 +1808,7 @@ function handleShakeDetection(activeSites) {
             if (!shakeDetectCooldown) {
                 shakeDetectCooldown = setTimeout(() => {
                     isShakeDetectActive = false;
+                    shakeDetectFirstSite = null; // ★追加: 変数をリセット
                     if (!preShakeDetectMode && isRealtimeOnlyMode) {
                         setTimeout(() => {
                             isRealtimeOnlyMode = false;
