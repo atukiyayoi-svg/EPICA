@@ -103,7 +103,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 /* --- 津波避難ラベル --- */
 #tsunamiEvacuateLabel {
     position: absolute;
-    bottom: 110px; /* displayModeWrapの少し上に配置 */
+    bottom: 110px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(255, 0, 0, 0.9);
@@ -245,8 +245,8 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     backdrop-filter:blur(5px); 
     cursor:pointer; 
     transition: all 0.2s;
-    height: 75px;        /* アイテムの高さを固定 */
-    flex-shrink: 0;      /* アイテムが潰れるのを防ぐ */
+    height: 75px;        
+    flex-shrink: 0;      
 }
 .qItem:hover { background:rgba(50,50,50,0.95); }
 .qItem.selected { border: 2px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); transform: scale(1.02); margin-left: -5px; }
@@ -336,7 +336,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 @keyframes blink{from{opacity:0.5}to{opacity:1}}
 
-/* ================= レスポンシブ対応 (重複・配置崩れ対策) ================= */
+/* ================= レスポンシブ対応 ================= */
 @media screen and (max-width: 1250px) {
     body { 
         overflow-y: auto; overflow-x: hidden; 
@@ -577,7 +577,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
-// デフォルト設定
 const defaultSettings = {
     eewPrediction: false,
     showObsPoints: false,
@@ -597,7 +596,6 @@ const defaultSettings = {
     volBgm: 0.3
 };
 
-// ローカルストレージから設定を読み込む、なければデフォルト
 let userSettings = { ...defaultSettings };
 try {
     const saved = localStorage.getItem('epicaUserSettings');
@@ -611,11 +609,9 @@ function saveSettings() {
     localStorage.setItem('epicaUserSettings', JSON.stringify(userSettings));
 }
 
-// AXIS情報保持用
 const axisHistory = { weather: [], volcano: [], news: [] };
 const MAX_AXIS_HISTORY = 10;
 
-// 音声アセット
 let seFirst = new Audio('First.mp3');
 let seLast = new Audio('Last.mp3');
 let seTsunami = new Audio('Tsunami.mp3');
@@ -623,7 +619,6 @@ let seUpdateApi = new Audio('UpdateAPI.mp3');
 let seUpdateEew = new Audio('UpdateEEW.mp3');
 let seWarning = new Audio('Warning.mp3');
 
-// BGMアセット
 let bgmFiles = {
     '朝.wav': new Audio('朝.wav'),
     '昼.wav': new Audio('昼.wav'),
@@ -641,7 +636,6 @@ function updateSeVolumes() {
     seWarning.volume = userSettings.volWarning;
 }
 
-// 設定UI制御と同期
 document.getElementById('btnSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'block';
 });
@@ -649,7 +643,6 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'none';
 });
 
-// 各種トグル制御
 document.getElementById('chkEewPrediction').checked = userSettings.eewPrediction;
 document.getElementById('chkEewPrediction').addEventListener('change', (e) => {
     userSettings.eewPrediction = e.target.checked;
@@ -693,7 +686,6 @@ settingKeys.forEach(key => {
     const slider = document.getElementById(key + 'Slider');
     const valDisp = document.getElementById(key + 'Val');
     if (slider && valDisp) {
-        // ロード時にUIへ反映
         const mappedKey = key === 'vol' ? 'volume' : key;
         slider.value = userSettings[mappedKey];
         valDisp.innerText = userSettings[mappedKey];
@@ -725,7 +717,7 @@ function getBgmType() {
 function checkIsNormalState() {
     if (isEEWActive) return false;
     if (currentTsunamiData && !currentTsunamiData.cancelled && currentTsunamiData.areas && currentTsunamiData.areas.length > 0) return false;
-    if (window.currentEarthquakeData && window.currentEarthquakeData.domesticTsunami) {
+    if (window.currentEarthquakeData && window.currentEarthquakeData.domesticTsunami && (!currentTsunamiData || !currentTsunamiData.cancelled)) {
         const dt = window.currentEarthquakeData.domesticTsunami;
         if (dt === "Checking" || dt === "Warning" || dt === "MajorWarning") return false;
     }
@@ -775,7 +767,6 @@ function updateClock() {
     const clock = document.getElementById("clockPanel");
     if(clock) clock.innerText = `${y}/${m}/${d}　${hh}:${mm}:${ss}`;
     
-    // コメントリストの有効期限管理
     const timestamp = now.getTime();
     let changed = false;
     window.eewOriginalTextList = window.eewOriginalTextList.filter(item => {
@@ -784,7 +775,6 @@ function updateClock() {
     });
     if (changed) updateCommentDisplay(window.latestFullQuakeList);
 
-    // 23:50:00 の本日のまとめトリガー
     const todayStr = `${y}-${m}-${d}`;
     if (now.getHours() === 23 && now.getMinutes() === 50 && now.getSeconds() === 0 && summaryPlayedForToday !== todayStr) {
         summaryPlayedForToday = todayStr;
@@ -881,7 +871,6 @@ function processSpeechQueue() {
     text = text.replace(/km/g, "キロメートル").replace(/m/g, "メートル");
     const uttr = new SpeechSynthesisUtterance(text);
     uttr.lang = "ja-JP"; 
-    // 発話音量を可能な限り最大化するよう調整（設定音量に依存させるが基本最大）
     uttr.volume = Math.min(1, userSettings.volume * 1.5); 
     uttr.rate = userSettings.speechRate; 
     uttr.pitch = userSettings.speechPitch;
@@ -1087,30 +1076,9 @@ let eewPollTimers = new Map(); let eewTimeoutTimers = new Map(); let eewOffsets 
 
 const MAP_BORDER_COLOR = "rgba(255,255,255,0.3)"; const MAP_BORDER_WEIGHT = 1.0;
 
-// Yahoo独自21段階震度(0〜20)をNIED強震モニタ(-3〜7)にマッピングするためのカラーテーブル
-// NIEDカラーマップに準拠。0が-3.0、20が7.0相当
 const KYOSHIN_COLORS = [
-    "#000033", // 0: -3.0
-    "#000066", // 1: -2.5
-    "#000099", // 2: -2.0
-    "#0000cc", // 3: -1.5
-    "#0000ff", // 4: -1.0
-    "#0066ff", // 5: -0.5
-    "#00ccff", // 6: 0.0
-    "#00ffff", // 7: 0.5
-    "#66ffcc", // 8: 1.0
-    "#99ff99", // 9: 1.5
-    "#ccff66", // 10: 2.0
-    "#ffff00", // 11: 2.5
-    "#ffcc00", // 12: 3.0
-    "#ff9900", // 13: 3.5
-    "#ff6600", // 14: 4.0
-    "#ff3300", // 15: 4.5
-    "#ff0000", // 16: 5.0
-    "#cc0000", // 17: 5.5
-    "#990000", // 18: 6.0
-    "#660000", // 19: 6.5
-    "#800080"  // 20: 7.0
+    "#000033", "#000066", "#000099", "#0000cc", "#0000ff", "#0066ff", "#00ccff", "#00ffff", "#66ffcc", "#99ff99", 
+    "#ccff66", "#ffff00", "#ffcc00", "#ff9900", "#ff6600", "#ff3300", "#ff0000", "#cc0000", "#990000", "#660000", "#800080"
 ];
 
 const PREF_ARV = { "北海道": 1.6, "青森県": 1.8, "岩手県": 1.4, "宮城県": 2.0, "秋田県": 1.9, "山形県": 1.8, "福島県": 1.8, "茨城県": 2.1, "栃木県": 1.7, "群馬県": 1.6, "埼玉県": 2.4, "千葉県": 2.3, "東京都": 2.2, "神奈川県": 2.1, "新潟県": 2.2, "富山県": 1.8, "石川県": 1.9, "福井県": 1.8, "山梨県": 1.4, "長野県": 1.5, "岐阜県": 1.8, "静岡県": 1.9, "愛知県": 2.2, "三重県": 2.0, "滋賀県": 1.8, "京都府": 1.7, "大阪府": 2.4, "兵庫県": 2.1, "奈良県": 1.8, "和歌山県": 1.6, "鳥取県": 1.7, "島根県": 1.5, "岡山県": 1.9, "広島県": 1.6, "山口県": 1.6, "徳島県": 1.8, "香川県": 1.9, "愛媛県": 1.7, "高知県": 1.8, "福岡県": 1.9, "佐賀県": 2.2, "長崎県": 1.5, "熊本県": 1.8, "大分県": 1.7, "宮崎県": 1.8, "鹿児島県": 1.7, "沖縄県": 1.6 };
@@ -1126,7 +1094,7 @@ const scaleColor = s => {
   if (code.includes("6弱")) return "#fa0000"; 
   if (code.includes("6強")) return "#a00000";
   if (code === "7") return "#960096"; 
-  return "#aaaaaa"; // 震度不明時のカラーを明るい灰色に変更
+  return "#aaaaaa"; 
 };
 const magColor = m => m >= 7.5 ? "#ff0000" : m >= 6.0 ? "#ff5500" : m >= 4.0 ? "#ffff00" : "#00ced1";
 const depthColor = d => {
@@ -1217,13 +1185,13 @@ function getNearestRegion(lat, lng) {
     return nearestName;
 }
 
-/* ================= J-SHIS API 連携機能 (最適化・キャッシュ付き) ================= */
+/* ================= J-SHIS API 連携機能 ================= */
 const arvCache = new Map();
 async function fetchARVFromJSHIS(lat, lon, cacheKey) {
     if (cacheKey && arvCache.has(cacheKey)) return arvCache.get(cacheKey);
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 800); // フリーズ防止のための短時間タイムアウト
+        const timeoutId = setTimeout(() => controller.abort(), 800); 
         const url = `https://www.j-shis.bosai.go.jp/map/api/sstrct/V4/meshinfo.geojson?position=${lon},${lat}&epsg=4326`;
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -1591,7 +1559,6 @@ async function updateWolfxEEW(data) {
     if (latestQuakeMarker) latestQuakeMarker.setOpacity(0);
     if(obsLayer) obsLayer.clearLayers(); 
 
-    // --- UI 即時反映 ---
     activeEEWs.set(id, data); 
     updateLPGMDisplay(data.Magunitude, data.Depth);
 
@@ -1602,7 +1569,6 @@ async function updateWolfxEEW(data) {
         const eewFontSize = maxShindoStr.length > 1 ? (maxShindoStr === "不明" ? "24px" : "40px") : "48px";
         let tagsHTML = ""; if (data.isTraining) tagsHTML += `<span class="tag" style="background:#800080; color:#fff;">訓練報</span>`; if (data.isAssumption) tagsHTML += `<span class="tag" style="background:#000080; color:#fff;">PLUM法</span>`;
         
-        // ForecastArray の UI 表示
         let areasHTML = "";
         if (data.Forecast && data.Forecast.length > 0) {
             let forecastList = data.Forecast.map(f => {
@@ -1634,7 +1600,6 @@ async function updateWolfxEEW(data) {
         if (!eewWaveTimer) drawWaves();
     }
 
-    // --- 非同期処理群 (マップ予測・Forecast色付け) ---
     calculateEewOffset(data).then(async offset => {
         eewOffsets.set(id, offset);
         if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
@@ -1668,7 +1633,6 @@ async function updateWolfxEEW(data) {
                             }
                         }
 
-                        // ForecastArrayに含まれる地域で予測が震度4未満なら震度4に補正
                         if (isForecastTarget && maxShindoNum < 4) {
                             maxShindoStrResult = "4";
                             maxShindoNum = 4;
@@ -1776,7 +1740,6 @@ function cancelShakeDetectImmediate() {
 function handleShakeDetection(activeSites) {
     shakeDetectLayer.clearLayers();
     
-    // 確定報が出るまで（震度速報、震源速報受信中）は揺れ検知を行わない
     let isWaitingForDetail = false;
     if (window.currentEarthquakeIssue && (window.currentEarthquakeIssue.type === "ScalePrompt" || window.currentEarthquakeIssue.type === "Destination")) {
         isWaitingForDetail = true;
@@ -1864,7 +1827,7 @@ function handleShakeDetection(activeSites) {
         });
 
         let grid = {};
-        let gridSize = 0.4; // ★ 0.2から0.4に変更して軽量化
+        let gridSize = 0.4;
         let detectedRegions = new Set();
 
         validSites.forEach(s => {
@@ -1989,9 +1952,11 @@ function updateTsunamiDisplay(data, eqData) {
 
     // ★ 津波警報判定によるラベル表示の制御
     let hasWarning = false;
-    if (data && !data.cancelled && data.areas) {
+    let isCancelled = data && data.cancelled;
+
+    if (data && !isCancelled && data.areas) {
         hasWarning = data.areas.some(a => ["MajorWarning", "MajorTsunami", "Warning", "TsunamiWarning"].includes(a.grade));
-    } else if (eqData) {
+    } else if (eqData && !isCancelled) {
         const dt = eqData.domesticTsunami;
         if (dt === "Warning" || dt === "MajorWarning") hasWarning = true;
     }
@@ -2002,7 +1967,14 @@ function updateTsunamiDisplay(data, eqData) {
 
     if(!area) return;
 
-    let hasAreaInfo = (data && !data.cancelled && data.areas && data.areas.length > 0);
+    if (isCancelled) {
+        let msg = "津波警報・注意報は解除されました。<br>現在、津波の心配はありません。";
+        area.innerHTML = `<div class="noTsunami" style="color:#aaa; flex-direction:column; line-height:1.4;">${msg}</div>`; 
+        area.style.opacity = 1; 
+        return;
+    }
+
+    let hasAreaInfo = (data && !isCancelled && data.areas && data.areas.length > 0);
 
     if (!hasAreaInfo && eqData) {
         let msg = ""; let color = "#aaa";
@@ -2032,8 +2004,7 @@ function updateTsunamiDisplay(data, eqData) {
             }
         }
         if (!msg) {
-            if (data && data.cancelled) msg = "津波警報・注意報は解除されました。<br>現在、津波の心配はありません。";
-            else msg = "国内での津波の心配はありません。<br>海外での津波の影響は不明です。";
+            msg = "国内での津波の心配はありません。<br>海外での津波の影響は不明です。";
         }
         area.innerHTML = `<div class="noTsunami" style="color:${color}; flex-direction:column; line-height:1.4;">${msg}</div>`; area.style.opacity = 1; return;
     }
@@ -2142,6 +2113,8 @@ async function loadQuakes(){
         }
         
         let playUpdateApi = false; let playTsunami = false;
+        let playTsunamiCancel = false;
+
         if (latestEQ && latestEQ.earthquake.time !== lastEqTime) {
             lastEqTime = latestEQ.earthquake.time;
             if (!isInitialLoad) {
@@ -2192,10 +2165,18 @@ async function loadQuakes(){
             let currentTsunamiTime = tsunamiData.issue ? tsunamiData.issue.time : null;
             if (currentTsunamiTime && currentTsunamiTime !== lastTsunamiIssueTime) {
                 lastTsunamiIssueTime = currentTsunamiTime;
-                if (!tsunamiData.cancelled && tsunamiData.areas && tsunamiData.areas.length > 0) playTsunami = true;
+                if (!tsunamiData.cancelled && tsunamiData.areas && tsunamiData.areas.length > 0) {
+                    playTsunami = true;
+                } else if (tsunamiData.cancelled) {
+                    playTsunamiCancel = true;
+                }
             }
         }
         if (playTsunami) { seTsunami.currentTime = 0; seTsunami.play().catch(e=>{}); }
+        if (playTsunamiCancel) {
+            speakText("津波警報、および、津波注意報は、すべて解除されました。");
+            seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{});
+        }
         if (playUpdateApi) { seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{}); }
 
         if (latestEQ && !isEEWActive) {
@@ -2243,7 +2224,7 @@ function addLog(msg) {
     const line = document.createElement("div"); line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; logPanel.prepend(line);
 }
 
-// --- Wolfx WebSocket (メインEEW用) ---
+// --- Wolfx WebSocket ---
 let isWolfxConnected = false;
 function connectWolfx() {
     const wolfx = new WebSocket("wss://ws-api.wolfx.jp/jma_eew");
@@ -2257,7 +2238,7 @@ function connectWolfx() {
     wolfx.onerror = () => { isWolfxConnected = false; };
 }
 
-// --- P2Pquake WebSocket (地震履歴用) ---
+// --- P2Pquake WebSocket ---
 function connectP2P() {
     const p2p = new WebSocket("wss://api.p2pquake.net/v2/ws");
     p2p.onmessage = e => { 
@@ -2456,7 +2437,6 @@ function convertAxisEewToWolfx(msg) {
     };
 }
 
-
 /* ================= アプリケーション初期化ロジック ================= */
 function updateStartupStatus(msg) {
     const el = document.getElementById("startupStatus");
@@ -2545,7 +2525,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("siyouIframe").src = "";
     });
 });
-
 </script>
 </body>
 </html>
