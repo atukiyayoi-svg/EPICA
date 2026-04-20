@@ -417,6 +417,10 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div class="axisHeader">火山情報 (VOLCANOLOGY)</div>
         <div id="volcanoScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
     </div>
+    <div id="shakeDetectPanel" class="base-panel" style="border-top: 4px solid #00ff00; height: 120px; display: none;">
+        <div class="axisHeader" style="color: #00ff00;">揺れ検知情報 (SHAKE DETECTION)</div>
+        <div id="shakeDetectScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">検知待機中...</div></div>
+    </div>
     <div id="dailySummaryPanel" class="base-panel" style="border-top: 4px solid #cc00ff;">
         <div class="axisHeader" style="color: #ff66ff;">本日のまとめ (DAILY SUMMARY)</div>
         <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">待機中...</div></div>
@@ -466,6 +470,10 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
             </div>
             <div class="setting-item">
                 <label>揺れ検知機能 (自動追従表示) <input type="checkbox" id="chkShakeDetect"></label>
+            </div>
+            <div class="setting-item">
+                <label>揺れ検知 閾値 (計測震度目安) <span class="setting-value" id="shakeThresholdVal">1.0</span></label>
+                <input type="range" id="shakeThresholdSlider" min="5" max="15" step="1" value="8">
             </div>
             <div class="setting-item">
                 <label>EEW受信元
@@ -549,7 +557,8 @@ window.eewOriginalTextList = [];
 const defaultSettings = {
     eewPrediction: false,
     showObsPoints: false,
-    shakeDetect: false, // 追加: 揺れ検知機能
+    shakeDetect: false,
+    shakeThreshold: 8, 
     eewSource: 'wolfx',
     volume: 0.5,
     alarmPitch: 1500,
@@ -633,6 +642,16 @@ document.getElementById('chkShowObsPoints').addEventListener('change', (e) => {
 document.getElementById('chkShakeDetect').checked = userSettings.shakeDetect;
 document.getElementById('chkShakeDetect').addEventListener('change', (e) => {
     userSettings.shakeDetect = e.target.checked;
+    saveSettings();
+});
+
+document.getElementById('shakeThresholdSlider').value = userSettings.shakeThreshold || 8;
+document.getElementById('shakeThresholdVal').innerText = (((userSettings.shakeThreshold || 8) - 6) * 0.5).toFixed(1);
+
+document.getElementById('shakeThresholdSlider').addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    document.getElementById('shakeThresholdVal').innerText = ((val - 6) * 0.5).toFixed(1);
+    userSettings.shakeThreshold = val;
     saveSettings();
 });
 
@@ -1130,6 +1149,50 @@ function getPolygonPoint(f) {
     return { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 };
 }
 
+function getDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function hexToRgba(hex, alpha) {
+    if(!hex || typeof hex !== 'string') return `rgba(0,0,0,${alpha})`;
+    try {
+        const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    } catch(e) { return `rgba(0,0,0,${alpha})`; }
+}
+
+function getNearestRegion(lat, lng) {
+    let minDist = Infinity;
+    let nearestName = "不明な地域";
+    
+    if (window.jmaStationsJson) {
+        window.jmaStationsJson.forEach(st => {
+            let d = getDistance(lat, lng, st.lat, st.lon);
+            if (d < minDist) {
+                minDist = d;
+                if (st.area && st.area.name) nearestName = st.area.name;
+                else if (st.name) nearestName = st.name;
+            }
+        });
+        if (nearestName !== "不明な地域") return nearestName;
+    }
+
+    if (prefData && prefData.features) {
+        prefData.features.forEach(f => {
+            let name = f.properties.name || f.properties.nam_ja || f.properties.code;
+            let pt = getPolygonPoint(f);
+            let d = getDistance(lat, lng, pt.lat, pt.lng);
+            if (d < minDist) {
+                minDist = d;
+                nearestName = name;
+            }
+        });
+    }
+    return nearestName;
+}
+
 /* ================= J-SHIS API 連携機能 (最適化・キャッシュ付き) ================= */
 const arvCache = new Map();
 async function fetchARVFromJSHIS(lat, lon, cacheKey) {
@@ -1182,18 +1245,6 @@ async function calcPredictedIntensity(mag, depth, eLat, eLng, pLat, pLng, prefNa
 }
 function limitIntensity(calcS, maxS) {
     const cNum = fmt.intensityToNum(calcS); const mNum = fmt.intensityToNum(maxS); return cNum > mNum ? String(maxS) : String(calcS);
-}
-function getDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-function hexToRgba(hex, alpha) {
-    if(!hex || typeof hex !== 'string') return `rgba(0,0,0,${alpha})`;
-    try {
-        const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    } catch(e) { return `rgba(0,0,0,${alpha})`; }
 }
 
 /* ================= 海域地震(isSea)のオフセット補正 ================= */
@@ -1264,7 +1315,7 @@ const lMap = L.map('leafletMap', {
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20 }).addTo(lMap);
 let geojsonLayer, tsunamiGeojsonLayer = null; let obsLayer = L.layerGroup().addTo(lMap); let latestQuakeMarker = null; let epicenterMarkers = new Map(); let prefData = null; let currentTsunamiData = null;
-const shakeDetectLayer = L.layerGroup().addTo(lMap); // 追加: 揺れ検知レイヤー
+const shakeDetectLayer = L.layerGroup().addTo(lMap);
 window.jmaStationsJson = null;
 
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex = 410; lMap.getPane('tsunamiPane').style.pointerEvents = 'none';
@@ -1670,13 +1721,12 @@ let shakeDetectCooldown = null;
 
 function handleShakeDetection(activeSites) {
     shakeDetectLayer.clearLayers();
-    if (isEEWActive || selectedHistoryQuake !== null) return; // EEW中や過去履歴閲覧中は無効化
+    if (isEEWActive || selectedHistoryQuake !== null) return; 
 
     let validSites = [];
     for (let i = 0; i < activeSites.length; i++) {
         let s1 = activeSites[i];
         let hasNeighbor = false;
-        // ノイズ除去：40km以内に他の検知点があるか確認
         for (let j = 0; j < activeSites.length; j++) {
             if (i === j) continue;
             let d = getDistance(s1.lat, s1.lng, activeSites[j].lat, activeSites[j].lng);
@@ -1695,7 +1745,6 @@ function handleShakeDetection(activeSites) {
             isShakeDetectActive = true;
             preShakeDetectMode = isRealtimeOnlyMode;
             if (!isRealtimeOnlyMode) {
-                // 非同期にして無限ループを防止
                 setTimeout(() => {
                     isRealtimeOnlyMode = true;
                     document.getElementById('btnRealtimeMode').classList.add('active');
@@ -1706,10 +1755,10 @@ function handleShakeDetection(activeSites) {
             playPippiBeep();
         }
 
-        // 碁盤の目ロジック（約10km四方のグリッド）
         let grid = {};
-        let gridSize = 0.1;
+        let gridSize = 0.2; 
         let bounds = L.latLngBounds();
+        let detectedRegions = new Set();
 
         validSites.forEach(s => {
             let gx = Math.floor(s.lng / gridSize);
@@ -1720,6 +1769,7 @@ function handleShakeDetection(activeSites) {
             } else {
                 if (s.lv > grid[key].maxLv) grid[key].maxLv = s.lv;
             }
+            detectedRegions.add(getNearestRegion(s.lat, s.lng));
         });
 
         Object.values(grid).forEach(cell => {
@@ -1736,8 +1786,20 @@ function handleShakeDetection(activeSites) {
         });
 
         if (bounds.isValid()) {
-            lMap.flyToBounds(bounds, { padding: [50, 50], maxZoom: 8, duration: 1.2 });
+            lMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 8, duration: 1.5 });
         }
+
+        let regionsStr = Array.from(detectedRegions).join("、 ");
+        let sdPanel = document.getElementById('shakeDetectPanel');
+        if (sdPanel) sdPanel.style.display = 'block';
+        
+        let html = `
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 10px; margin-bottom: 10px;">
+                <div class="info-title">揺れを検知 <small>${new Date().toLocaleTimeString()}</small></div>
+                <div class="info-text">以下の地域で揺れを検知しました：<br>${regionsStr}</div>
+            </div>`;
+        updatePanelScroll("shakeDetectScrollArea", html);
+
     } else {
         if (isShakeDetectActive) {
             if (!shakeDetectCooldown) {
@@ -1749,7 +1811,6 @@ function handleShakeDetection(activeSites) {
                             document.getElementById('btnNormalMode').classList.add('active');
                             document.getElementById('btnRealtimeMode').classList.remove('active');
                             refreshMapDisplay();
-                            // 元の震央位置に戻す
                             if (window.currentEarthquakeData && window.currentEarthquakeData.hypocenter && window.currentEarthquakeData.hypocenter.latitude && window.currentEarthquakeData.hypocenter.latitude !== -200) {
                                 lMap.flyTo([window.currentEarthquakeData.hypocenter.latitude, window.currentEarthquakeData.hypocenter.longitude], 8, {duration: 1.5});
                             } else {
@@ -1759,7 +1820,13 @@ function handleShakeDetection(activeSites) {
                     }
                     shakeDetectLayer.clearLayers();
                     shakeDetectCooldown = null;
-                }, 5000); // 5秒間揺れがなければ解除
+
+                    let sdPanel = document.getElementById('shakeDetectPanel');
+                    if (sdPanel) {
+                        sdPanel.style.display = 'none';
+                        document.getElementById('shakeDetectScrollArea').innerHTML = '<div class="info-text" style="color:#666;text-align:center;padding-top:20px;">検知待機中...</div>';
+                    }
+                }, 5000); 
             }
         }
     }
@@ -1781,18 +1848,14 @@ function renderKyoshinCanvas(d) {
         if (isDebugNankai) {
             lv = Math.max(0, intens[i]);
         } else {
-            // 文字コードからYahoo独自の0〜20の震度インデックスを取得
             const charCode = intens[i].charCodeAt(0);
             const intensityIndex = charCode - 100;
             
             if (intensityIndex < 0 || intensityIndex > 20) continue;
-            
-            // KYOSHIN_COLORS (NIED準拠: -3〜7) にマッピング
             lv = intensityIndex; 
         }
 
-        // 揺れ検知：震度1以上（lv >= 8）
-        if (userSettings.shakeDetect && lv >= 8) {
+        if (userSettings.shakeDetect && lv >= (userSettings.shakeThreshold || 8)) {
             activeSites.push({ lat: sites[i].lat, lng: sites[i].lng, lv: lv });
         }
 
@@ -1804,7 +1867,6 @@ function renderKyoshinCanvas(d) {
         if (!isEEWActive) {
             if (isRealtimeOnlyMode) alpha = 1.0;
             else { 
-                // 非EEW時は小さい揺れ(lv<8 つまり震度1.0未満)を透過させる
                 alpha = Math.max(0.05, Math.min(1.0, lv / 8)); 
                 if (alpha < 0.1) continue; 
             }
@@ -1896,7 +1958,6 @@ function updateCommentDisplay(fullList) {
     const area = document.getElementById("commentScrollArea"); if(!area) return; 
     let html = "";
     
-    // EEWの自由付随コメント(OriginalText)を優先または追加表示
     if (window.eewOriginalTextList && window.eewOriginalTextList.length > 0) {
         window.eewOriginalTextList.forEach(item => {
             if (item.text) {
@@ -1905,7 +1966,6 @@ function updateCommentDisplay(fullList) {
         });
     }
 
-    // 地震情報の自由付随コメント
     const commentData = fullList?.find(x => x.code === 551 && x.comments?.freeFormComment);
     if (commentData && commentData.comments.freeFormComment) { 
         html += `<div class="commentBody">${commentData.comments.freeFormComment}</div>`; 
@@ -1930,14 +1990,11 @@ async function loadQuakes(){
         const fullList=await res.json(); if(!fullList?.length)return;
         window.latestFullQuakeList = fullList;
         
-        // 震度速報(ScalePrompt)も含めてパースする
         const list = fullList.filter(x => x.code === 551);
         const tsunamiData = fullList.find(x => x.code === 552);
         updateCommentDisplay(fullList);
 
         let latestEQ = list[0];
-        // もし最新がDestinationなら、同時間のScalePromptを探してポイント・最大震度を引き継ぐ
-        // または、現在表示中のものが同じ地震ならそれを引き継ぐ（震度速報時のマップ上画を維持する）
         if (latestEQ && latestEQ.issue && latestEQ.issue.type === "Destination") {
             const relatedPrompt = list.find(x => x.issue && x.issue.type === "ScalePrompt" && x.earthquake.time === latestEQ.earthquake.time);
             if (relatedPrompt) {
@@ -1959,7 +2016,6 @@ async function loadQuakes(){
             if (!isInitialLoad) {
                 playUpdateApi = true;
                 
-                // 発生時刻の差分計算
                 const eqTimeStr = latestEQ.earthquake.time.replace(/\//g, "-").replace(" ", "T");
                 const eqDate = new Date(eqTimeStr);
                 const now = new Date();
@@ -1977,7 +2033,6 @@ async function loadQuakes(){
                 
                 if (latestEQ.issue.type === "ScalePrompt") {
                     speechText = `震度速報です。最大震度${s.replace("強", "きょう").replace("弱", "じゃく")}の地震が発生しました。`;
-                    // 震度の大きい順に地域を読み上げ（上位3件程度まで）
                     if (latestEQ.points && latestEQ.points.length > 0) {
                         let sortedPoints = [...latestEQ.points].sort((a,b) => b.scale - a.scale).slice(0, 3);
                         let pointsText = sortedPoints.map(p => `${p.addr}で震度${fmt.shindo(p.scale).replace("強","きょう").replace("弱","じゃく")}`).join("、");
@@ -1986,10 +2041,8 @@ async function loadQuakes(){
                 } else if (latestEQ.issue.type === "Destination") {
                     speechText = `先ほどの地震の震源位置が更新されました。震源地は、${eqName}。マグニチュードは、${mag}。深さは、${depthStr}、です。`;
                 } else {
-                    // 確定報
                     speechText = `地震情報が更新されました。${timePrefix}地震情報の詳細です。震源地は、${eqName}。最大震度は、${s.replace("強", "きょう").replace("弱", "じゃく")}。マグニチュードは、${mag}で、深さは、${depthStr}、です。`;
                     
-                    // 津波情報の読み上げ追加
                     const dt = latestEQ.earthquake.domesticTsunami;
                     if (dt === "None") {
                         speechText += `この地震による津波の心配はありません。`;
@@ -2043,7 +2096,6 @@ async function loadQuakes(){
         }
         updateTsunamiDisplay(tsunamiData, latestEQ?.earthquake);
 
-        // 履歴ウィンドウからは ScalePrompt, Destination, 震度不明の情報を除外
         currentQuakeList = list.filter(x => 
             x.issue && x.issue.type !== "ScalePrompt" && 
             x.issue.type !== "Destination" && 
@@ -2083,7 +2135,6 @@ function connectP2P() {
         if(d.code===551||d.code===552) { 
             addLog(`P2P WS 受信: Code ${d.code}`); 
             if(d.code===551) {
-                // EEW表示中でかつ、P2Pから情報(確定報など)が届いた場合はEEWを終了し地図描画などを戻す
                 if (isEEWActive) clearEEWDisplay(); 
                 loadQuakes(); 
             }
@@ -2287,26 +2338,22 @@ function showStartupReady() {
     document.getElementById("startupReady").style.display = "block";
 }
 
-/* --- アップデートチェック設定 --- */
-const CURRENT_VERSION = "4.2.0"; // 現在のコードのバージョン
-// 自分のGitHubリポジトリのRAW URL
+const CURRENT_VERSION = "4.2.0"; 
 const VERSION_CHECK_URL = "https://raw.githubusercontent.com/atukiyayoi-svg/EPICA/refs/heads/main/version.json";
 
 async function checkSystemUpdate() {
     try {
-        const response = await fetch(`${VERSION_CHECK_URL}?t=${Date.now()}`); // キャッシュ回避
+        const response = await fetch(`${VERSION_CHECK_URL}?t=${Date.now()}`); 
         if (!response.ok) return;
         
         const data = await response.json();
         const latestVersion = data.version;
 
-        // 1. 起動画面のバージョン表記をGitHub上の最新版(latestVersion)に書き換える
         const startupVersionElement = document.getElementById('startup-version');
         if (startupVersionElement) {
             startupVersionElement.innerText = latestVersion;
         }
 
-        // 2. ローカルのバージョンと異なる場合のみアップデート確認を出す
         if (latestVersion !== CURRENT_VERSION) {
             if (confirm(`新しいバージョン（V${latestVersion}）が利用可能です。\nアップデートして再読み込みしますか？`)) {
                 window.location.reload(true);
@@ -2319,7 +2366,6 @@ async function checkSystemUpdate() {
 
 async function startApp() {
     try {
-    // 1. 最初にアップデートをチェック
         await checkSystemUpdate();
 
         updateStartupStatus("観測点データ読み込み中...");
@@ -2345,7 +2391,7 @@ async function startApp() {
     } catch(e) {
         console.error(e);
         updateStartupStatus("初期化エラーが発生しました: " + e.message);
-        showStartupReady(); // エラー時でも強制起動を許可
+        showStartupReady(); 
     }
 }
 
@@ -2354,7 +2400,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     document.getElementById("btnStart").addEventListener("click", () => {
         document.getElementById("startupScreen").style.display = "none";
-        initAudio(); // ユーザーのアクションでAudioContextを安全に初期化
+        initAudio(); 
     });
     
     document.getElementById("btnSiyou").addEventListener("click", () => {
