@@ -579,6 +579,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 /* ================= グローバルステート & ユーザー設定 ================= */
 window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
+let wasTsunamiActive = false; // 津波警報・注意報が発表中だったかを判定するフラグ
 
 const defaultSettings = {
     pushNotify: false,
@@ -622,6 +623,26 @@ function sendPushNotification(title, options) {
             console.warn("Push notification failed", e);
         }
     }
+}
+
+// プッシュ通知用 アイコン動的生成関数 (Web Pushの仕様制約を補うため)
+function getPushIconDataURL(text, bgColor, textColor) {
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold ' + (text.length > 1 ? '120px' : '160px') + ' sans-serif';
+        ctx.fillText(text, 128, 128);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(4, 4, 248, 248);
+        return canvas.toDataURL('image/png');
+    } catch(e) { return null; }
 }
 
 const axisHistory = { weather: [], volcano: [], news: [] };
@@ -1389,7 +1410,7 @@ function drawWaves() {
 async function initLeaflet() {
     try {
         const res = await fetch("saibun.geojson"); prefData = await res.json();
-        geojsonLayer = L.geoJSON(prefData, { style: () => ({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "#222", fillOpacity: 0.5 }) }).addTo(lMap);
+        geojsonLayer = L.geoJSON(prefData, { style: () => ({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 }) }).addTo(lMap);
     } catch(e) { console.error("saibun.geojson load error", e); }
     try {
         const tRes = await fetch("tsunami.json"); const tData = await tRes.json();
@@ -1588,8 +1609,12 @@ async function updateWolfxEEW(data) {
             }).join("、");
             bodyText += `\n【予測地域】\n${forecastList}`;
         }
+        let maxS = data.MaxIntensity || "?";
+        let iconUrl = getPushIconDataURL(maxS, scaleColor(data.MaxIntensity || "0"), getContrastColor(scaleColor(data.MaxIntensity || "0")));
+        
         sendPushNotification(`${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報`, {
             body: bodyText,
+            icon: iconUrl,
             tag: "eew_" + id
         });
     }
@@ -1600,7 +1625,8 @@ async function updateWolfxEEW(data) {
             const card = document.createElement("div"); card.className = "eewCard active cancel";
             card.innerHTML = `<div class="eewHeader">EEW 取消報</div><div class="eewEpicenter" style="color:#aaa;">緊急地震速報は取り消されました</div>`; container.prepend(card);
         }
-        sendPushNotification(`EEW 取消報`, { body: `緊急地震速報は取り消されました`, tag: "eew_" + id });
+        let iconUrl = getPushIconDataURL("取消", "#555555", "#ffffff");
+        sendPushNotification(`EEW 取消報`, { body: `緊急地震速報は取り消されました`, icon: iconUrl, tag: "eew_" + id });
         setTimeout(() => { addLog(`EEW [${id}] キャンセル。`); clearEEWDisplay(id); if (!isEEWActive) loadQuakes(); }, 10000);
         return;
     }
@@ -1706,10 +1732,19 @@ async function updateWolfxEEW(data) {
                     geojsonLayer.setStyle(f => {
                         const res = updateStyles.find(r => r.id === f.properties._tempFeatureId);
                         if (!res) return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 };
+                        
                         let strokeColor = res.isForecastTarget ? "#ffff00" : MAP_BORDER_COLOR;
                         let strokeWt = res.isForecastTarget ? 2.5 : MAP_BORDER_WEIGHT;
                         let op = res.isForecastTarget ? 0.9 : 0.7;
-                        let fColor = scaleColor(res.shindo);
+                        
+                        // ★ 修正点: 震度0(不明)の場合は塗りを透過にして境界線を隠さないようにする
+                        let fColor = "transparent";
+                        if (res.shindo !== "0" && res.shindo !== "不明") {
+                            fColor = scaleColor(res.shindo);
+                        } else {
+                            op = 0; // 透過なのでfillOpacityは0とする
+                        }
+
                         return { color: strokeColor, weight: strokeWt, fillColor: fColor, fillOpacity: op };
                     });
                 } else {
@@ -1927,8 +1962,10 @@ function handleShakeDetection(activeSites) {
         // ★ プッシュ通知 (揺れ検知)
         if (isInitialDetection) {
             let shindoVal = ((currentMaxLv - 6) * 0.5).toFixed(1);
+            let iconUrl = getPushIconDataURL("検知", "#00ff00", "#000000");
             sendPushNotification(`揺れ検知情報`, {
                 body: `時刻: ${new Date().toLocaleTimeString()}\n地域: ${regionsStr}\n計測震度目安: ${shindoVal}以上`,
+                icon: iconUrl,
                 tag: "shake_detect"
             });
         }
@@ -2018,7 +2055,6 @@ function updateTsunamiDisplay(data, eqData) {
     currentTsunamiData = data; updateTsunamiMap(); 
     const area = document.getElementById("tsunamiScrollArea"); 
 
-    // ★ 津波警報判定によるラベル表示の制御
     let hasWarning = false;
     let isCancelled = data && data.cancelled;
 
@@ -2035,17 +2071,14 @@ function updateTsunamiDisplay(data, eqData) {
 
     if(!area) return;
 
-    // EEW受信中、かつ有効な津波情報がない場合は「調査中」表示へ切り替え
     if (isEEWActive && (!data || isCancelled || !data.areas || data.areas.length === 0)) {
         area.innerHTML = '<div class="noTsunami" style="color:#00ffff; flex-direction:column; line-height:1.4;">この地震による津波を調査中</div>';
         area.style.opacity = 1;
         return;
     }
 
-    // 古い津波解除メッセージのリセットロジック
     if (isCancelled) {
         let isOutdatedCancel = false;
-        // 津波情報の発表時刻と最新地震の発生時刻を比較し、最新の地震の方が新しければリセット
         if (data.issue && data.issue.time && eqData && eqData.time) {
             let tTime = new Date(data.issue.time.replace(/\//g, "-").replace(" ", "T")).getTime();
             let eqTime = new Date(eqData.time.replace(/\//g, "-").replace(" ", "T")).getTime();
@@ -2075,7 +2108,7 @@ function updateTsunamiDisplay(data, eqData) {
         else if (dt === "Watch") { msg = "津波注意報が発表されています。"; color = "#ffff00"; }
         else if (dt === "Warning" || dt === "MajorWarning") { msg = "津波警報等が発表されています。"; color = "#ff0000"; }
         else if (dt === "Unknown") { msg = "国内への津波の影響は不明です。"; color = "#ffaa00"; }
-        else if (dt === "None") { msg = "国内での津波の心配はありません。"; }
+        else if (dt === "None") { msg = "この地震による津波の心配はありません。"; } // ★修正：より明確な表現に
 
         if (ft && ft !== "None") {
             let fMsg = "";
@@ -2090,7 +2123,7 @@ function updateTsunamiDisplay(data, eqData) {
             else if (ft === "Unknown") fMsg = "海外での津波の影響は不明です。";
 
             if (fMsg) {
-                if (dt === "None" || !dt) { msg = "国内での津波の心配はありません。<br>" + fMsg; color = "#aaa"; }
+                if (dt === "None" || !dt) { msg = "この地震による津波の心配はありません。<br>" + fMsg; color = "#aaa"; }
                 else { msg += "<br><br>" + fMsg; }
             }
         }
@@ -2205,6 +2238,7 @@ async function loadQuakes(){
         
         let playUpdateApi = false; let playTsunami = false;
         let playTsunamiCancel = false;
+        let playTsunamiNoWorry = false; // ★追加：津波の心配がない場合の読み上げフラグ
 
         if (latestEQ && latestEQ.earthquake.time !== lastEqTime) {
             lastEqTime = latestEQ.earthquake.time;
@@ -2263,15 +2297,19 @@ async function loadQuakes(){
                          eqBody += `観測地域: ${pointsText}`;
                      }
                 }
-                sendPushNotification(eqTitle, { body: eqBody, tag: "eq_" + latestEQ.earthquake.time });
+                
+                let iconUrl = getPushIconDataURL(s, scaleColor(s), getContrastColor(scaleColor(s)));
+                sendPushNotification(eqTitle, { body: eqBody, icon: iconUrl, tag: "eq_" + latestEQ.earthquake.time });
             }
         }
+
         if (tsunamiData && !isInitialLoad) {
             let currentTsunamiTime = tsunamiData.issue ? tsunamiData.issue.time : null;
             if (currentTsunamiTime && currentTsunamiTime !== lastTsunamiIssueTime) {
                 lastTsunamiIssueTime = currentTsunamiTime;
                 if (!tsunamiData.cancelled && tsunamiData.areas && tsunamiData.areas.length > 0) {
                     playTsunami = true;
+                    wasTsunamiActive = true;
 
                     // ★ プッシュ通知 (津波情報)
                     const gradeMap = { "MajorWarning": "大津波警報", "MajorTsunami": "大津波警報", "Warning": "津波警報", "TsunamiWarning": "津波警報", "Watch": "津波注意報", "TsunamiAdvisory": "津波注意報", "Unknown": "津波予報" };
@@ -2282,19 +2320,40 @@ async function loadQuakes(){
                     }).join("\n");
                     
                     if (tBody.length > 200) tBody = tBody.substring(0, 197) + "...";
-                    sendPushNotification(`津波情報発表`, { body: tBody, tag: "tsunami_" + currentTsunamiTime });
+
+                    let tColor = "#ff0000"; let tText = "津波";
+                    if (tsunamiData.areas.some(a => a.grade === "MajorWarning" || a.grade === "MajorTsunami")) { tColor = "#aa00aa"; tText = "大津波"; }
+                    else if (tsunamiData.areas.some(a => a.grade === "Watch" || a.grade === "TsunamiAdvisory")) { tColor = "#ffff00"; tText = "注意報"; }
+                    
+                    let iconUrl = getPushIconDataURL(tText, tColor, getContrastColor(tColor));
+                    sendPushNotification(`津波情報発表`, { body: tBody, icon: iconUrl, tag: "tsunami_" + currentTsunamiTime });
 
                 } else if (tsunamiData.cancelled) {
-                    playTsunamiCancel = true;
-                    // ★ プッシュ通知 (津波解除)
-                    sendPushNotification(`津波情報`, { body: `津波警報・注意報はすべて解除されました。`, tag: "tsunami_cancel" });
+                    // ★ 修正点: 過去に実際に警報/注意報が出ていたか否かで分岐
+                    if (wasTsunamiActive) {
+                        playTsunamiCancel = true;
+                        wasTsunamiActive = false;
+                        let iconUrl = getPushIconDataURL("解除", "#555555", "#ffffff");
+                        sendPushNotification(`津波情報`, { body: `津波警報・注意報はすべて解除されました。`, icon: iconUrl, tag: "tsunami_cancel" });
+                    } else {
+                        playTsunamiNoWorry = true;
+                        let iconUrl = getPushIconDataURL("なし", "#555555", "#ffffff");
+                        sendPushNotification(`津波情報`, { body: `この地震による津波の心配はありません。`, icon: iconUrl, tag: "tsunami_none" });
+                    }
                 }
             }
         }
+        
         if (playTsunami) { seTsunami.currentTime = 0; seTsunami.play().catch(e=>{}); }
         if (playTsunamiCancel) {
             speakText("津波警報、および、津波注意報は、すべて解除されました。");
             seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{});
+        } else if (playTsunamiNoWorry) {
+            // 地震情報の読み上げで既に「心配なし」を言っている重複を防ぐ
+            if (!playUpdateApi || (latestEQ && latestEQ.earthquake.domesticTsunami !== "None")) {
+                speakText("この地震による津波の心配はありません。");
+                seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{});
+            }
         }
         if (playUpdateApi) { seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{}); }
 
