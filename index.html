@@ -249,7 +249,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     flex-shrink: 0;      
 }
 .qItem:hover { background:rgba(50,50,50,0.95); }
-.qItem.selected { border: 2px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); transform: scale(1.02); margin-left: -5px; }
+.qItem.selected { border: 2px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
 .scaleBox{width:75px;display:flex;align-items:center;justify-content:center; font-size:32px;font-weight:900;flex-shrink:0}
 .qInfo{flex:1;padding:10px 14px;color:#fff}
 .qName{font-size:20px; font-weight:900; margin-bottom:6px;}
@@ -263,14 +263,15 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .noComment { height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; }
 
 /* --- 予測長周期地震動階級パネル --- */
-#lpgmPanel { height: 100px; }
+#lpgmPanel { height: 130px; }
 .lpgmHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #ff4500; border-bottom: 1px solid rgba(255,255,255,0.2); }
-#lpgmBody { display: flex; align-items: center; justify-content: space-around; height: calc(100% - 25px); padding: 0 10px; }
+#lpgmBody { display: flex; align-items: center; justify-content: space-around; height: 50px; padding-top: 5px; }
 .lpgmClass { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; border-radius: 50%; background: #333; color: #888; border: 2px solid #555; transition: all 0.3s; }
 .lpgmClass.active-1 { background: rgba(0,206,209,0.2); color: #00ced1; border-color: #00ced1; box-shadow: 0 0 10px rgba(0,206,209,0.5); }
 .lpgmClass.active-2 { background: rgba(255,255,0,0.2); color: #ffff00; border-color: #ffff00; box-shadow: 0 0 10px rgba(255,255,0,0.5); }
 .lpgmClass.active-3 { background: rgba(255,170,0,0.2); color: #ffaa00; border-color: #ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.5); }
 .lpgmClass.active-4 { background: rgba(255,0,0,0.2); color: #ff0000; border-color: #ff0000; box-shadow: 0 0 10px rgba(255,0,0,0.5); }
+#lpgmDesc { font-size: 12px; color: #ddd; text-align: center; padding: 4px 10px; line-height: 1.4; font-weight: bold; }
 
 /* --- AXIS API 情報ウィンドウ --- */
 #weatherPanel { height: 120px; display: none; }
@@ -420,16 +421,19 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     <div id="commentPanel" class="base-panel" style="border-top: 4px solid #00ffcc;">
         <div class="commentHeader">自由付随コメント (FREE FORM COMMENT)</div>
         <div id="commentScrollArea">
-            <div class="noComment">付随コメントなし。</div>
+            <div class="noComment">受信待機中...</div>
         </div>
     </div>
     <div id="lpgmPanel" class="base-panel" style="border-top: 4px solid #ff4500;">
         <div class="lpgmHeader">予測長周期地震動階級 (ESTIMATED LPGM CLASS)</div>
-        <div id="lpgmBody">
-            <div class="lpgmClass">1</div>
-            <div class="lpgmClass">2</div>
-            <div class="lpgmClass">3</div>
-            <div class="lpgmClass">4</div>
+        <div style="display:flex; flex-direction:column; height:calc(100% - 25px);">
+            <div id="lpgmBody">
+                <div class="lpgmClass">1</div>
+                <div class="lpgmClass">2</div>
+                <div class="lpgmClass">3</div>
+                <div class="lpgmClass">4</div>
+            </div>
+            <div id="lpgmDesc"></div>
         </div>
     </div>
     <div id="weatherPanel" class="base-panel" style="border-top: 4px solid #1e90ff;">
@@ -484,6 +488,23 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 <div id="settingsModal">
     <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
     <div class="settingsBody">
+        <div class="setting-group">
+            <div class="setting-group-title">外観設定 (Appearance)</div>
+            <div class="setting-item">
+                <label>UIフォントサイズ比率 <span class="setting-value" id="uiFontSizeVal">100%</span></label>
+                <input type="range" id="uiFontSizeSlider" min="80" max="150" step="5" value="100">
+            </div>
+            <div class="setting-item">
+                <label>背景カラー</label>
+                <input type="color" id="bgColorPicker" value="#050505" style="width:100%; height:30px; cursor:pointer; border:none; padding:0;">
+            </div>
+            <div class="setting-item">
+                <label>震度カラーをカスタムする <input type="checkbox" id="chkCustomShindoColors"></label>
+            </div>
+            <div id="customShindoColorsArea" style="display:none; flex-wrap:wrap; gap:10px; margin-top:10px;">
+                </div>
+        </div>
+
         <div class="setting-group">
             <div class="setting-group-title">拡張機能</div>
             <div class="setting-item">
@@ -598,7 +619,14 @@ const defaultSettings = {
     volUpdateApi: 0.5,
     volUpdateEew: 0.5,
     volWarning: 0.5,
-    volBgm: 0.3
+    volBgm: 0.3,
+    uiFontSize: 100,
+    bgColor: "#050505",
+    customShindoColors: false,
+    shindoColors: {
+        "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600",
+        "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096"
+    }
 };
 
 let userSettings = { ...defaultSettings };
@@ -607,12 +635,44 @@ try {
     if (saved) {
         const parsed = JSON.parse(saved);
         userSettings = { ...defaultSettings, ...parsed };
+        // マージ時にネストされたオブジェクトも補完する
+        userSettings.shindoColors = { ...defaultSettings.shindoColors, ...(parsed.shindoColors || {}) };
     }
 } catch(e) { console.warn("Failed to load settings", e); }
 
 function saveSettings() {
     localStorage.setItem('epicaUserSettings', JSON.stringify(userSettings));
 }
+
+// --------------------------------------------------------
+// 色の算出・取得ヘルパー (設定連動)
+// --------------------------------------------------------
+const scaleColor = s => {
+  const code = String(s);
+  const cols = userSettings.customShindoColors ? userSettings.shindoColors : defaultSettings.shindoColors;
+  if (code === "1") return cols["1"]; 
+  if (code === "2") return cols["2"]; 
+  if (code === "3") return cols["3"]; 
+  if (code === "4") return cols["4"];
+  if (code.includes("5弱")) return cols["5弱"]; 
+  if (code.includes("5強")) return cols["5強"]; 
+  if (code.includes("6弱")) return cols["6弱"]; 
+  if (code.includes("6強")) return cols["6強"];
+  if (code === "7") return cols["7"]; 
+  return "#aaaaaa"; 
+};
+const magColor = m => m >= 7.5 ? "#ff0000" : m >= 6.0 ? "#ff5500" : m >= 4.0 ? "#ffff00" : "#00ced1";
+const depthColor = d => {
+    if (d === -1 || d === null) return "#444"; if (d === 0) return "#ff0000"; if (d < 30) return "#ff4500"; if (d < 70) return "#ffa500"; if (d < 150) return "#1e90ff"; return "#00008b";               
+};
+const getContrastColor = hex => {
+ if(!hex || hex === "#222" || hex === "#aaaaaa") return "#fff";
+ try {
+    const c = hex.replace("#",""); if (c.length !== 6) return "#fff";
+    const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+    return (r*299 + g*587 + b*114) / 1000 >= 140 ? "#000" : "#fff";
+ } catch(e) { return "#fff"; }
+};
 
 // プッシュ通知制動ヘルパー
 function sendPushNotification(title, options) {
@@ -625,7 +685,7 @@ function sendPushNotification(title, options) {
     }
 }
 
-// プッシュ通知用 アイコン動的生成関数 (Web Pushの仕様制約を補うため)
+// プッシュ通知用 アイコン動的生成関数
 function getPushIconDataURL(text, bgColor, textColor) {
     try {
         const canvas = document.createElement('canvas');
@@ -678,6 +738,94 @@ document.getElementById('btnSettings').addEventListener('click', () => {
 document.getElementById('btnCloseSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'none';
 });
+
+// 外観設定適用処理
+function applyAppearance() {
+    document.body.style.backgroundColor = userSettings.bgColor;
+    const startupScr = document.getElementById('startupScreen');
+    if(startupScr) startupScr.style.backgroundColor = userSettings.bgColor;
+
+    let ratio = userSettings.uiFontSize / 100;
+    let styleSheet = document.getElementById('dynamicAppearance');
+    if (!styleSheet) {
+        styleSheet = document.createElement('style');
+        styleSheet.id = 'dynamicAppearance';
+        document.head.appendChild(styleSheet);
+    }
+    // 重要なテキスト要素のサイズをスライダー比率で動的変更
+    styleSheet.innerHTML = `
+        .latestTitle { font-size: ${26 * ratio}px !important; }
+        .latestSub { font-size: ${16 * ratio}px !important; }
+        .qName { font-size: ${20 * ratio}px !important; }
+        .info-title { font-size: ${14 * ratio}px !important; }
+        .info-text { font-size: ${13 * ratio}px !important; }
+        .tsunamiInfo { font-size: ${15 * ratio}px !important; }
+        .commentBody { font-size: ${14 * ratio}px !important; }
+        .detailPlace { font-size: ${15 * ratio}px !important; }
+        .eewEpicenter { font-size: ${24 * ratio}px !important; }
+    `;
+
+    // 凡例の更新
+    document.querySelectorAll('.legendItem').forEach(el => {
+        let s = el.innerText;
+        const cols = userSettings.customShindoColors ? userSettings.shindoColors : defaultSettings.shindoColors;
+        if (cols[s]) {
+            el.style.backgroundColor = cols[s];
+            el.style.color = getContrastColor(cols[s]);
+        }
+    });
+}
+
+// 外観設定 UIリスナー追加
+document.getElementById('bgColorPicker').value = userSettings.bgColor;
+document.getElementById('bgColorPicker').addEventListener('change', (e) => {
+    userSettings.bgColor = e.target.value;
+    saveSettings(); applyAppearance();
+});
+
+document.getElementById('uiFontSizeSlider').value = userSettings.uiFontSize;
+document.getElementById('uiFontSizeVal').innerText = userSettings.uiFontSize + "%";
+document.getElementById('uiFontSizeSlider').addEventListener('input', (e) => {
+    userSettings.uiFontSize = parseInt(e.target.value);
+    document.getElementById('uiFontSizeVal').innerText = userSettings.uiFontSize + "%";
+    saveSettings(); applyAppearance();
+});
+
+const customColorsArea = document.getElementById('customShindoColorsArea');
+const shindoKeys = ["1", "2", "3", "4", "5弱", "5強", "6弱", "6強", "7"];
+shindoKeys.forEach(k => {
+    const div = document.createElement('div');
+    div.style.display = 'flex'; div.style.flexDirection = 'column'; div.style.alignItems = 'center';
+    div.innerHTML = `<span style="font-size:12px; font-weight:bold;">${k}</span>
+                     <input type="color" id="cp_${k}" value="${userSettings.shindoColors[k]}" style="width:30px;height:30px;cursor:pointer;border:none;padding:0;">`;
+    customColorsArea.appendChild(div);
+
+    div.querySelector('input').addEventListener('change', (e) => {
+        userSettings.shindoColors[k] = e.target.value;
+        saveSettings(); applyAppearance();
+        refreshMapDisplay(); renderHistoryPanel();
+        if(window.currentEarthquakeData) {
+            const e0 = window.currentEarthquakeData;
+            const s0 = fmt.shindo(e0.maxScale, e0.hypocenter.depth);
+            const scBg = scaleColor(s0);
+            const latestScale = document.querySelector('.latestScale');
+            if(latestScale) {
+                latestScale.style.backgroundColor = scBg;
+                latestScale.style.color = getContrastColor(scBg);
+            }
+        }
+    });
+});
+
+document.getElementById('chkCustomShindoColors').checked = userSettings.customShindoColors;
+customColorsArea.style.display = userSettings.customShindoColors ? "flex" : "none";
+document.getElementById('chkCustomShindoColors').addEventListener('change', (e) => {
+    userSettings.customShindoColors = e.target.checked;
+    customColorsArea.style.display = userSettings.customShindoColors ? "flex" : "none";
+    saveSettings(); applyAppearance();
+    refreshMapDisplay(); renderHistoryPanel();
+});
+
 
 // プッシュ通知設定のイベントリスナー
 document.getElementById('chkPushNotify').checked = userSettings.pushNotify;
@@ -828,7 +976,10 @@ function updateClock() {
         if (timestamp >= item.expiry) { changed = true; return false; }
         return true;
     });
-    if (changed) updateCommentDisplay(window.latestFullQuakeList);
+    if (changed) {
+        let activeQuake = selectedHistoryQuake || (window.latestFullQuakeList ? window.latestFullQuakeList.find(x => x.code === 551) : null);
+        updateCommentDisplay(activeQuake);
+    }
 
     const todayStr = `${y}-${m}-${d}`;
     if (now.getHours() === 23 && now.getMinutes() === 50 && now.getSeconds() === 0 && summaryPlayedForToday !== todayStr) {
@@ -989,9 +1140,13 @@ function refreshMapDisplay() {
 /* ================= 履歴パネル選択管理 ================= */
 function handleHistoryClick(q) {
     if (selectedHistoryQuake && selectedHistoryQuake.earthquake.time === q.earthquake.time) {
-        selectedHistoryQuake = null; updateLeafletMap(window.currentEarthquakeData, window.currentEarthquakePoints, window.currentEarthquakeIssue);
+        selectedHistoryQuake = null; 
+        updateLeafletMap(window.currentEarthquakeData, window.currentEarthquakePoints, window.currentEarthquakeIssue);
+        updateCommentDisplay(currentQuakeList[0] || null); // 新規受信分にリセット
     } else {
-        selectedHistoryQuake = q; updateLeafletMap(q.earthquake, q.points, q.issue);
+        selectedHistoryQuake = q; 
+        updateLeafletMap(q.earthquake, q.points, q.issue);
+        updateCommentDisplay(q); // 選択した地震の付随コメントを表示
     }
     renderHistoryPanel();
     if (window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
@@ -1107,7 +1262,10 @@ async function applyNankaiMockData() {
     };
 
     const mockList = [mockEarthquake];
-    window.latestFullQuakeList = mockList; updateCommentDisplay(mockList); updateTsunamiDisplay(mockTsunami, mockEarthquake.earthquake); updateLPGMDisplay(mag, depth);
+    window.latestFullQuakeList = mockList; 
+    updateCommentDisplay(mockEarthquake); 
+    updateTsunamiDisplay(mockTsunami, mockEarthquake.earthquake); 
+    updateLPGMDisplay(mag, depth);
 
     const e0 = mockEarthquake.earthquake, s0 = fmt.shindo(e0.maxScale, e0.hypocenter.depth), scBg = scaleColor(s0), mc0 = magColor(e0.hypocenter.magnitude), dc0 = depthColor(e0.hypocenter.depth);
     const latest = document.getElementById("latestPanel");
@@ -1137,32 +1295,6 @@ const KYOSHIN_COLORS = [
 ];
 
 const PREF_ARV = { "北海道": 1.6, "青森県": 1.8, "岩手県": 1.4, "宮城県": 2.0, "秋田県": 1.9, "山形県": 1.8, "福島県": 1.8, "茨城県": 2.1, "栃木県": 1.7, "群馬県": 1.6, "埼玉県": 2.4, "千葉県": 2.3, "東京都": 2.2, "神奈川県": 2.1, "新潟県": 2.2, "富山県": 1.8, "石川県": 1.9, "福井県": 1.8, "山梨県": 1.4, "長野県": 1.5, "岐阜県": 1.8, "静岡県": 1.9, "愛知県": 2.2, "三重県": 2.0, "滋賀県": 1.8, "京都府": 1.7, "大阪府": 2.4, "兵庫県": 2.1, "奈良県": 1.8, "和歌山県": 1.6, "鳥取県": 1.7, "島根県": 1.5, "岡山県": 1.9, "広島県": 1.6, "山口県": 1.6, "徳島県": 1.8, "香川県": 1.9, "愛媛県": 1.7, "高知県": 1.8, "福岡県": 1.9, "佐賀県": 2.2, "長崎県": 1.5, "熊本県": 1.8, "大分県": 1.7, "宮崎県": 1.8, "鹿児島県": 1.7, "沖縄県": 1.6 };
-
-const scaleColor = s => {
-  const code = String(s);
-  if (code === "1") return "#f2f2ff"; 
-  if (code === "2") return "#0000ff"; 
-  if (code === "3") return "#00c800"; 
-  if (code === "4") return "#fae600";
-  if (code.includes("5弱")) return "#ff9900"; 
-  if (code.includes("5強")) return "#ff2800"; 
-  if (code.includes("6弱")) return "#fa0000"; 
-  if (code.includes("6強")) return "#a00000";
-  if (code === "7") return "#960096"; 
-  return "#aaaaaa"; 
-};
-const magColor = m => m >= 7.5 ? "#ff0000" : m >= 6.0 ? "#ff5500" : m >= 4.0 ? "#ffff00" : "#00ced1";
-const depthColor = d => {
-    if (d === -1 || d === null) return "#444"; if (d === 0) return "#ff0000"; if (d < 30) return "#ff4500"; if (d < 70) return "#ffa500"; if (d < 150) return "#1e90ff"; return "#00008b";               
-};
-const getContrastColor = hex => {
- if(!hex || hex === "#222" || hex === "#aaaaaa") return "#fff";
- try {
-    const c = hex.replace("#",""); if (c.length !== 6) return "#fff";
-    const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
-    return (r*299 + g*587 + b*114) / 1000 >= 140 ? "#000" : "#fff";
- } catch(e) { return "#fff"; }
-};
 
 class Formatter {
     shindo(s, depth = null) {
@@ -1318,7 +1450,7 @@ async function calculateEewOffset(eew) {
     if (targetRaw > maxRaw) return targetRaw - maxRaw; return 0;
 }
 
-/* ================= 予測長周期地震動階級の算出 ================= */
+/* ================= 予測長周期地震動階級の算出と説明表示 ================= */
 function calcLPGM(mag, depth) {
     if (mag === null || mag === undefined || mag === -1) return 0;
     const m = parseFloat(mag), d = parseFloat(depth) || 0;
@@ -1326,13 +1458,30 @@ function calcLPGM(mag, depth) {
     let score = (m - 6.0) * 2.5 - (d / 50.0);
     if (score >= 3.5) return 4; if (score >= 2.5) return 3; if (score >= 1.5) return 2; if (score >= 0.5) return 1; return 0;
 }
+
 function updateLPGMDisplay(mag, depth) {
     const panel = document.getElementById("lpgmBody"); if(!panel) return;
+    const descPanel = document.getElementById("lpgmDesc");
     const lpgmLevel = calcLPGM(mag, depth); let html = "";
     for(let i=1; i<=4; i++) {
         const activeClass = i <= lpgmLevel ? ` active-${i}` : ""; html += `<div class="lpgmClass${activeClass}">${i}</div>`;
     }
     panel.innerHTML = html;
+
+    // 長周期地震動階級の説明文追加ロジック
+    if (descPanel) {
+        if (lpgmLevel === 1) {
+            descPanel.innerHTML = "階級1: 室内にいたほとんどの人が感じる。ブラインドなど吊り下げものが大きく揺れる。";
+        } else if (lpgmLevel === 2) {
+            descPanel.innerHTML = "階級2: 室内で大きな揺れを感じる。物につかまりたいと感じる。キャスター付き什器がわずかに動く。";
+        } else if (lpgmLevel === 3) {
+            descPanel.innerHTML = "階級3: 立っていることが困難になる。固定していない家具が移動することがあり、不安定なものは倒れることがある。";
+        } else if (lpgmLevel === 4) {
+            descPanel.innerHTML = "階級4: 立っていることができず、はわないと動けない。固定していない家具の大半が移動し、倒れるものもある。";
+        } else {
+            descPanel.innerHTML = "";
+        }
+    }
 }
 
 /* ================= スクロール管理 ================= */
@@ -1592,7 +1741,8 @@ async function updateWolfxEEW(data) {
         const existing = window.eewOriginalTextList.find(x => x.id === id);
         if (existing) { existing.text = data.OriginalText; existing.expiry = expiry; } 
         else { window.eewOriginalTextList.push({ id: id, text: data.OriginalText, expiry: expiry }); }
-        updateCommentDisplay(window.latestFullQuakeList);
+        let activeQuake = selectedHistoryQuake || (window.latestFullQuakeList ? window.latestFullQuakeList.find(x => x.code === 551) : null);
+        updateCommentDisplay(activeQuake);
     }
     
     let isNewEew = !activeEEWs.has(id); let prevData = activeEEWs.get(id);
@@ -1666,6 +1816,9 @@ async function updateWolfxEEW(data) {
         card.innerHTML = `<div class="eewHeader"><span style="display:flex; align-items:center;">${tagsHTML}${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報</span><span>${data.AnnouncedTime.slice(11,19)}</span></div><div class="eewBody"><div class="eewScaleBox" style="background:${scCol}; color:${scTextCol}; border-color:${scCol}; font-size:${eewFontSize};">${maxShindoStr}</div><div class="eewInfoBox"><div class="eewEpicenter">${data.Hypocenter}</div><div class="eewSubInfo"><span>M${data.Magunitude}</span><span>${fmt.depth(data.Depth)}</span></div><div style="font-size:13px; color:#00ffff; margin-top:6px; font-weight:bold; border-top:1px dashed rgba(255,255,255,0.3); padding-top:4px;">津波含む詳細情報調査中</div></div></div>${areasHTML}`;
     }
     
+    // フォントサイズの再適用 (eewEpicenter等のサイズが動的生成されるため)
+    applyAppearance();
+
     const popup = document.getElementById("eewPopup");
     if(popup) { let hasWarnAny = Array.from(activeEEWs.values()).some(e => e.isWarn); popup.innerText = hasWarnAny ? (activeEEWs.size > 1 ? "複数の緊急地震速報 (警報)" : "緊急地震速報 (警報)") : (activeEEWs.size > 1 ? "複数の緊急地震速報 (予報)" : "緊急地震速報 (予報)"); popup.style.display = "block"; }
     
@@ -1737,12 +1890,12 @@ async function updateWolfxEEW(data) {
                         let strokeWt = res.isForecastTarget ? 2.5 : MAP_BORDER_WEIGHT;
                         let op = res.isForecastTarget ? 0.9 : 0.7;
                         
-                        // ★ 修正点: 震度0(不明)の場合は塗りを透過にして境界線を隠さないようにする
+                        // 震度0(不明)の場合は塗りを透過にして境界線を隠さないようにする
                         let fColor = "transparent";
                         if (res.shindo !== "0" && res.shindo !== "不明") {
                             fColor = scaleColor(res.shindo);
                         } else {
-                            op = 0; // 透過なのでfillOpacityは0とする
+                            op = 0; 
                         }
 
                         return { color: strokeColor, weight: strokeWt, fillColor: fColor, fillOpacity: op };
@@ -2108,7 +2261,7 @@ function updateTsunamiDisplay(data, eqData) {
         else if (dt === "Watch") { msg = "津波注意報が発表されています。"; color = "#ffff00"; }
         else if (dt === "Warning" || dt === "MajorWarning") { msg = "津波警報等が発表されています。"; color = "#ff0000"; }
         else if (dt === "Unknown") { msg = "国内への津波の影響は不明です。"; color = "#ffaa00"; }
-        else if (dt === "None") { msg = "この地震による津波の心配はありません。"; } // ★修正：より明確な表現に
+        else if (dt === "None") { msg = "この地震による津波の心配はありません。"; } 
 
         if (ft && ft !== "None") {
             let fMsg = "";
@@ -2180,7 +2333,7 @@ function updateTsunamiDisplay(data, eqData) {
     area.scrollTop = 0; startAutoScroll("tsunamiScrollArea");
 }
 
-function updateCommentDisplay(fullList) {
+function updateCommentDisplay(quakeItem) {
     const area = document.getElementById("commentScrollArea"); if(!area) return; 
     let html = "";
     
@@ -2192,13 +2345,12 @@ function updateCommentDisplay(fullList) {
         });
     }
 
-    const commentData = fullList?.find(x => x.code === 551 && x.comments?.freeFormComment);
-    if (commentData && commentData.comments.freeFormComment) { 
-        html += `<div class="commentBody">${commentData.comments.freeFormComment}</div>`; 
+    if (quakeItem && quakeItem.comments && quakeItem.comments.freeFormComment) { 
+        html += `<div class="commentBody">${quakeItem.comments.freeFormComment}</div>`; 
     }
     
     if (html === "") { 
-        area.innerHTML = '<div class="noComment">付随コメントなし。</div>'; 
+        area.innerHTML = '<div class="noComment">受信待機中...</div>'; 
         area.style.opacity = 1; 
     } 
     else { 
@@ -2218,9 +2370,10 @@ async function loadQuakes(){
         
         const list = fullList.filter(x => x.code === 551);
         const tsunamiData = fullList.find(x => x.code === 552);
-        updateCommentDisplay(fullList);
 
         let latestEQ = list[0];
+        updateCommentDisplay(latestEQ);
+
         if (latestEQ && latestEQ.issue && latestEQ.issue.type === "Destination") {
             const relatedPrompt = list.find(x => x.issue && x.issue.type === "ScalePrompt" && x.earthquake.time === latestEQ.earthquake.time);
             if (relatedPrompt) {
@@ -2238,7 +2391,7 @@ async function loadQuakes(){
         
         let playUpdateApi = false; let playTsunami = false;
         let playTsunamiCancel = false;
-        let playTsunamiNoWorry = false; // ★追加：津波の心配がない場合の読み上げフラグ
+        let playTsunamiNoWorry = false; 
 
         if (latestEQ && latestEQ.earthquake.time !== lastEqTime) {
             lastEqTime = latestEQ.earthquake.time;
@@ -2329,7 +2482,6 @@ async function loadQuakes(){
                     sendPushNotification(`津波情報発表`, { body: tBody, icon: iconUrl, tag: "tsunami_" + currentTsunamiTime });
 
                 } else if (tsunamiData.cancelled) {
-                    // ★ 修正点: 過去に実際に警報/注意報が出ていたか否かで分岐
                     if (wasTsunamiActive) {
                         playTsunamiCancel = true;
                         wasTsunamiActive = false;
@@ -2349,7 +2501,6 @@ async function loadQuakes(){
             speakText("津波警報、および、津波注意報は、すべて解除されました。");
             seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{});
         } else if (playTsunamiNoWorry) {
-            // 地震情報の読み上げで既に「心配なし」を言っている重複を防ぐ
             if (!playUpdateApi || (latestEQ && latestEQ.earthquake.domesticTsunami !== "None")) {
                 speakText("この地震による津波の心配はありません。");
                 seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{});
@@ -2383,6 +2534,9 @@ async function loadQuakes(){
             }
             if (!selectedHistoryQuake) updateLeafletMap(latestEQ.earthquake, latestEQ.points, latestEQ.issue);
             updateLPGMDisplay(latestEQ.earthquake.hypocenter.magnitude, latestEQ.earthquake.hypocenter.depth);
+            
+            // 最新地震パネル更新時にフォント比率再適用
+            applyAppearance();
         }
         updateTsunamiDisplay(tsunamiData, latestEQ?.earthquake);
 
@@ -2548,6 +2702,7 @@ function renderAxisPanel(areaId, historyArray) {
         </div>
     `).join("");
     updatePanelScroll(areaId, html);
+    applyAppearance();
 }
 
 function updatePanelScroll(areaId, html) {
@@ -2656,6 +2811,9 @@ async function checkSystemUpdate() {
 async function startApp() {
     try {
         await checkSystemUpdate();
+
+        // 起動時に外観設定を初期反映
+        applyAppearance();
 
         updateStartupStatus("観測点データ読み込み中...");
         await loadSites();
