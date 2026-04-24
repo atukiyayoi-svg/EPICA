@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -331,17 +330,8 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .p-table th, .p-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
 .p-table th { background: #edf2f7; color: #4a5568; }
 
-/* --- 特別警報・臨時情報パネル --- */
-#nankaiPanel, #sanrikuPanel { display: none; flex-direction: column; max-height: 250px; }
-.mega-quake-header { background: rgba(255,0,255,0.2); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #ff66ff; border-bottom: 1px solid rgba(255,255,255,0.2); }
-#sanrikuPanel .mega-quake-header { background: rgba(0,170,255,0.2); color: #00ccff; }
-.mega-quake-scroll { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-.mega-quake-scroll::-webkit-scrollbar { display: none; }
-
-/* --- AXIS API 情報ウィンドウ --- */
-#dailySummaryPanel { height: 120px; display: none; }
-
-#newsPanel {
+/* --- 特別警報・臨時情報パネル (置換) --- */
+#megaQuakeAlertPanel {
     position: fixed;
     top: 1250px; 
     bottom: 90px; left: 50%; transform: translateX(-50%);
@@ -349,10 +339,14 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     z-index: 1000;
     display: none;
 }
+.mega-quake-header { background: rgba(255,0,255,0.2); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #ff66ff; border-bottom: 1px solid rgba(255,255,255,0.2); }
+.mega-quake-scroll { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
+.mega-quake-scroll::-webkit-scrollbar { display: none; }
+
+/* --- AXIS API 情報ウィンドウ --- */
+#dailySummaryPanel { height: 120px; display: none; }
 
 .axisHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); }
-#newsPanel .axisHeader { color: #ffff00; }
-
 .axisScrollArea { width: 100%; height: calc(100% - 25px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
 .axisScrollArea::-webkit-scrollbar { display: none; }
 .info-title { font-size: 14px; font-weight: 900; color: #fff; margin-bottom: 4px; }
@@ -428,7 +422,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     #leftSidebar { order: 2; margin-top: 8px !important; }
     #rightSidebar { order: 3; margin-top: 8px !important; }
     
-    #newsPanel { 
+    #megaQuakeAlertPanel { 
         position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; 
         transform: none !important; width: 96% !important; margin: 8px auto !important; 
         order: 4; flex-shrink: 0; 
@@ -521,16 +515,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div id="weatherWarningScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
     </div>
     
-    <div id="nankaiPanel" class="base-panel" style="border-top: 4px solid #ff00ff;">
-        <div class="mega-quake-header">南海トラフ地震関連情報 (NANKAI TROUGH INFO)</div>
-        <div id="nankaiScrollArea" class="mega-quake-scroll"></div>
-    </div>
-
-    <div id="sanrikuPanel" class="base-panel" style="border-top: 4px solid #00aaff;">
-        <div class="mega-quake-header">北海道・三陸沖後発地震注意情報 (SANRIKU-OKI INFO)</div>
-        <div id="sanrikuScrollArea" class="mega-quake-scroll"></div>
-    </div>
-    
     <div id="shakeDetectPanel" class="base-panel" style="border-top: 4px solid #00ff00; height: 120px; display: none;">
         <div class="axisHeader" style="color: #00ff00;">揺れ検知情報 (SHAKE DETECTION)</div>
         <div id="shakeDetectScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">検知待機中...</div></div>
@@ -563,9 +547,9 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     </div>
 </div>
 
-<div id="newsPanel" class="base-panel" style="border-top: 4px solid #ffff00;">
-    <div class="axisHeader">ニュース速報 (BREAKING NEWS)</div>
-    <div id="newsScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
+<div id="megaQuakeAlertPanel" class="base-panel" style="border-top: 4px solid #ff00ff;">
+    <div class="axisHeader" style="color: #ff00ff;">重大な地震情報 (MEGA QUAKE ALERT)</div>
+    <div id="megaQuakeAlertScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">現在発表されている情報はありません</div></div>
 </div>
 
 <div id="clockPanel">--/--/-- --:--:--</div>
@@ -584,7 +568,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
             <div class="setting-item"><label>コメントパネル <span class="setting-value" id="fsCommentVal">100%</span></label><input type="range" id="fsCommentSlider" min="80" max="150" step="5" value="100"></div>
             <div class="setting-item"><label>XMLパネル <span class="setting-value" id="fsXmlVal">100%</span></label><input type="range" id="fsXmlSlider" min="80" max="150" step="5" value="100"></div>
             <div class="setting-item"><label>気象警報パネル <span class="setting-value" id="fsWeatherWarningVal">100%</span></label><input type="range" id="fsWeatherWarningSlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>ニュース速報パネル <span class="setting-value" id="fsNewsVal">100%</span></label><input type="range" id="fsNewsSlider" min="80" max="150" step="5" value="100"></div>
         </div>
 
         <div class="setting-group">
@@ -615,6 +598,9 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
             </div>
             <div class="setting-item">
                 <label>揺れ検知機能 (自動追従表示) <input type="checkbox" id="chkShakeDetect"></label>
+            </div>
+            <div class="setting-item">
+                <label>揺れ検知から震央を推定する (5点以上) <input type="checkbox" id="chkEstimateEpicenter"></label>
             </div>
             <div class="setting-item">
                 <label>揺れ検知 閾値 (計測震度目安) <span class="setting-value" id="shakeThresholdVal">1.0</span></label>
@@ -701,12 +687,11 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 /* ================= グローバルステート & ユーザー設定 ================= */
 window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
-window.activeNankaiInfos = {};
-window.activeSanrikuInfos = {};
+let megaQuakeStatus = { nankai: null, sanriku: null };
 let wasTsunamiActive = false;
 
 const defaultSettings = {
-    pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false,
+    pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false,
     shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0,
     volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3,
     fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, fsNews: 100,
@@ -764,7 +749,6 @@ function getPushIconDataURL(text, bgColor, textColor) {
     } catch(e) { return null; }
 }
 
-const axisHistory = { news: [] }; const MAX_AXIS_HISTORY = 10;
 let seFirst = new Audio('First.mp3'), seLast = new Audio('Last.mp3'), seTsunami = new Audio('Tsunami.mp3');
 let seUpdateApi = new Audio('UpdateAPI.mp3'), seUpdateEew = new Audio('UpdateEEW.mp3'), seWarning = new Audio('Warning.mp3');
 let bgmFiles = { '朝.wav': new Audio('朝.wav'), '昼.wav': new Audio('昼.wav'), '夕方.wav': new Audio('夕方.wav'), '夜.wav': new Audio('夜.wav') };
@@ -806,8 +790,6 @@ function applyAppearance() {
         #xmlPanel .p-info-title { font-size: ${15 * (userSettings.fsXml / 100)}px !important; }
         #weatherWarningPanel .p-info-section { font-size: ${14 * (userSettings.fsWeatherWarning / 100)}px !important; }
         #weatherWarningPanel .p-info-title { font-size: ${15 * (userSettings.fsWeatherWarning / 100)}px !important; }
-        #newsPanel .info-title { font-size: ${14 * (userSettings.fsNews / 100)}px !important; }
-        #newsPanel .info-text { font-size: ${13 * (userSettings.fsNews / 100)}px !important; }
         .eewEpicenter { font-size: ${24 * (userSettings.fsLatest / 100)}px !important; }
     `;
 
@@ -818,7 +800,7 @@ function applyAppearance() {
 }
 
 // フォントサイズUIリスナー追加
-const fsKeys = ['fsLatest', 'fsDetail', 'fsTsunami', 'fsHistory', 'fsComment', 'fsXml', 'fsWeatherWarning', 'fsNews'];
+const fsKeys = ['fsLatest', 'fsDetail', 'fsTsunami', 'fsHistory', 'fsComment', 'fsXml', 'fsWeatherWarning'];
 fsKeys.forEach(k => {
     let slider = document.getElementById(k + 'Slider'); let valDisp = document.getElementById(k + 'Val');
     if (slider && valDisp) {
@@ -875,6 +857,9 @@ document.getElementById('chkShowObsPoints').checked = userSettings.showObsPoints
 document.getElementById('chkShowObsPoints').addEventListener('change', (e) => { userSettings.showObsPoints = e.target.checked; saveSettings(); refreshMapDisplay(); });
 document.getElementById('chkShakeDetect').checked = userSettings.shakeDetect;
 document.getElementById('chkShakeDetect').addEventListener('change', (e) => { userSettings.shakeDetect = e.target.checked; saveSettings(); });
+
+document.getElementById('chkEstimateEpicenter').checked = userSettings.estimateEpicenter;
+document.getElementById('chkEstimateEpicenter').addEventListener('change', (e) => { userSettings.estimateEpicenter = e.target.checked; saveSettings(); });
 
 document.getElementById('shakeThresholdSlider').value = userSettings.shakeThreshold || 8;
 document.getElementById('shakeThresholdVal').innerText = (((userSettings.shakeThreshold || 8) - 6) * 0.5).toFixed(1);
@@ -1004,6 +989,29 @@ function playPippiBeep() {
     }; playNote(0); playNote(0.15);
 }
 
+/* ================= 重大地震情報パネル更新 ================= */
+function updateMegaQuakeAlertPanel() {
+    const panel = document.getElementById('megaQuakeAlertPanel');
+    const scrollArea = document.getElementById('megaQuakeAlertScrollArea');
+    if (!panel || !scrollArea) return;
+    
+    let htmls = [];
+    if (megaQuakeStatus.sanriku) {
+        htmls.push(`<div class="info-text" style="font-size:16px; font-weight:bold; color:#00ccff;">北海道・三陸沖後発地震注意情報が発表中</div>`);
+    }
+    if (megaQuakeStatus.nankai) {
+        htmls.push(`<div class="info-text" style="font-size:16px; font-weight:bold; color:#ff66ff;">${megaQuakeStatus.nankai}が発表中</div>`);
+    }
+    
+    if (htmls.length > 0) {
+        panel.style.display = 'block';
+        scrollArea.innerHTML = `<div style="padding:15px; text-align:center; display:flex; flex-direction:column; gap:10px;">${htmls.join('')}</div>`;
+    } else {
+        panel.style.display = 'none';
+        scrollArea.innerHTML = `<div class="info-text" style="color:#666;text-align:center;padding-top:20px;">現在発表されている情報はありません</div>`;
+    }
+}
+
 /* ================= JMA XML 連携 (気象庁防災情報XML) ================= */
 let processedXmlUrls = new Set();
 let xmlTsunamiData = null; 
@@ -1011,7 +1019,7 @@ let xmlTsunamiGeojsonLayer = null;
 
 let lastFeedUpdateEqvol = 0;
 let lastFeedUpdateExtra = 0;
-let lastFeedUpdateEqvolL = 0; // 追加
+let lastFeedUpdateEqvolL = 0;
 let xmlBuffer = { eqvol: [], extra: [] };
 let warnBuffer = { extra: [] }; 
 
@@ -1019,7 +1027,7 @@ async function pollJmaXml() {
     const feeds = [
         { url: 'https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml', type: 'eqvol' },
         { url: 'https://www.data.jma.go.jp/developer/xml/feed/extra.xml', type: 'extra' },
-        { url: 'https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml', type: 'eqvol_l' } // 長期フィード追加
+        { url: 'https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml', type: 'eqvol_l' }
     ];
     let isUpdated = false;
 
@@ -1050,7 +1058,6 @@ async function pollJmaXml() {
                     let title = entry.querySelector('title')?.textContent || "";
 
                     if (f.type === 'eqvol_l') {
-                        // 長期フィードからは指定の特定情報のみを処理
                         const isNankai = title.includes("南海トラフ地震臨時情報") || title.includes("南海トラフ地震関連解説情報");
                         const isSanriku = title.includes("北海道・三陸沖後発地震注意情報");
                         if (!isNankai && !isSanriku) continue;
@@ -1106,14 +1113,35 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
         
         const isNankai = title.includes("南海トラフ地震臨時情報") || title.includes("南海トラフ地震関連解説情報");
         const isSanriku = title.includes("北海道・三陸沖後発地震注意情報");
-        if (isNankai) handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, window.activeNankaiInfos, "nankaiPanel", "nankaiScrollArea");
-        if (isSanriku) handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, window.activeSanrikuInfos, "sanrikuPanel", "sanrikuScrollArea");
+        const infoTypeStr = head?.querySelector('InfoType')?.textContent;
+
+        if (isNankai) {
+            if (infoTypeStr === "取消") {
+                megaQuakeStatus.nankai = null;
+            } else if (title.includes("南海トラフ地震臨時情報")) {
+                let match = title.match(/南海トラフ地震臨時情報（(.+)）/);
+                let keyword = match ? match[1] : "調査中";
+                megaQuakeStatus.nankai = `南海トラフ地震臨時情報（${keyword}）`;
+            } else {
+                if (!megaQuakeStatus.nankai) megaQuakeStatus.nankai = "南海トラフ地震関連解説情報";
+            }
+            updateMegaQuakeAlertPanel();
+        }
+
+        if (isSanriku) {
+            if (infoTypeStr === "取消") {
+                megaQuakeStatus.sanriku = null;
+            } else {
+                megaQuakeStatus.sanriku = true;
+            }
+            updateMegaQuakeAlertPanel();
+        }
 
         // --- 気象警報用HTML生成 ---
         const warnings = bodyEl?.querySelectorAll('Warning');
         let warnHtml = "";
+        let hasRealWarning = false;
         if (warnings && warnings.length > 0) {
-            let hasRealWarning = false;
             let tmpWarnHtml = `<div style="border-bottom: 2px solid #e2e8f0; margin-bottom: 10px; padding-bottom: 5px;">
                 <div class="p-info-title">${title}</div>
                 <div style="font-size: 12px; color: #718096;">発表時刻: ${reportTime}</div>
@@ -1160,6 +1188,27 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
         if (headlineText) { html += `<div style="background: #fffaf0; border: 1px solid #fbd38d; padding: 10px; margin-bottom: 15px; font-weight: bold; font-size: 13px; color: #975a16;">${headlineText.replace(/\n/g, '<br>')}</div>`; }
 
         let contentFound = false;
+        
+        // 特別警報・臨時情報の内容を総合パネルにも表示
+        if (isNankai || isSanriku) {
+            contentFound = true;
+            let bgColor = isNankai ? "#fdf4ff" : "#f0f8ff";
+            let borderColor = isNankai ? "#fbcfe8" : "#bae6fd";
+            let textColor = isNankai ? "#97266d" : "#0369a1";
+            
+            html += `<div class="p-info-section" style="background-color:${bgColor}; border-color:${borderColor};">`;
+            html += `<h3 style="color:${textColor}; border-color:${borderColor};">⚠️ ${title}</h3>`;
+            
+            const textNodes = bodyEl?.querySelectorAll('EarthquakeInfo > Text, EarthquakeInfo > Appendix, Comments > Text, Text');
+            let textHtml = "";
+            if (textNodes && textNodes.length > 0) {
+                textHtml = Array.from(textNodes).map(t => t.textContent.trim()).filter(t => t).join('\n\n');
+            }
+            if (textHtml) {
+                html += `<div style="font-size:13px; line-height:1.5; white-space:pre-wrap; padding:10px; background:#fff; border:1px solid ${borderColor}; border-radius:4px;">${textHtml}</div>`;
+            }
+            html += `</div>`;
+        }
 
         const tsunamiEl = bodyEl?.querySelector('Tsunami');
         if (tsunamiEl) {
@@ -1273,7 +1322,7 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
             }); html += `</div>`;
         }
 
-        if (!contentFound && !bodyEl?.querySelector('Earthquake') && !bodyEl?.querySelector('Intensity') && !warnHtml) {
+        if (!contentFound && !bodyEl?.querySelector('Earthquake') && !bodyEl?.querySelector('Intensity') && !hasRealWarning) {
             const genericAreas = Array.from(xmlDoc.querySelectorAll('Body > Area'));
             if (genericAreas.length > 0) {
                 html += `<div class="p-info-section"><h3>その他の地域情報</h3><table class="p-table"><tr><th>地域名</th><th>詳細</th></tr>`;
@@ -1296,14 +1345,17 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
             }
         }
         
-        // eqvol_l からの情報も総合パネルに表示する
+        // 総合パネルへの追加処理
         if (type === 'eqvol' || type === 'eqvol_l') {
             xmlBuffer.eqvol.unshift(html);
             xmlBuffer.eqvol = xmlBuffer.eqvol.slice(0, 15);
         } else if (type === 'extra') {
-            if (contentFound || comments || html.includes('その他の地域情報')) {
-                xmlBuffer.extra.unshift(html);
-                xmlBuffer.extra = xmlBuffer.extra.slice(0, 15);
+            const isWeatherWarningXML = infoKind === "気象警報・注意報" || (hasRealWarning && !contentFound);
+            if (!isWeatherWarningXML) {
+                if (contentFound || comments || html.includes('その他の地域情報')) {
+                    xmlBuffer.extra.unshift(html);
+                    xmlBuffer.extra = xmlBuffer.extra.slice(0, 15);
+                }
             }
         }
         
@@ -1323,32 +1375,6 @@ async function processXmlUrl(url, type) {
     } catch(e) {
         console.warn("XML Fetch error", e);
     }
-}
-
-function handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, targetDict, panelId, scrollAreaId) {
-    const infoType = xmlDoc.querySelector('Head > InfoType')?.textContent;
-    if (infoType === "取消") { 
-        for (let prop in targetDict) delete targetDict[prop]; 
-    } else {
-        let h = `<div style="font-weight:bold; margin-bottom:5px; font-size:14px; color:currentColor;">${title} <span style="color:#aaa; font-size:12px; font-weight:normal;">(${reportTime})</span></div>`;
-        if (headlineText) { h += `<div style="margin-bottom:8px; padding:8px; background:rgba(255,255,255,0.1); border-left:4px solid currentColor; font-weight:bold; font-size:13px;">${headlineText.replace(/\n/g, '<br>')}</div>`; }
-        
-        // 本文（EarthquakeInfo > Text）や参考（Appendix）、コメントを抽出
-        let textHtml = "";
-        const textNodes = bodyEl?.querySelectorAll('EarthquakeInfo > Text, EarthquakeInfo > Appendix, Comments > Text');
-        if (textNodes && textNodes.length > 0) {
-            textHtml = Array.from(textNodes).map(t => t.textContent.trim()).filter(t => t).join('\n\n');
-        }
-        if (textHtml) { 
-            h += `<div style="font-size:13px; line-height:1.5; white-space:pre-wrap;">${textHtml}</div>`; 
-        }
-
-        targetDict[reportTime] = h;
-    }
-    const panel = document.getElementById(panelId); const keys = Object.keys(targetDict).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
-    if (keys.length > 0) {
-        panel.style.display = "flex"; let fullHtml = keys.map(k => targetDict[k]).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.3); margin:15px 0;">'); updatePanelScroll(scrollAreaId, fullHtml);
-    } else { panel.style.display = "none"; }
 }
 
 function handleHypocenterUpdateXml(xmlDoc) {
@@ -2221,12 +2247,42 @@ function handleShakeDetection(activeSites) {
             let rect = L.rectangle([cell.sw, cell.ne], { color: cStr, weight: 2, fillColor: hexToRgba(cStr, 0.3), opacity: 0.9 }); shakeDetectLayer.addLayer(rect);
         });
 
+        let estHtml = "";
+        if (userSettings.estimateEpicenter && validSites.length >= 5) {
+            let sumLat = 0, sumLng = 0, sumWeight = 0;
+            validSites.forEach(s => {
+                let weight = Math.pow(s.lv, 3);
+                sumLat += s.lat * weight;
+                sumLng += s.lng * weight;
+                sumWeight += weight;
+            });
+            let estLat = sumLat / sumWeight;
+            let estLng = sumLng / sumWeight;
+            
+            let estMarker = L.circleMarker([estLat, estLng], {
+                radius: 12,
+                color: '#ff00ff',
+                weight: 3,
+                fillColor: '#ff00ff',
+                fillOpacity: 0.5,
+                pane: 'epicenterPane'
+            });
+            shakeDetectLayer.addLayer(estMarker);
+
+            let estIcon = L.divIcon({className:'epicenter-icon', html:'×', iconSize:[30,30], iconAnchor:[15,15]});
+            let crossMarker = L.marker([estLat, estLng], {icon: estIcon, pane: 'epicenterPane'});
+            shakeDetectLayer.addLayer(crossMarker);
+            
+            estHtml = `<div class="info-text" style="color:#ff66ff; font-weight:bold; margin-top:5px; font-size:14px;">※推定震央: ${estLat.toFixed(2)}, ${estLng.toFixed(2)} 付近</div>`;
+        }
+
         let regionsStr = Array.from(detectedRegions).join("、 ");
         let sdPanel = document.getElementById('shakeDetectPanel'); if (sdPanel) sdPanel.style.display = 'block';
         let html = `
             <div style="border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 10px; margin-bottom: 10px;">
                 <div class="info-title">揺れを検知 <small>${new Date().toLocaleTimeString()}</small></div>
                 <div class="info-text">以下の地域で揺れを検知しました：<br>${regionsStr}</div>
+                ${estHtml}
             </div>`;
         updatePanelScroll("shakeDetectScrollArea", html);
 
@@ -2549,7 +2605,7 @@ function connectAxis() {
         const data = e.data;
         if (typeof data === 'string') {
             if (data === 'hello') {
-                addLog("📡 AXIS API Authenticated"); axisRetrySec = 1000; axisRetryCount = 0; document.getElementById('newsPanel').style.display = 'block';
+                addLog("📡 AXIS API Authenticated"); axisRetrySec = 1000; axisRetryCount = 0; 
                 if(axisHeartbeatTimer) clearInterval(axisHeartbeatTimer);
                 axisHeartbeatTimer = setInterval(() => { if (axisWs && axisWs.readyState === WebSocket.OPEN) axisWs.send("hb"); }, 30000);
                 return;
@@ -2558,20 +2614,14 @@ function connectAxis() {
         try { handleAxisMessage(JSON.parse(data)); } catch (err) { console.error("AXIS parse error", err); }
     };
     axisWs.onclose = () => {
-        addLog("📡 AXIS API Disconnected"); document.getElementById('newsPanel').style.display = 'none'; if(axisHeartbeatTimer) clearInterval(axisHeartbeatTimer);
+        addLog("📡 AXIS API Disconnected"); if(axisHeartbeatTimer) clearInterval(axisHeartbeatTimer);
         axisRetrySec = axisRetrySec * 2; if (axisRetryCount < axisRetryMax) { axisRetryCount++; axisRetryTimer = setTimeout(connectAxis, axisRetrySec); }
     };
 }
 
 function handleAxisMessage(data) {
     const channel = data.channel; const msg = data.message;
-    if (channel === 'breaking-news') {
-        const title = msg?.Title || "ニュース速報"; const time = msg?.ReportDateTime ? msg.ReportDateTime.slice(0,16).replace("T", " ") : ""; const text = (msg?.Text || []).join("<br>");
-        axisHistory.news.unshift({title, time, text}); if(axisHistory.news.length > MAX_AXIS_HISTORY) axisHistory.news.pop();
-        const html = axisHistory.news.map(item => `<div style="border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 10px; margin-bottom: 10px;"><div class="info-title">${item.title} <small>${item.time}</small></div><div class="info-text">${item.text}</div></div>`).join("");
-        updatePanelScroll("newsScrollArea", html); applyAppearance();
-    }
-    else if (channel === 'eew') {
+    if (channel === 'eew') {
         const wolfxFormat = convertAxisEewToWolfx(msg); if (wolfxFormat && userSettings.eewSource === 'axis') updateWolfxEEW(wolfxFormat);
     }
 }
