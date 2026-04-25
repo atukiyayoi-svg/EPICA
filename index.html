@@ -86,13 +86,35 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     overflow: hidden;
 }
 
+/* --- 下部パネルコンテナ (重大な地震情報・JMA XML・気象警報) --- */
+#bottomPanelsContainer {
+    position: fixed;
+    bottom: 90px;
+    left: 440px; 
+    right: 400px;
+    height: 250px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+    pointer-events: none;
+}
+#bottomPanelsContainer > div {
+    flex: 1;
+    pointer-events: auto;
+    position: relative !important;
+    top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+    transform: none !important;
+    width: auto !important;
+    height: 100%;
+}
+
 /* --- 2Dマップ専用ウィンドウ --- */
 #leafletWrap {
     position: fixed;
     top: 10px;
     left: 440px; 
     right: 400px; 
-    bottom: 120px; 
+    bottom: 350px; /* bottomPanelsContainerの高さ(250) + bottom(90) + gap(10) */
     background: rgba(0,0,0,0.5);
     border: 1px solid rgba(255,255,255,0.2);
     box-shadow: inset 0 0 50px rgba(0,0,0,1);
@@ -287,7 +309,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 /* --- JMA XML ウィンドウ (改良版・白背景・黒縁) --- */
 #xmlPanel { 
-    height: 350px; display: flex; flex-direction: column;
+    display: flex; flex-direction: column;
     background: #ffffff; border: 2px solid #000000; color: #333; 
 }
 #xmlPanel .xmlHeader { background: #f0f0f0; padding: 4px 10px; font-size: 12px; font-weight: bold; color: #000; border-bottom: 2px solid #000; }
@@ -298,7 +320,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 /* --- 気象警報ウィンドウ (新規作成・白背景・黒縁) --- */
 #weatherWarningPanel { 
-    height: 250px; display: flex; flex-direction: column;
+    display: flex; flex-direction: column;
     background: #ffffff; border: 2px solid #000000; color: #333; 
 }
 #weatherWarningPanel .warnHeader { background: #fff1f2; padding: 4px 10px; font-size: 12px; font-weight: bold; color: #e53e3e; border-bottom: 2px solid #000; }
@@ -330,14 +352,10 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .p-table th, .p-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
 .p-table th { background: #edf2f7; color: #4a5568; }
 
-/* --- 特別警報・臨時情報パネル (置換) --- */
+/* --- 特別警報・臨時情報パネル --- */
 #megaQuakeAlertPanel {
-    position: fixed;
-    top: 1250px; 
-    bottom: 90px; left: 50%; transform: translateX(-50%);
-    width: 600px; height: 100px;
-    z-index: 1000;
-    display: none;
+    display: none; /* 初期は非表示、JSで制御 */
+    flex-direction: column;
 }
 .mega-quake-header { background: rgba(255,0,255,0.2); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #ff66ff; border-bottom: 1px solid rgba(255,255,255,0.2); }
 .mega-quake-scroll { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
@@ -407,6 +425,17 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         position: fixed !important; top: 10px !important; left: 50% !important; 
         transform: translateX(-50%) !important; font-size: 18px !important; z-index: 9999; 
     }
+
+    #bottomPanelsContainer {
+        position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+        width: 96% !important; margin: 8px auto !important;
+        flex-direction: column; height: auto !important;
+        order: 4; flex-shrink: 0; pointer-events: auto;
+    }
+    #bottomPanelsContainer > div {
+        height: 250px !important; /* スマホ時の各パネルの高さ */
+        flex: none;
+    }
     
     #leafletWrap { 
         position: relative !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important; 
@@ -422,11 +451,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     #leftSidebar { order: 2; margin-top: 8px !important; }
     #rightSidebar { order: 3; margin-top: 8px !important; }
     
-    #megaQuakeAlertPanel { 
-        position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; 
-        transform: none !important; width: 96% !important; margin: 8px auto !important; 
-        order: 4; flex-shrink: 0; 
-    }
     #wsLogPanel { 
         position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; 
         width: 96% !important; margin: 8px auto 30px auto !important; 
@@ -504,6 +528,22 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
             <div id="lpgmDesc"></div>
         </div>
     </div>
+    <div id="dailySummaryPanel" class="base-panel" style="border-top: 4px solid #cc00ff;">
+        <div class="axisHeader" style="color: #ff66ff;">本日のまとめ (DAILY SUMMARY)</div>
+        <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">待機中...</div></div>
+    </div>
+    <div id="shakeDetectPanel" class="base-panel" style="border-top: 4px solid #00ff00; height: 120px; display: none;">
+        <div class="axisHeader" style="color: #00ff00;">揺れ検知情報 (SHAKE DETECTION)</div>
+        <div id="shakeDetectScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">検知待機中...</div></div>
+    </div>
+</div>
+
+<div id="bottomPanelsContainer">
+    <div id="megaQuakeAlertPanel" class="base-panel" style="border-top: 4px solid #ff00ff;">
+        <div class="axisHeader" style="color: #ff00ff;">重大な地震情報 (MEGA QUAKE ALERT)</div>
+        <div id="megaQuakeAlertScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">現在発表されている情報はありません</div></div>
+    </div>
+    
     <div id="xmlPanel" class="base-panel">
         <div class="xmlHeader">気象庁防災情報XML (JMA XML) - 総合</div>
         <div id="xmlScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
@@ -513,15 +553,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     <div id="weatherWarningPanel" class="base-panel">
         <div class="warnHeader">気象警報・注意報 (WEATHER WARNING)</div>
         <div id="weatherWarningScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
-    </div>
-    
-    <div id="shakeDetectPanel" class="base-panel" style="border-top: 4px solid #00ff00; height: 120px; display: none;">
-        <div class="axisHeader" style="color: #00ff00;">揺れ検知情報 (SHAKE DETECTION)</div>
-        <div id="shakeDetectScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">検知待機中...</div></div>
-    </div>
-    <div id="dailySummaryPanel" class="base-panel" style="border-top: 4px solid #cc00ff;">
-        <div class="axisHeader" style="color: #ff66ff;">本日のまとめ (DAILY SUMMARY)</div>
-        <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">待機中...</div></div>
     </div>
 </div>
 
@@ -545,11 +576,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div class="legendItem" style="background:#a00000;color:#fff;">6強</div>
         <div class="legendItem" style="background:#960096;color:#fff;">7</div>
     </div>
-</div>
-
-<div id="megaQuakeAlertPanel" class="base-panel" style="border-top: 4px solid #ff00ff;">
-    <div class="axisHeader" style="color: #ff00ff;">重大な地震情報 (MEGA QUAKE ALERT)</div>
-    <div id="megaQuakeAlertScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">現在発表されている情報はありません</div></div>
 </div>
 
 <div id="clockPanel">--/--/-- --:--:--</div>
@@ -689,6 +715,9 @@ window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 let megaQuakeStatus = { nankai: null, sanriku: null };
 let wasTsunamiActive = false;
+
+// 海面変動継続フラグおよび管理用
+let seaLevelChangeContinues = false;
 
 const defaultSettings = {
     pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false,
@@ -1004,7 +1033,7 @@ function updateMegaQuakeAlertPanel() {
     }
     
     if (htmls.length > 0) {
-        panel.style.display = 'block';
+        panel.style.display = 'flex';
         scrollArea.innerHTML = `<div style="padding:15px; text-align:center; display:flex; flex-direction:column; gap:10px;">${htmls.join('')}</div>`;
     } else {
         panel.style.display = 'none';
@@ -1101,6 +1130,28 @@ function renderXmlPanels() {
     applyAppearance();
 }
 
+// 漢数字を半角数字に変換する簡易ヘルパー
+function kanjiToNumber(str) {
+    const kanjiMap = { '〇':0, '一':1, '二':2, '三':3, '四':4, '五':5, '六':6, '七':7, '八':8, '九':9, '十':10 };
+    let res = 0;
+    for(let i=0; i<str.length; i++) {
+        let n = kanjiMap[str[i]];
+        if(n !== undefined) {
+            if(n === 10) { res += (res===0?1:0)*10; } // 簡易対応
+            else { res += n; }
+        } else {
+            // 全角数字など
+            let code = str.charCodeAt(i);
+            if (code >= 0xFF10 && code <= 0xFF19) {
+                res = res * 10 + (code - 0xFF10);
+            } else if (code >= 0x30 && code <= 0x39) {
+                res = res * 10 + (code - 0x30);
+            }
+        }
+    }
+    return res > 0 ? res : 1;
+}
+
 async function processXmlString(xmlText, type, overrideUrl = null) {
     try {
         const xmlDoc = new DOMParser().parseFromString(xmlText, "application/xml");
@@ -1111,6 +1162,29 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
         if (title === "顕著な地震の震源要素更新のお知らせ") handleHypocenterUpdateXml(xmlDoc);
         if (infoKind === "津波警報・注意報・予報a" || title.includes("津波")) handleTsunamiXml(xmlDoc, headlineText);
         
+        // 津波「若干の海面変動」の継続判定ロジック
+        const textNodes = bodyEl?.querySelectorAll('EarthquakeInfo > Text, EarthquakeInfo > Appendix, Comments > Text, Text');
+        let fullTextContent = headlineText;
+        if (textNodes && textNodes.length > 0) {
+            fullTextContent += "\n" + Array.from(textNodes).map(t => t.textContent.trim()).filter(t => t).join('\n\n');
+        }
+        
+        const changeMatch = fullTextContent.match(/若干の海面変動が.*?今後([０-９0-9一二三四五六七八九十]+)(時間|日)程度は継続/);
+        if (changeMatch) {
+            let numVal = kanjiToNumber(changeMatch[1]);
+            let unit = changeMatch[2];
+            let ms = numVal * (unit === '日' ? 24*60*60*1000 : 60*60*1000);
+            let rawReportTime = head?.querySelector('ReportDateTime')?.textContent || xmlDoc.querySelector('Control > DateTime')?.textContent;
+            if (rawReportTime) {
+                let expiryDate = new Date(new Date(rawReportTime).getTime() + ms);
+                if (new Date() < expiryDate) {
+                    seaLevelChangeContinues = true;
+                } else {
+                    seaLevelChangeContinues = false;
+                }
+            }
+        }
+
         const isNankai = title.includes("南海トラフ地震臨時情報") || title.includes("南海トラフ地震関連解説情報");
         const isSanriku = title.includes("北海道・三陸沖後発地震注意情報");
         const infoTypeStr = head?.querySelector('InfoType')?.textContent;
@@ -1199,7 +1273,6 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
             html += `<div class="p-info-section" style="background-color:${bgColor}; border-color:${borderColor};">`;
             html += `<h3 style="color:${textColor}; border-color:${borderColor};">⚠️ ${title}</h3>`;
             
-            const textNodes = bodyEl?.querySelectorAll('EarthquakeInfo > Text, EarthquakeInfo > Appendix, Comments > Text, Text');
             let textHtml = "";
             if (textNodes && textNodes.length > 0) {
                 textHtml = Array.from(textNodes).map(t => t.textContent.trim()).filter(t => t).join('\n\n');
@@ -1550,7 +1623,7 @@ function triggerNankaiDebug() {
                 <Title>気象警報・注意報</Title>
                 <ReportDateTime>${new Date().toISOString()}</ReportDateTime>
                 <InfoKind>気象警報・注意報</InfoKind>
-                <Headline><Text>東京都に大雨警報が発表されました。</Text></Headline>
+                <Headline><Text>東京都に大雨警報が発表されました。若干の海面変動が観測されておりますので、今後１日程度は継続する可能性が高いと考えられます。</Text></Headline>
             </Head>
             <Body>
                 <Warning type="気象警報・注意報（府県予報区等）">
@@ -2155,6 +2228,7 @@ async function updateWolfxEEW(data) {
 
 /* ================= 強震モニタ取得・2D描画 & 揺れ検知機能 ================= */
 let sites=[];
+let siteDetectTimes = new Map(); // 震央推定用
 const loadSites=async()=>{ 
     try {
         const r=await fetch("https://weather-kyoshin.east.edge.storage-yahoo.jp/SiteList/sitelist.json"); const items = (await r.json()).items; 
@@ -2175,11 +2249,15 @@ async function fetchKyoshin(){
 window.lastKyoshinData = null;
 function drawKyoshin(d){ if(!d?.realTimeData) return; window.lastKyoshinData = d; renderKyoshinCanvas(d); }
 
-let isShakeDetectActive = false, preShakeDetectMode = false, shakeDetectCooldown = null, shakeDetectFirstSite = null, previousShakeDetectSites = new Map();
+let isShakeDetectActive = false, preShakeDetectMode = false, shakeDetectCooldown = null;
+let sdInitialSite = null;
+let sdNearest3Sites = [];
+let sdValidSites = [];
 
 function cancelShakeDetectImmediate() {
-    isShakeDetectActive = false; shakeDetectFirstSite = null; previousShakeDetectSites.clear(); 
+    isShakeDetectActive = false; sdInitialSite = null; sdNearest3Sites = []; sdValidSites = [];
     if (shakeDetectCooldown) { clearTimeout(shakeDetectCooldown); shakeDetectCooldown = null; }
+    siteDetectTimes.clear(); // 震央推定用の時刻記録もクリア
     
     if (!preShakeDetectMode && isRealtimeOnlyMode) {
         setTimeout(() => {
@@ -2199,14 +2277,34 @@ function handleShakeDetection(activeSites) {
     if (window.currentEarthquakeIssue && (window.currentEarthquakeIssue.type === "ScalePrompt" || window.currentEarthquakeIssue.type === "Destination")) { isWaitingForDetail = true; }
     if (isEEWActive || selectedHistoryQuake !== null || isWaitingForDetail) { if (isShakeDetectActive) { cancelShakeDetectImmediate(); } return; }
 
-    let validSites = [];
-    for (let i = 0; i < activeSites.length; i++) {
-        let s1 = activeSites[i]; let hasNeighbor = false;
-        for (let j = 0; j < activeSites.length; j++) { if (i === j) continue; let d = getDistance(s1.lat, s1.lng, activeSites[j].lat, activeSites[j].lng); if (d < 40) { hasNeighbor = true; break; } }
-        if (hasNeighbor) validSites.push(s1);
+    if (activeSites.length > 0) {
+        if (!sdInitialSite) {
+            sdInitialSite = activeSites[0];
+            // 最も近い3点を見つける
+            let dists = sites.map(s => ({site: s, dist: getDistance(sdInitialSite.lat, sdInitialSite.lng, s.lat, s.lng)}));
+            dists.sort((a,b) => a.dist - b.dist);
+            // 0番目は自分自身(距離0)、1番目〜3番目を取得
+            sdNearest3Sites = dists.slice(1, 4).map(d => d.site);
+        }
+
+        let nearestActiveCount = 0;
+        sdNearest3Sites.forEach(n => {
+            if (activeSites.some(a => a.lat === n.lat && a.lng === n.lng)) nearestActiveCount++;
+        });
+
+        if (nearestActiveCount >= 3) {
+            sdValidSites = activeSites;
+        } else {
+            sdValidSites = [];
+        }
+    } else {
+        if (!isShakeDetectActive) {
+            sdInitialSite = null;
+            sdNearest3Sites = [];
+        }
     }
 
-    if (validSites.length >= 2) {
+    if (sdValidSites.length >= 4) { // sdInitialSite + nearest3 = 4
         if (shakeDetectCooldown) { clearTimeout(shakeDetectCooldown); shakeDetectCooldown = null; }
         let isInitialDetection = false;
         if (!isShakeDetectActive) {
@@ -2215,27 +2313,17 @@ function handleShakeDetection(activeSites) {
             playPippiBeep();
         }
 
-        let currentMaxLv = -1; let currentMaxSites = [];
-        validSites.forEach(s => {
-            if (s.lv > currentMaxLv) { currentMaxLv = s.lv; currentMaxSites = [s]; } 
-            else if (s.lv === currentMaxLv) { currentMaxSites.push(s); }
+        let currentMaxLv = -1; let targetSite = null;
+        sdValidSites.forEach(s => {
+            if (s.lv > currentMaxLv) { currentMaxLv = s.lv; targetSite = s; } 
         });
 
-        let targetSite = null;
-        if (currentMaxSites.length > 0) {
-            let newestSites = currentMaxSites.filter(s => { let key = `${s.lat}_${s.lng}`; let prevLv = previousShakeDetectSites.get(key); return prevLv === undefined || s.lv > prevLv; });
-            if (newestSites.length > 0) { targetSite = newestSites[0]; } else { targetSite = currentMaxSites[0]; }
+        if (targetSite && isInitialDetection) {
+            lMap.flyTo([targetSite.lat, targetSite.lng], 8, { duration: 1.5 });
         }
-
-        if (targetSite) {
-            let key = `${targetSite.lat}_${targetSite.lng}`; let currentTargetKey = shakeDetectFirstSite ? `${shakeDetectFirstSite.lat}_${shakeDetectFirstSite.lng}` : null;
-            if (!shakeDetectFirstSite || targetSite.lv > shakeDetectFirstSite.lv || key !== currentTargetKey) { shakeDetectFirstSite = targetSite; lMap.flyTo([targetSite.lat, targetSite.lng], 8, { duration: 1.5 }); }
-        }
-
-        previousShakeDetectSites.clear(); validSites.forEach(s => { previousShakeDetectSites.set(`${s.lat}_${s.lng}`, s.lv); });
 
         let grid = {}; let gridSize = 0.4; let detectedRegions = new Set();
-        validSites.forEach(s => {
+        sdValidSites.forEach(s => {
             let gx = Math.floor(s.lng / gridSize); let gy = Math.floor(s.lat / gridSize); let key = `${gx}_${gy}`;
             if (!grid[key]) { grid[key] = { maxLv: s.lv, sw: [gy * gridSize, gx * gridSize], ne: [(gy + 1) * gridSize, (gx + 1) * gridSize] }; } 
             else { if (s.lv > grid[key].maxLv) grid[key].maxLv = s.lv; }
@@ -2248,16 +2336,59 @@ function handleShakeDetection(activeSites) {
         });
 
         let estHtml = "";
-        if (userSettings.estimateEpicenter && validSites.length >= 5) {
-            let sumLat = 0, sumLng = 0, sumWeight = 0;
-            validSites.forEach(s => {
-                let weight = Math.pow(s.lv, 3);
-                sumLat += s.lat * weight;
-                sumLng += s.lng * weight;
-                sumWeight += weight;
+        if (userSettings.estimateEpicenter && siteDetectTimes.size >= 5) {
+            // ガイガー法に基づくグリッドサーチ最適化
+            let detectedTimes = [];
+            siteDetectTimes.forEach((time, key) => {
+                let [lat, lng] = key.split('_').map(Number);
+                detectedTimes.push({lat: lat, lng: lng, t: time});
             });
-            let estLat = sumLat / sumWeight;
-            let estLng = sumLng / sumWeight;
+            detectedTimes.sort((a, b) => a.t - b.t);
+
+            const Vs = 3.5; // S波速度 km/s
+            let centerLat = detectedTimes[0].lat;
+            let centerLng = detectedTimes[0].lng;
+            let minError = Infinity;
+            let bestLat = centerLat, bestLng = centerLng;
+
+            function calcError(cLat, cLng) {
+                let D0 = getDistance(cLat, cLng, detectedTimes[0].lat, detectedTimes[0].lng);
+                let T0 = detectedTimes[0].t - (D0 / Vs) * 1000;
+                let err = 0;
+                for (let i = 1; i < detectedTimes.length; i++) {
+                    let Di = getDistance(cLat, cLng, detectedTimes[i].lat, detectedTimes[i].lng);
+                    let expectedTime = T0 + (Di / Vs) * 1000;
+                    err += Math.pow(detectedTimes[i].t - expectedTime, 2);
+                }
+                return err;
+            }
+
+            // 粗探索 (半径2度、0.2度刻み)
+            for (let dLat = -2; dLat <= 2; dLat += 0.2) {
+                for (let dLng = -2; dLng <= 2; dLng += 0.2) {
+                    let err = calcError(centerLat + dLat, centerLng + dLng);
+                    if (err < minError) {
+                        minError = err;
+                        bestLat = centerLat + dLat;
+                        bestLng = centerLng + dLng;
+                    }
+                }
+            }
+            // 詳細探索 (ベスト位置周辺0.4度、0.05度刻み)
+            let fineCenterLat = bestLat, fineCenterLng = bestLng;
+            for (let dLat = -0.4; dLat <= 0.4; dLat += 0.05) {
+                for (let dLng = -0.4; dLng <= 0.4; dLng += 0.05) {
+                    let err = calcError(fineCenterLat + dLat, fineCenterLng + dLng);
+                    if (err < minError) {
+                        minError = err;
+                        bestLat = fineCenterLat + dLat;
+                        bestLng = fineCenterLng + dLng;
+                    }
+                }
+            }
+
+            let estLat = bestLat;
+            let estLng = bestLng;
             
             let estMarker = L.circleMarker([estLat, estLng], {
                 radius: 12,
@@ -2273,7 +2404,7 @@ function handleShakeDetection(activeSites) {
             let crossMarker = L.marker([estLat, estLng], {icon: estIcon, pane: 'epicenterPane'});
             shakeDetectLayer.addLayer(crossMarker);
             
-            estHtml = `<div class="info-text" style="color:#ff66ff; font-weight:bold; margin-top:5px; font-size:14px;">※推定震央: ${estLat.toFixed(2)}, ${estLng.toFixed(2)} 付近</div>`;
+            estHtml = `<div class="info-text" style="color:#ff66ff; font-weight:bold; margin-top:5px; font-size:14px;">※推定震央 (最適化): ${estLat.toFixed(2)}, ${estLng.toFixed(2)} 付近</div>`;
         }
 
         let regionsStr = Array.from(detectedRegions).join("、 ");
@@ -2303,6 +2434,7 @@ function renderKyoshinCanvas(d) {
     const zoom = lMap.getZoom(); const baseRadius = Math.max(0.8, Math.pow(zoom, 2) * 0.08);
     let activeSites = [];
     let rtPaintChanged = false;
+    let currentFrameTime = Date.now(); // 厳密には d の取得時刻を使うべきだが、表示時刻とする
 
     for(let i=0; i<sites.length; i++){
         if(intens[i] === undefined || intens[i] === null) continue;
@@ -2310,7 +2442,14 @@ function renderKyoshinCanvas(d) {
         if (isDebugNankai) { lv = Math.max(0, intens[i]); } 
         else { const charCode = intens[i].charCodeAt(0); const intensityIndex = charCode - 100; if (intensityIndex < 0 || intensityIndex > 20) continue; lv = intensityIndex; }
 
-        if (userSettings.shakeDetect && lv >= (userSettings.shakeThreshold || 8)) { activeSites.push({ lat: sites[i].lat, lng: sites[i].lng, lv: lv }); }
+        if (userSettings.shakeDetect && lv >= (userSettings.shakeThreshold || 8)) { 
+            activeSites.push({ lat: sites[i].lat, lng: sites[i].lng, lv: lv });
+            // 初検知時刻の記録
+            let key = `${sites[i].lat}_${sites[i].lng}`;
+            if (!siteDetectTimes.has(key)) {
+                siteDetectTimes.set(key, currentFrameTime);
+            }
+        }
         
         if (isEEWActive && userSettings.eewRealtimePaint) {
             let fId = siteToFeatureId[i];
@@ -2343,7 +2482,15 @@ function renderKyoshinCanvas(d) {
 function updateTsunamiMap() {
     if (!tsunamiGeojsonLayer) return;
     const data = currentTsunamiData;
-    if (!data || data.cancelled || !data.areas || data.areas.length === 0) { tsunamiGeojsonLayer.setStyle({ color: "transparent", weight: 0, fillColor: "transparent", fillOpacity: 0 }); return; }
+    if (!data || data.cancelled || !data.areas || data.areas.length === 0) {
+        if (!seaLevelChangeContinues) { // 海面変動が継続中でなければクリア
+            tsunamiGeojsonLayer.setStyle({ color: "transparent", weight: 0, fillColor: "transparent", fillOpacity: 0 }); 
+        } else {
+            // 海面変動継続中なので薄い水色で沿岸を塗るなどの表現（データがない場合は全国になるため注意が必要だが、ここでは簡易的に保持）
+            // 適切な対象エリアが不明な場合はクリアするか、最後に残っていたエリアを利用する
+        }
+        return; 
+    }
     const areaGrades = {}; data.areas.forEach(a => { areaGrades[a.name] = a.grade; });
     tsunamiGeojsonLayer.setStyle(feature => {
         const areaName = feature.properties.name || feature.properties.nam_ja || feature.properties.code; const grade = areaGrades[areaName];
@@ -2351,6 +2498,8 @@ function updateTsunamiMap() {
             let color = "#ffffff";
             if (grade === "MajorWarning" || grade === "MajorTsunami") color = "#aa00aa"; else if (grade === "Warning" || grade === "TsunamiWarning") color = "#ff0000"; else if (grade === "Watch" || grade === "TsunamiAdvisory") color = "#ffff00";
             return { color: color, weight: 12, opacity: 0.8, fillColor: color, fillOpacity: 0.5 };
+        } else if (seaLevelChangeContinues) {
+             return { color: "#00ced1", weight: 4, opacity: 0.5, fillColor: "transparent", fillOpacity: 0 }; // 海面変動継続中
         } else return { color: "transparent", weight: 0, fillColor: "transparent", fillOpacity: 0 };
     });
 }
@@ -2377,7 +2526,13 @@ function updateTsunamiDisplay(data, eqData) {
             if (eqTime > tTime) { isOutdatedCancel = true; }
         }
         if (isOutdatedCancel) { isCancelled = false; data = null; } 
-        else { let msg = "津波警報・注意報は解除されました。<br>現在、津波の心配はありません。"; area.innerHTML = `<div class="noTsunami" style="color:#aaa; flex-direction:column; line-height:1.4;">${msg}</div>`; area.style.opacity = 1; return; }
+        else { 
+            let msg = "津波警報・注意報は解除されました。<br>現在、津波の心配はありません。"; 
+            if (seaLevelChangeContinues) {
+                msg = "津波警報・注意報は全て解除されました。<br><span style='color:#00ced1'>※若干の海面変動が継続している可能性があります。</span>";
+            }
+            area.innerHTML = `<div class="noTsunami" style="color:#aaa; flex-direction:column; line-height:1.4;">${msg}</div>`; area.style.opacity = 1; return; 
+        }
     }
 
     let hasAreaInfo = (data && !isCancelled && data.areas && data.areas.length > 0);
@@ -2400,10 +2555,19 @@ function updateTsunamiDisplay(data, eqData) {
             if (fMsg) { if (dt === "None" || !dt) { msg = "この地震による津波の心配はありません。<br>" + fMsg; color = "#aaa"; } else { msg += "<br><br>" + fMsg; } }
         }
         if (!msg) { msg = "国内での津波の心配はありません。<br>海外での津波の影響は不明です。"; }
+        if (seaLevelChangeContinues && dt === "None") {
+            msg += "<br><span style='color:#00ced1'>※若干の海面変動が継続している可能性があります。</span>";
+        }
         area.innerHTML = `<div class="noTsunami" style="color:${color}; flex-direction:column; line-height:1.4;">${msg}</div>`; area.style.opacity = 1; return;
     }
 
-    if (!hasAreaInfo && !xmlActive) { area.innerHTML = '<div class="noTsunami">国内での津波の心配はありません。<br>海外での津波の影響は不明です。</div>'; area.style.opacity = 1; return; }
+    if (!hasAreaInfo && !xmlActive) { 
+        let msg = "国内での津波の心配はありません。<br>海外での津波の影響は不明です。";
+        if (seaLevelChangeContinues) {
+            msg += "<br><span style='color:#00ced1'>※若干の海面変動が継続している可能性があります。</span>";
+        }
+        area.innerHTML = `<div class="noTsunami">${msg}</div>`; area.style.opacity = 1; return; 
+    }
     
     let combinedHtml = "";
     const gradeMap = { "MajorWarning": { name: "大津波警報", color: "#aa00aa" }, "MajorTsunami": { name: "大津波警報", color: "#aa00aa" }, "Warning": { name: "津波警報", color: "#ff0000" }, "TsunamiWarning": { name: "津波警報", color: "#ff0000" }, "Watch": { name: "津波注意報", color: "#ffff00" }, "TsunamiAdvisory": { name: "津波注意報", color: "#ffff00" }, "Unknown": { name: "津波予報", color: "#ffffff" }, "SlightChange": { name: "津波予報", color: "#00ced1" } };
