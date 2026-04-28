@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <title>EPICA - Earthquake Prediction & Information</title>
+<link rel="icon" href="data:," />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -1444,6 +1445,11 @@ async function initAnnualAnimation() {
             dragging: true, touchZoom: false, scrollWheelZoom: true, doubleClickZoom: false
         }).setView([37.5, 137], 4);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(animMap);
+        
+        // 修正箇所：animMap 用の epicenterPane を作成してエラーを防止
+        animMap.createPane('epicenterPane');
+        animMap.getPane('epicenterPane').style.zIndex = 650;
+        animMap.getPane('epicenterPane').style.pointerEvents = 'none';
     }
     if(isAnimFetching) return;
     isAnimFetching = true;
@@ -1455,12 +1461,10 @@ async function initAnnualAnimation() {
     const currentMonth = new Date().getMonth() + 1;
     
     try {
-        // b.htmlを参考にUSGSからデータ取得（制限なしで今年のデータを全て取得するため月ごとに分割）
         for (let month = 1; month <= currentMonth; month++) {
             let startD = `${currentYear}-${String(month).padStart(2, '0')}-01`;
             let endD = month === 12 ? `${currentYear+1}-01-01` : `${currentYear}-${String(month+1).padStart(2, '0')}-01`;
             
-            // 日本周辺・全マグニチュードを指定
             let url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startD}&endtime=${endD}&minlatitude=24&maxlatitude=46&minlongitude=122&maxlongitude=146`;
             
             const res = await fetch(url);
@@ -1470,10 +1474,9 @@ async function initAnnualAnimation() {
                     annualQuakes = annualQuakes.concat(data.features);
                 }
             }
-            await new Promise(r => setTimeout(r, 100)); // 負荷軽減のためのわずかな遅延
+            await new Promise(r => setTimeout(r, 100));
         }
         
-        // 時間順（古い順）にソート
         annualQuakes.sort((a, b) => a.properties.time - b.properties.time);
     } catch(e) { 
         console.error("アニメーションデータ取得エラー", e);
@@ -1506,7 +1509,6 @@ function runAnnualAnimation() {
         const dt = now - lastRealTime;
         lastRealTime = now;
         
-        // 仮想時間の進行速度調整 (取得件数が膨大なため進行速度を少し早めに設定)
         virtualTime += dt * 14400; 
         
         if (virtualTime > endTime) {
@@ -1524,7 +1526,7 @@ function runAnnualAnimation() {
         
         while (qIndex < annualQuakes.length) {
             const q = annualQuakes[qIndex];
-            const qTime = q.properties.time; // USGSフォーマットの時間(ms)
+            const qTime = q.properties.time;
             if (qTime <= virtualTime) {
                 spawnAnimMarker(q);
                 qIndex++;
@@ -1539,18 +1541,17 @@ function runAnnualAnimation() {
     animReqId = requestAnimationFrame(animLoop);
 }
 
-// マグニチュードに基づく波紋カラーの取得
 function getRippleColor(mag) {
-    if (mag >= 7.0) return '#960096'; // 震度7に近い紫
-    if (mag >= 6.0) return '#a00000'; // 濃い赤
-    if (mag >= 5.5) return '#fa0000'; // 赤
-    if (mag >= 5.0) return '#ff2800'; // 朱色
-    if (mag >= 4.5) return '#ff9900'; // オレンジ
-    if (mag >= 4.0) return '#fae600'; // 黄色
-    if (mag >= 3.0) return '#00c800'; // 緑
-    if (mag >= 2.0) return '#0000ff'; // 青
-    if (mag >= 1.0) return '#f2f2ff'; // 水色〜白
-    return '#ffffff'; // 白っぽい色
+    if (mag >= 7.0) return '#960096'; 
+    if (mag >= 6.0) return '#a00000'; 
+    if (mag >= 5.5) return '#fa0000'; 
+    if (mag >= 5.0) return '#ff2800'; 
+    if (mag >= 4.5) return '#ff9900'; 
+    if (mag >= 4.0) return '#fae600'; 
+    if (mag >= 3.0) return '#00c800'; 
+    if (mag >= 2.0) return '#0000ff'; 
+    if (mag >= 1.0) return '#f2f2ff'; 
+    return '#ffffff';
 }
 
 function spawnAnimMarker(q) {
@@ -1563,14 +1564,12 @@ function spawnAnimMarker(q) {
     
     const col = getRippleColor(mag);
     
-    // マグニチュードの値が大きいほど波紋の最大のひろがりが大きくなるようにする
     const size = Math.max(15, Math.pow(Math.max(1, mag), 2.5) * 1.5);
     const duration = Math.max(1500, mag * 800); 
     
     let html = `<div class="anim-marker-container">
         <div class="anim-ring" style="--max-size: ${size}px; border-color: ${col}; animation-duration: ${duration}ms; border-width: ${Math.max(1, mag)}px;"></div>
     </div>`;
-    // M〇〇と表示する機能は削除済
     
     const icon = L.divIcon({
         className: '',
@@ -1579,6 +1578,7 @@ function spawnAnimMarker(q) {
         iconAnchor: [0, 0]
     });
     
+    // epicenterPaneが作成されたのでエラーなく描画されます
     const marker = L.marker([lat, lng], {icon: icon, pane: 'epicenterPane'}).addTo(animMap);
     
     setTimeout(() => {
@@ -1586,7 +1586,6 @@ function spawnAnimMarker(q) {
     }, duration);
 }
 
-// 円形の雫波紋アニメーションCSSの動的挿入
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
 @keyframes dropRipple {
@@ -1624,7 +1623,6 @@ styleSheet.innerText = `
 }
 `;
 document.head.appendChild(styleSheet);
-
 
 async function startApp(){try{await checkSystemUpdate(); applyAppearance(); updateStartupStatus("観測点データ読み込み中..."); await loadSites(); updateStartupStatus("地図データ読み込み中..."); await initLeaflet(); updateStartupStatus("地震情報取得中..."); await loadQuakes(); pollJmaXml(); connectP2P(); connectWolfx(); connectAxis(); updateStartupStatus("リアルタイムデータ取得中..."); const d=await fetchKyoshin(); if(d)drawKyoshin(d); setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); initAnnualAnimation(); showStartupReady();}catch(e){updateStartupStatus("初期化エラー: "+e.message); showStartupReady();}}
 
