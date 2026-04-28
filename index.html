@@ -65,8 +65,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 /* --- 巨大地震警戒テロップ --- */
 #megaQuakeTelop { position: absolute; bottom: 60px; left: calc(50% + 220px); background: #FF00FF; color: #FFF; border: 2px solid #FFF; padding: 10px 20px; font-size: 16px; font-weight: 700; z-index: 1000; pointer-events: none; animation: blink 0.8s infinite alternate; white-space: nowrap; display: none; }
 
-/* --- 震度カラー凡例 --- */
-#shindoLegend { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; background: rgba(0,0,0,0.8); border: 2px solid #444; padding: 4px; z-index: 1000; pointer-events: none; }
+/* --- 震度カラー凡例 (縦並び・右寄せ) --- */
+#shindoLegend { position: absolute; bottom: 12px; right: 12px; transform: none; left: auto; display: flex; flex-direction: column-reverse; gap: 2px; background: rgba(0,0,0,0.8); border: 2px solid #444; padding: 4px; z-index: 1000; pointer-events: none; }
 .legendItem { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; border-radius: 2px; }
 
 /* --- 最新情報 (兼 EEW表示領域) --- */
@@ -77,7 +77,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .latestSub{ font-size: 16px; color: #FFFF00; font-weight: 700; }
 .latestScale{ width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 700; flex-shrink: 0; border: 2px solid #fff; border-radius: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
 .tag-checking { background: #FF9900; color: #000; padding: 4px 8px; font-weight: 700; font-size: 14px; margin-left: 8px; border-radius: 2px; }
-.tag { display: inline-block; padding: 4px 8px; border-radius: 2px; font-size: 14px; font-weight: 700; margin-right: 6px; text-align: center; border: 1px solid rgba(255,255,255,0.3); }
+.tag { display: inline-block; padding: 4px 8px; border-radius: 2px; font-size: 14px; font-weight: 700; margin-right: 6px; text-align: center; }
 
 /* --- 震度詳細 --- */
 #detailPanel{ height: 180px; }
@@ -194,7 +194,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .info-text { font-size: 14px; line-height: 1.5; color: #DDD; white-space: pre-wrap; word-wrap: break-word; font-weight: 700; }
 
 /* --- 時計 --- */
-#clockPanel { position: fixed; bottom: 12px; left: 12px; width: 420px; background: rgba(0, 0, 0, 0.9); border: 2px solid #444; color: #fff; font-size: 28px; font-weight: 700; text-align: center; padding: 14px 0; z-index: 100; letter-spacing: 0.1em; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+#clockPanel { width: 100%; background: rgba(0, 0, 0, 0.9); border: 2px solid #444; color: #fff; font-size: 28px; font-weight: 700; text-align: center; padding: 14px 0; z-index: 100; letter-spacing: 0.1em; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); margin-bottom: 0px; box-sizing: border-box; }
 
 /* --- システムログ --- */
 #wsLogPanel { position: fixed; bottom: 12px; right: 12px; width: 380px; height: 120px; background: rgba(0,0,0,0.8); border: 2px solid #00FF00; color: #00FF00; font-family: monospace; font-size: 12px; padding: 12px; overflow-y: auto; z-index: 150; box-sizing: border-box; display: none; border-radius: 4px; }
@@ -299,6 +299,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 </div>
 
 <div id="rightSidebar">
+    <div id="clockPanel">--/--/-- --:--:--</div>
     <div id="commentPanel" class="base-panel">
         <div class="commentHeader">自由付随コメント (FREE FORM COMMENT)</div>
         <div id="commentScrollArea"><div class="noComment">受信待機中...</div></div>
@@ -316,6 +317,15 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div class="axisHeader" style="color: #DDA0DD;">本日のまとめ (DAILY SUMMARY)</div>
         <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">待機中...</div></div>
     </div>
+    
+    <div id="annualAnimationPanel" class="base-panel" style="border-top: 8px solid #FF8C00; height: 350px;">
+        <div class="axisHeader" style="color: #FF8C00; display:flex; justify-content: space-between;">
+            <span>今年の地震活動 (ANIMATION)</span>
+            <span id="annualAnimTime" style="font-weight: 700; color: #FFF;">--/--/-- --:--</span>
+        </div>
+        <div id="annualAnimMap" style="flex: 1; background:#050505;"></div>
+    </div>
+    
     <div id="eqUpdatePanel" class="base-panel" style="display:none; border-top: 8px solid #FFD700; height: 190px;">
         <div class="axisHeader" style="color: #FFD700;">震源要素更新のお知らせ</div>
         <div id="eqUpdateText" style="padding: 12px; font-size:14px; line-height:1.5;"></div>
@@ -367,7 +377,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     </div>
 </div>
 
-<div id="clockPanel">--/--/-- --:--:--</div>
 <div id="wsLogPanel">-- SYSTEM READY --<br>※「1」キーで全機能デバッグテスト開始<br>※「2」キーでログ表示/非表示切替</div>
 
 <div id="settingsModal">
@@ -485,10 +494,6 @@ function applyAppearance() {
     const mapEl = document.getElementById('leafletMap');
     if(mapEl) mapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
 
-    document.querySelectorAll('.eew-mini-map').forEach(el => {
-        el.style.setProperty('background', userSettings.mapOceanColor, 'important');
-    });
-
     let st = document.getElementById('dynamicAppearance'); if(!st){st=document.createElement('style'); st.id='dynamicAppearance'; document.head.appendChild(st);}
     st.innerHTML = `
         .latestTitle { font-size: ${24 * (userSettings.fsLatest / 100)}px !important; }
@@ -500,7 +505,6 @@ function applyAppearance() {
         #xmlPanel .p-info-section { font-size: ${14 * (userSettings.fsXml / 100)}px !important; }
         #weatherWarningPanel .p-info-section { font-size: ${14 * (userSettings.fsWeatherWarning / 100)}px !important; }
         .eewEpicenter { font-size: ${22 * (userSettings.fsLatest / 100)}px !important; }
-        .eew-mini-map { background: ${userSettings.mapOceanColor} !important; }
     `;
     document.querySelectorAll('.legendItem').forEach(el=>{ let s=el.innerText; const cols=userSettings.customShindoColors?userSettings.shindoColors:defaultSettings.shindoColors; if(cols[s]){el.style.backgroundColor=cols[s]; el.style.color=getContrastColor(cols[s]);} });
 }
@@ -519,13 +523,6 @@ document.getElementById('chkShowMapTile').addEventListener('change', e => {
         if(userSettings.showMapTile) baseTileLayer.addTo(lMap);
         else baseTileLayer.remove();
     }
-    eewMiniMaps.forEach((m, id) => {
-        let t = eewMiniTileLayers.get(id);
-        if (t) {
-            if (userSettings.showMapTile) t.addTo(m);
-            else t.remove();
-        }
-    });
 });
 
 document.getElementById('mapOceanColorPicker').value = userSettings.mapOceanColor;
@@ -541,7 +538,6 @@ document.getElementById('mapLandColorPicker').addEventListener('input', e => {
     saveSettings();
     refreshMapDisplay();
     if(isEEWActive) updateEewGeojsonStyles();
-    updateEewMiniMapStyles();
 });
 
 document.getElementById('chkMapLandTransparent').checked = userSettings.mapLandTransparent;
@@ -550,7 +546,6 @@ document.getElementById('chkMapLandTransparent').addEventListener('change', e =>
     saveSettings();
     refreshMapDisplay();
     if(isEEWActive) updateEewGeojsonStyles();
-    updateEewMiniMapStyles();
 });
 
 
@@ -944,7 +939,7 @@ function renderHistoryPanel(){
         d.className="qItem"; if(selectedHistoryQuake&&selectedHistoryQuake.earthquake.time===e.time)d.classList.add("selected"); d.onclick=()=>handleHistoryClick(q); 
         let tN=e.hypocenter.name; if(q.issue?.type==="ScalePrompt")tN="[震度速報]"; 
         let lpgmHtml = q.earthquake.maxLpgmInt ? `<span class="lpgm-badge">長周期 階級${q.earthquake.maxLpgmInt}</span>` : "";
-        d.innerHTML=`<div class="scaleBox" style="background:${b};color:${getContrastColor(b)};font-size:${s.length>1?"24px":"32px"}">${s}</div><div class="qInfo"><div class="qName">${tN}${lpgmHtml}</div><div style="display:flex;align-items:center;"><span class="tag" style="background:${mC};color:${getContrastColor(mC)}">M${e.hypocenter.magnitude!==-1?e.hypocenter.magnitude.toFixed(1):'-.-'}</span><span class="tag" style="background:${dC};color:${getContrastColor(dC)}">${fmt.depth(e.hypocenter.depth)}</span><span style="font-size:12px;opacity:0.8;margin-left:auto;">${e.time.slice(5,16).replace("-","/")}</span></div></div>`; 
+        d.innerHTML=`<div class="scaleBox" style="background:${b};color:${getContrastColor(b)};font-size:${s.length>1?"24px":"32px"}">${s}</div><div class="qInfo"><div class="qName">${tN}${lpgmHtml}</div><div style="display:flex;align-items:center;"><span class="tag" style="background:rgba(0,0,0,0.6);color:${mC}; border:1px solid ${mC};">M${e.hypocenter.magnitude!==-1?e.hypocenter.magnitude.toFixed(1):'-.-'}</span><span class="tag" style="background:rgba(0,0,0,0.6);color:${dC}; border:1px solid ${dC};">${fmt.depth(e.hypocenter.depth)}</span><span style="font-size:12px;opacity:0.8;margin-left:auto;">${e.time.slice(5,16).replace("-","/")}</span></div></div>`; 
         p.appendChild(d);
     }); 
     applyAppearance();
@@ -976,7 +971,21 @@ async function calcPredictedIntensity(m,d,el,eo,pl,po,pN,os=0,fI=null){const r=a
 function limitIntensity(c,m){return fmt.intensityToNum(c)>fmt.intensityToNum(m)?String(m):String(c);} function lvToShindoStr(l){return instrumentalToScale((l-6)*0.5);}
 function getMinInstrumental(s){if(s==="1")return 0.5;if(s==="2")return 1.5;if(s==="3")return 2.5;if(s==="4")return 3.5;if(s.includes("5弱"))return 4.5;if(s.includes("5強"))return 5.0;if(s.includes("6弱"))return 5.5;if(s.includes("6強"))return 6.0;if(s==="7")return 6.5;return 0;}
 async function calculateEewOffset(ew){if(!ew.isSea||!ew.MaxIntensity)return 0; const el=parseFloat(ew.Latitude), eo=parseFloat(ew.Longitude), m=parseFloat(ew.Magunitude), d=parseInt(ew.Depth); if(isNaN(el)||isNaN(eo))return 0; let mD=Infinity, nL=el, nO=eo, nN="", nI=null; if(prefData?.features)prefData.features.forEach((f,i)=>{const nm=f.properties.name||f.properties.nam_ja||f.properties.code, pt=getPolygonPoint(f), ds=getDistance(el,eo,pt.lat,pt.lng); if(ds<mD){mD=ds;nL=pt.lat;nO=pt.lng;nN=nm;nI=f.id||nm||`feat_${i}`;}}); const mr=await calcPredictedIntensityRaw(m,d,el,eo,nL,nO,nN,nI), tr=getMinInstrumental(ew.MaxIntensity); return tr>mr?tr-mr:0;}
-function calcLPGM(m,d){if(m===null||m===undefined||m===-1)return 0; const mf=parseFloat(m), df=parseFloat(d)||0; if(mf<6.0)return 0; let sc=(mf-6.0)*2.5-(df/50.0); if(sc>=3.5)return 4; if(sc>=2.5)return 3; if(sc>=1.5)return 2; if(sc>=0.5)return 1; return 0;}
+
+// --- 予測長周期地震動 精度向上版 ---
+function calcLPGM(m,d){
+    if(m===null||m===undefined||m===-1)return 0; 
+    const mf=parseFloat(m), df=parseFloat(d)||0; 
+    if(mf<6.0) return 0; 
+    let pSva = Math.pow(10, 0.6 * mf - 0.005 * df - 2.5); 
+    if(mf >= 8.0 && df <= 50) pSva *= 2.0; 
+    if(pSva >= 100) return 4;
+    if(pSva >= 50) return 3;
+    if(pSva >= 15) return 2;
+    if(pSva >= 5) return 1;
+    return 0;
+}
+
 function updateLPGMDisplay(m,d){const p=document.getElementById("lpgmBody"), dp=document.getElementById("lpgmDesc"); if(!p)return; const lv=calcLPGM(m,d); let h=""; for(let i=1;i<=4;i++)h+=`<div class="lpgmClass${i<=lv?` active-${i}`:""}">${i}</div>`; p.innerHTML=h; if(dp)dp.innerHTML=lv===1?"階級1: ほとんどの人が感じる。吊り下げものが大きく揺れる。":lv===2?"階級2: 大きな揺れ。物につかまりたいと感じる。":lv===3?"階級3: 立っていることが困難。不安定なものは倒れる。":lv===4?"階級4: はわないと動けない。固定していない家具が倒れる。":"";}
 
 const scrollStates=new Map(); function startAutoScroll(id){const a=document.getElementById(id); if(!a)return; if(scrollStates.has(id))clearInterval(scrollStates.get(id).timer); const st={timer:null,md:0,wc:0,wl:80,fl:20}; st.timer=setInterval(()=>{const mP=a.scrollHeight-a.clientHeight; if(mP<=1){a.style.opacity=1;a.scrollTop=0;return;} switch(st.md){case 0:a.style.opacity=1;if(++st.wc>=st.wl){st.md=1;st.wc=0;}break;case 1:a.scrollTop+=1;if(a.scrollTop>=mP-1){st.md=2;st.wc=0;}break;case 2:if(++st.wc>=st.wl){st.md=3;st.wc=0;a.style.opacity=0;}break;case 3:if(++st.wc>=st.fl){a.scrollTop=0;st.md=4;st.wc=0;}break;case 4:a.style.opacity=1;if(++st.wc>=st.fl){st.md=0;st.wc=0;}break;}},45); scrollStates.set(id,st);}
@@ -1054,12 +1063,6 @@ function updateLeafletMap(e,p,i,skp=false){
 let currentEewDisplayIndex = 0;
 let eewDisplayRotationTimer = null;
 let eewMiniMaps = new Map();
-let eewMiniGeojsonLayers = new Map(); 
-let eewMiniTileLayers = new Map();
-
-function updateEewMiniMapStyles() {
-    eewMiniGeojsonLayers.forEach(layer => layer.setStyle(getLandDefaultStyle()));
-}
 
 function startEewRotationTimer() {
     if (eewDisplayRotationTimer) clearInterval(eewDisplayRotationTimer);
@@ -1083,7 +1086,6 @@ function renderLatestPanel() {
     if (!lt) return;
 
     if (isEEWActive && activeEEWs.size > 0) {
-        // EEW表示モード (ローテーション対応)
         const eewArray = Array.from(activeEEWs.values());
         if (currentEewDisplayIndex >= eewArray.length) currentEewDisplayIndex = 0;
         const d = eewArray[currentEewDisplayIndex];
@@ -1101,18 +1103,17 @@ function renderLatestPanel() {
             <div class="latestWrap" style="border:4px solid ${d.isWarn ? '#FF0000' : '#FFFF00'}; background: #0A0A0A; padding: 8px;">
                 <div class="latestScale" style="background:${sc};color:${stc};font-size:${efs}; border: 2px solid ${sc}; width: 100px; height: 100px;">${ms}</div>
                 <div class="latestLeft">
-                    <div class="latestTitle" style="color:${d.isWarn ? '#FF0000' : '#FFFF00'}; font-size: 26px;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</div>
-                    <div class="latestSub" style="color:#FFFF00; font-size:18px; font-weight:bold;">${d.Hypocenter}</div>
+                    <div class="latestTitle" style="color:${d.isWarn ? '#FF0000' : '#FFFF00'}; font-size: 16px;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</div>
+                    <div class="latestSub" style="color:#FFFF00; font-size:28px; font-weight:bold;">${d.Hypocenter}</div>
                     <div style="font-size:16px;">
-                        <span class="tag" style="background:#0000FF;color:#fff;border-color:#00BFFF;">M${d.Magunitude}</span>
-                        <span class="tag" style="background:#000;color:#fff;border-color:#FFF;">${fmt.depth(d.Depth)}</span>
+                        <span class="tag" style="background:rgba(0,0,0,0.6); color:#00BFFF; border: 1px solid #00BFFF;">M${d.Magunitude}</span>
+                        <span class="tag" style="background:rgba(0,0,0,0.6); color:#fff; border: 1px solid #fff;">${fmt.depth(d.Depth)}</span>
                         <span style="margin-left:8px; color:#CCC;">${d.AnnouncedTime.slice(11,19)} 発表</span>
                     </div>
                 </div>
             </div>
         `;
     } else {
-        // 通常表示モード
         if (window.currentEarthquakeData) {
             const e0 = window.currentEarthquakeData;
             let ln = e0.hypocenter.name;
@@ -1125,6 +1126,9 @@ function renderLatestPanel() {
             const dfs = s0.length > 1 ? (s0 === "不明" || s0 === "遠地" ? "24px" : "38px") : "52px";
             let lpgmHtml = e0.maxLpgmInt ? `<span class="tag lpgm-tag" style="background:#FF6600;color:#fff;">長周期 階級${e0.maxLpgmInt}</span>` : "";
             
+            const mC = magColor(e0.hypocenter.magnitude);
+            const dC = depthColor(e0.hypocenter.depth);
+
             lt.innerHTML = `
                 <div class="latestWrap">
                     <div class="latestScale" style="background:${sb};color:${getContrastColor(sb)};font-size:${dfs}">${s0}</div>
@@ -1132,8 +1136,8 @@ function renderLatestPanel() {
                         <div class="latestTitle">${ln} ${ct}</div>
                         <div class="latestSub">${e0.time.slice(5,16).replace("-","/")||''} 発生</div>
                         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
-                            <span class="tag" style="background:${magColor(e0.hypocenter.magnitude)};color:${getContrastColor(magColor(e0.hypocenter.magnitude))} border-color: rgba(255,255,255,0.3);">M${e0.hypocenter.magnitude !== -1 ? e0.hypocenter.magnitude.toFixed(1) : '-.-'}</span>
-                            <span class="tag" style="background:${depthColor(e0.hypocenter.depth)};color:${getContrastColor(depthColor(e0.hypocenter.depth))} border-color: rgba(255,255,255,0.3);">${fmt.depth(e0.hypocenter.depth)}</span>
+                            <span class="tag" style="background:rgba(0,0,0,0.6); color:${mC}; border: 1px solid ${mC};">M${e0.hypocenter.magnitude !== -1 ? e0.hypocenter.magnitude.toFixed(1) : '-.-'}</span>
+                            <span class="tag" style="background:rgba(0,0,0,0.6); color:${dC}; border: 1px solid ${dC};">${fmt.depth(e0.hypocenter.depth)}</span>
                             ${lpgmHtml}
                         </div>
                     </div>
@@ -1158,12 +1162,10 @@ function renderEewCards() {
     const eewArray = Array.from(activeEEWs.entries());
     if (currentEewDisplayIndex >= eewArray.length) currentEewDisplayIndex = 0;
     
-    // 全て表示するのではなく、ローテーションで1つだけ表示
     const [id, d] = eewArray[currentEewDisplayIndex];
     
     let cd = document.getElementById(id);
     if (!cd) {
-        // クリーンアップして新しく作る
         cn.innerHTML = ""; 
         cd = document.createElement("div");
         cd.id = id;
@@ -1208,25 +1210,12 @@ function renderEewCards() {
                 zoomControl: false, attributionControl: false, 
                 dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false
             }).setView([eL || 35, eO || 135], 6);
-            
-            let tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10});
-            if (userSettings.showMapTile !== false) tile.addTo(m);
-            eewMiniTileLayers.set(id, tile);
-
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(m);
             if(eL && eO) {
                 L.marker([eL, eO], {
                     icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [30, 30], iconAnchor: [15, 15]})
                 }).addTo(m);
             }
-
-            if (prefData) {
-                let miniGeo = L.geoJSON(prefData, {
-                    style: () => getLandDefaultStyle(),
-                    interactive: false 
-                }).addTo(m);
-                eewMiniGeojsonLayers.set(id, miniGeo);
-            }
-
             eewMiniMaps.set(id, m);
             setTimeout(() => m.invalidateSize(), 100);
         } else {
@@ -1241,8 +1230,6 @@ function clearEEWDisplay(eid=null){
     if(eid){
         activeEEWs.delete(eid); eewOffsets.delete(eid); if(epicenterMarkers.has(eid)){lMap.removeLayer(epicenterMarkers.get(eid)); epicenterMarkers.delete(eid);} const c=document.getElementById(eid); if(c)c.remove(); if(eewPollTimers.has(eid)){clearInterval(eewPollTimers.get(eid)); eewPollTimers.delete(eid);} if(eewTimeoutTimers.has(eid)){clearTimeout(eewTimeoutTimers.get(eid)); eewTimeoutTimers.delete(eid);}
         if(eewMiniMaps.has(eid)){ eewMiniMaps.get(eid).remove(); eewMiniMaps.delete(eid); }
-        if(eewMiniGeojsonLayers.has(eid)){ eewMiniGeojsonLayers.delete(eid); }
-        if(eewMiniTileLayers.has(eid)){ eewMiniTileLayers.delete(eid); }
         
         if(activeEEWs.size===0){
             isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
@@ -1256,8 +1243,6 @@ function clearEEWDisplay(eid=null){
     }else{
         isEEWActive=false; stopEewRotationTimer(); activeEEWs.clear(); eewOffsets.clear(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; eewPollTimers.forEach(t=>clearInterval(t)); eewPollTimers.clear(); eewTimeoutTimers.forEach(t=>clearTimeout(t)); eewTimeoutTimers.clear(); waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const ct=document.getElementById("eewContainer"); if(ct)ct.innerHTML=""; const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; epicenterMarkers.forEach(m=>lMap.removeLayer(m)); epicenterMarkers.clear(); 
         eewMiniMaps.forEach(m=>m.remove()); eewMiniMaps.clear();
-        eewMiniGeojsonLayers.clear(); 
-        eewMiniTileLayers.clear();
         if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
         renderLatestPanel();
     }
@@ -1444,7 +1429,169 @@ function convertAxisEewToWolfx(m){if(!m||!m.Title)return null; let la=0,lo=0; if
 function updateStartupStatus(m){const e=document.getElementById("startupStatus"); if(e)e.innerText=m;} function showStartupReady(){document.querySelector(".loader").style.display="none"; document.getElementById("startupStatus").style.display="none"; document.getElementById("startupReady").style.display="block";}
 const CURRENT_VERSION="4.4.0", VERSION_CHECK_URL="https://raw.githubusercontent.com/atukiyayoi-svg/EPICA/refs/heads/main/version.json";
 async function checkSystemUpdate(){try{const r=await fetch(`${VERSION_CHECK_URL}?t=${Date.now()}`); if(!r.ok)return; const d=await r.json(), lV=d.version, sE=document.getElementById('startup-version'); if(sE)sE.innerText=lV; if(lV!==CURRENT_VERSION){if(confirm(`新しいバージョン（V${lV}）が利用可能です。\nアップデートして再読み込みしますか？`))window.location.reload(true);}}catch(e){}}
-async function startApp(){try{await checkSystemUpdate(); applyAppearance(); updateStartupStatus("観測点データ読み込み中..."); await loadSites(); updateStartupStatus("地図データ読み込み中..."); await initLeaflet(); updateStartupStatus("地震情報取得中..."); await loadQuakes(); pollJmaXml(); connectP2P(); connectWolfx(); connectAxis(); updateStartupStatus("リアルタイムデータ取得中..."); const d=await fetchKyoshin(); if(d)drawKyoshin(d); setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); showStartupReady();}catch(e){updateStartupStatus("初期化エラー: "+e.message); showStartupReady();}}
+
+
+// --- 年間地震アニメーション関連 ---
+let animMap = null;
+let annualQuakes = [];
+let isAnimFetching = false;
+let animReqId = null;
+
+async function initAnnualAnimation() {
+    if(!animMap) {
+        animMap = L.map('annualAnimMap', {
+            zoomControl: false, attributionControl: false, 
+            dragging: true, touchZoom: false, scrollWheelZoom: true, doubleClickZoom: false
+        }).setView([37.5, 137], 4);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(animMap);
+    }
+    if(isAnimFetching) return;
+    isAnimFetching = true;
+    
+    const currentYear = new Date().getFullYear();
+    let offset = 0;
+    annualQuakes = [];
+    document.getElementById("annualAnimTime").innerText = "データ取得中...";
+    
+    while (true) {
+        try {
+            const res = await fetch(`https://api.p2pquake.net/v2/history?codes=551&limit=100&offset=${offset}`);
+            const data = await res.json();
+            if (!data || data.length === 0) break;
+            let keepGoing = true;
+            data.forEach(q => {
+                if(q.earthquake && q.earthquake.hypocenter && q.earthquake.time) {
+                    const eqDate = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T"));
+                    if (eqDate.getFullYear() === currentYear && q.earthquake.hypocenter.latitude !== -200) {
+                        annualQuakes.push(q);
+                    } else if (eqDate.getFullYear() < currentYear) {
+                        keepGoing = false;
+                    }
+                }
+            });
+            if (!keepGoing) break;
+            offset += 100;
+            if (offset > 2000) break; 
+            await new Promise(r => setTimeout(r, 100)); 
+        } catch(e) { break; }
+    }
+    
+    annualQuakes.sort((a,b) => new Date(a.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime() - new Date(b.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime());
+    isAnimFetching = false;
+    runAnnualAnimation();
+}
+
+function runAnnualAnimation() {
+    if(animReqId) cancelAnimationFrame(animReqId);
+    if(annualQuakes.length === 0) {
+        document.getElementById("annualAnimTime").innerText = "データなし";
+        setTimeout(initAnnualAnimation, 60000); 
+        return;
+    }
+    
+    const startTime = new Date(new Date().getFullYear(), 0, 1).getTime(); 
+    const endTime = new Date().getTime();
+    let virtualTime = startTime;
+    
+    let lastRealTime = performance.now();
+    let qIndex = 0;
+    
+    function animLoop(now) {
+        const dt = now - lastRealTime;
+        lastRealTime = now;
+        
+        virtualTime += dt * 1440; 
+        
+        if (virtualTime > endTime) {
+            setTimeout(initAnnualAnimation, 3000);
+            return;
+        }
+        
+        const vDate = new Date(virtualTime);
+        const y = vDate.getFullYear();
+        const m = String(vDate.getMonth()+1).padStart(2,'0');
+        const d = String(vDate.getDate()).padStart(2,'0');
+        const h = String(vDate.getHours()).padStart(2,'0');
+        const mn = String(vDate.getMinutes()).padStart(2,'0');
+        document.getElementById("annualAnimTime").innerText = `${y}/${m}/${d} ${h}:${mn}`;
+        
+        while (qIndex < annualQuakes.length) {
+            const q = annualQuakes[qIndex];
+            const qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
+            if (qTime <= virtualTime) {
+                spawnAnimMarker(q);
+                qIndex++;
+            } else {
+                break;
+            }
+        }
+        
+        animReqId = requestAnimationFrame(animLoop);
+    }
+    
+    animReqId = requestAnimationFrame(animLoop);
+}
+
+function spawnAnimMarker(q) {
+    const lat = q.earthquake.hypocenter.latitude;
+    const lng = q.earthquake.hypocenter.longitude;
+    const mag = q.earthquake.hypocenter.magnitude;
+    const scaleStr = fmt.shindo(q.earthquake.maxScale, q.earthquake.hypocenter.depth);
+    const col = scaleColor(scaleStr);
+    
+    const size = Math.max(20, Math.pow(mag, 2) * 1.5);
+    const duration = Math.max(1000, mag * 500); 
+    
+    let html = `<div class="anim-marker-container">
+        <div class="anim-ring" style="--max-size: ${size}px; border-color: ${col}; animation-duration: ${duration}ms; border-width: ${Math.max(1, mag/2)}px;"></div>
+    `;
+    
+    if (mag >= 4.0) {
+        html += `<div class="anim-label" style="color: ${magColor(mag)}; animation-duration: ${duration*1.5}ms;">M${mag.toFixed(1)}</div>`;
+    }
+    
+    html += `</div>`;
+    
+    const icon = L.divIcon({
+        className: '',
+        html: html,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+    });
+    
+    const marker = L.marker([lat, lng], {icon: icon, pane: 'epicenterPane'}).addTo(animMap);
+    
+    setTimeout(() => {
+        animMap.removeLayer(marker);
+    }, duration * 1.5);
+}
+
+const styleSheet = document.createElement("style");
+styleSheet.innerText = `
+@keyframes ringExpand {
+    0% { width: 0; height: 0; opacity: 1; }
+    100% { width: var(--max-size, 80px); height: var(--max-size, 80px); opacity: 0; }
+}
+.anim-ring {
+    animation-name: ringExpand;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+}
+@keyframes labelFadeOut {
+    0% { opacity: 1; transform: translateY(0); }
+    70% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
+.anim-label {
+    animation-name: labelFadeOut;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+}
+`;
+document.head.appendChild(styleSheet);
+
+
+async function startApp(){try{await checkSystemUpdate(); applyAppearance(); updateStartupStatus("観測点データ読み込み中..."); await loadSites(); updateStartupStatus("地図データ読み込み中..."); await initLeaflet(); updateStartupStatus("地震情報取得中..."); await loadQuakes(); pollJmaXml(); connectP2P(); connectWolfx(); connectAxis(); updateStartupStatus("リアルタイムデータ取得中..."); const d=await fetchKyoshin(); if(d)drawKyoshin(d); setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); initAnnualAnimation(); showStartupReady();}catch(e){updateStartupStatus("初期化エラー: "+e.message); showStartupReady();}}
 
 document.addEventListener("DOMContentLoaded", ()=>{startApp(); document.getElementById("btnStart").addEventListener("click", ()=>{document.getElementById("startupScreen").style.display="none"; initAudio();}); document.getElementById("btnSiyou").addEventListener("click", ()=>{document.getElementById("siyouIframe").src="siyou.html"; document.getElementById("siyouModal").style.display="flex";}); document.getElementById("btnCloseSiyou").addEventListener("click", ()=>{document.getElementById("siyouModal").style.display="none"; document.getElementById("siyouIframe").src="";});});
 </script>
