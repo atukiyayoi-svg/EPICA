@@ -502,6 +502,10 @@ function applyAppearance() {
     
     const mapEl = document.getElementById('leafletMap');
     if(mapEl) mapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
+    const animMapEl = document.getElementById('annualAnimMap');
+    if(animMapEl) animMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
+    const weatherMapEl = document.getElementById('weatherMapInner');
+    if(weatherMapEl) weatherMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
 
     let st = document.getElementById('dynamicAppearance'); if(!st){st=document.createElement('style'); st.id='dynamicAppearance'; document.head.appendChild(st);}
     st.innerHTML = `
@@ -516,6 +520,12 @@ function applyAppearance() {
         .eewEpicenter { font-size: ${22 * (userSettings.fsLatest / 100)}px !important; }
     `;
     document.querySelectorAll('.legendItem').forEach(el=>{ let s=el.innerText; const cols=userSettings.customShindoColors?userSettings.shindoColors:defaultSettings.shindoColors; if(cols[s]){el.style.backgroundColor=cols[s]; el.style.color=getContrastColor(cols[s]);} });
+}
+
+function updateSubMapGeojsonStyles() {
+    let style = getLandDefaultStyle();
+    if (animGeojsonLayer) animGeojsonLayer.setStyle(style);
+    if (weatherGeojsonLayer) weatherGeojsonLayer.setStyle(style);
 }
 
 ['fsLatest','fsDetail','fsTsunami','fsHistory','fsComment','fsXml','fsWeatherWarning'].forEach(k=>{ let sl=document.getElementById(k+'Slider'); let vl=document.getElementById(k+'Val'); if(sl&&vl){ sl.value=userSettings[k]; vl.innerText=userSettings[k]+"%"; sl.addEventListener('input', e=>{ userSettings[k]=parseInt(e.target.value); vl.innerText=userSettings[k]+"%"; saveSettings(); applyAppearance(); }); } });
@@ -547,6 +557,7 @@ document.getElementById('mapLandColorPicker').addEventListener('input', e => {
     saveSettings();
     refreshMapDisplay();
     if(isEEWActive) updateEewGeojsonStyles();
+    updateSubMapGeojsonStyles();
 });
 
 document.getElementById('chkMapLandTransparent').checked = userSettings.mapLandTransparent;
@@ -555,6 +566,7 @@ document.getElementById('chkMapLandTransparent').addEventListener('change', e =>
     saveSettings();
     refreshMapDisplay();
     if(isEEWActive) updateEewGeojsonStyles();
+    updateSubMapGeojsonStyles();
 });
 
 
@@ -877,7 +889,7 @@ async function processXmlString(xt, typ, ovUrl=null){
                 tm+=`<div class="p-info-section p-section-warning"><h3>⚠️ ${wT}</h3><div class="p-data-list">`;
                 w.querySelectorAll('Item').forEach(it=>{
                     const aN=it.querySelector('Area > Name')?.textContent||'不明'; let kTxts=[];
-                    it.querySelectorAll('Kind').forEach(k=>{ const kn=k.querySelector('Name')?.textContent, st=k.querySelector('Status')?.textContent; if(kn&&st)kTxts.push(`<span style="margin-right:8px;"><strong>${kn}</strong> <span class="p-status-badge p-status-${st}">${st}</span></span>`); else if(kn)kTxts.push(`<strong>${kn}</strong>`); });
+                    it.querySelectorAll('Kind').forEach(k=>{ const kn=k.querySelector('Name')?.textContent, st=k.querySelector('Status')?.textContent; if(kn&&st)kTxts.push(`<span style="margin-right:8px;"><strong>${kn}</strong> <span class="p-status-badge p-status-${st}"> ${st}</span></span>`); else if(kn)kTxts.push(`<strong>${kn}</strong>`); });
                     if(kTxts.length)tm+=`<div style="border-bottom:1px dashed #444; padding:8px 0;"><strong>${aN}</strong>: ${kTxts.join(' ')}</div>`;
                 }); tm+=`</div></div>`;
             }); if(hasW)wHtml=tm;
@@ -1119,6 +1131,8 @@ const lMap=L.map('leafletMap',{zoomControl:false,attributionControl:false,worldC
 const baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
 
 let geojsonLayer, tsunamiGeojsonLayer=null, obsLayer=L.layerGroup().addTo(lMap), latestQuakeMarker=null, epicenterMarkers=new Map(), prefData=null, currentTsunamiData=null; const shakeDetectLayer=L.layerGroup().addTo(lMap); window.jmaStationsJson=null;
+let animGeojsonLayer = null, weatherGeojsonLayer = null;
+
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex=410; lMap.getPane('tsunamiPane').style.pointerEvents='none'; lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex=450; lMap.getPane('kyoshinPane').style.pointerEvents='none'; lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex=460; lMap.getPane('wavePane').style.pointerEvents='none'; lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex=650; lMap.getPane('epicenterPane').style.pointerEvents='none';
 const waveCanvas=document.createElement('canvas'); waveCanvas.style.pointerEvents='none'; waveCanvas.className='leaflet-zoom-animated'; const WaveLayer=L.Layer.extend({onAdd:function(m){this._m=m;this._c=waveCanvas;m.getPane('wavePane').appendChild(this._c);m.on('moveend',this._rs,this);this._rs();},onRemove:function(m){m.getPane('wavePane').removeChild(this._c);m.off('moveend',this._rs,this);},_rs:function(){const sz=this._m.getSize();this._c.width=sz.x;this._c.height=sz.y;L.DomUtil.setPosition(this._c,this._m.containerPointToLayerPoint([0,0]));}}); lMap.addLayer(new WaveLayer());
 const kyoshinCanvas=document.createElement('canvas'); kyoshinCanvas.style.pointerEvents='none'; kyoshinCanvas.className='leaflet-zoom-animated'; const KyoshinLayer=L.Layer.extend({onAdd:function(m){this._m=m;this._c=kyoshinCanvas;m.getPane('kyoshinPane').appendChild(this._c);m.on('moveend',this._rs,this);m.on('zoom',this._rd,this);this._rs();},onRemove:function(m){m.getPane('kyoshinPane').removeChild(this._c);m.off('moveend',this._rs,this);m.off('zoom',this._rd,this);},_rs:function(){const sz=this._m.getSize();this._c.width=sz.x;this._c.height=sz.y;L.DomUtil.setPosition(this._c,this._m.containerPointToLayerPoint([0,0]));this._rd();},_rd:function(){if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);}}); lMap.addLayer(new KyoshinLayer());
@@ -1626,6 +1640,10 @@ async function initAnnualAnimation() {
         animMap.createPane('epicenterPane');
         animMap.getPane('epicenterPane').style.zIndex = 650;
         animMap.getPane('epicenterPane').style.pointerEvents = 'none';
+
+        if(prefData && !animGeojsonLayer) {
+            animGeojsonLayer = L.geoJSON(prefData, {style: () => getLandDefaultStyle(), interactive: false}).addTo(animMap);
+        }
     }
     if(isAnimFetching) return;
     isAnimFetching = true;
@@ -1815,7 +1833,15 @@ function initWeatherMap() {
     
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(weatherMap);
 
-    const layerOptions = { opacity: 0, maxNativeZoom: 10, attribution: '気象庁' };
+    weatherMap.createPane('radarPane');
+    weatherMap.getPane('radarPane').style.zIndex = 450;
+    weatherMap.getPane('radarPane').style.pointerEvents = 'none';
+
+    if(prefData && !weatherGeojsonLayer) {
+        weatherGeojsonLayer = L.geoJSON(prefData, {style: () => getLandDefaultStyle(), interactive: false}).addTo(weatherMap);
+    }
+
+    const layerOptions = { opacity: 0, maxNativeZoom: 10, attribution: '気象庁', pane: 'radarPane' };
     hrpnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
     thnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
 
@@ -1854,7 +1880,7 @@ function updateWeatherDisplay() {
     const panelEl = document.getElementById('weatherMapPanel');
     
     if (currentWeathMode === 'hrpns') {
-        hrpnsLayer.setOpacity(0.7);
+        hrpnsLayer.setOpacity(1.0);
         thnsLayer.setOpacity(0);
         if(titleEl) {
             titleEl.innerText = "気象レーダー (RAIN)";
@@ -1863,7 +1889,7 @@ function updateWeatherDisplay() {
         if(panelEl) panelEl.style.borderTopColor = "#0055ff";
     } else {
         hrpnsLayer.setOpacity(0);
-        thnsLayer.setOpacity(0.7);
+        thnsLayer.setOpacity(1.0);
         if(titleEl) {
             titleEl.innerText = "気象レーダー (THUNDER)";
             titleEl.parentNode.style.color = "#FFD700";
