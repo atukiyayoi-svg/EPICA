@@ -538,9 +538,14 @@ document.getElementById('chkShowMapTile').checked = userSettings.showMapTile;
 document.getElementById('chkShowMapTile').addEventListener('change', e => {
     userSettings.showMapTile = e.target.checked;
     saveSettings();
-    if(baseTileLayer) {
-        if(userSettings.showMapTile) baseTileLayer.addTo(lMap);
-        else baseTileLayer.remove();
+    if(userSettings.showMapTile) {
+        baseTileLayer.addTo(lMap);
+        if(animMap) animBaseTileLayer.addTo(animMap);
+        if(weatherMap) weatherBaseTileLayer.addTo(weatherMap);
+    } else {
+        baseTileLayer.remove();
+        if(animMap) animBaseTileLayer.remove();
+        if(weatherMap) weatherBaseTileLayer.remove();
     }
 });
 
@@ -1129,6 +1134,8 @@ const scrollStates=new Map(); function startAutoScroll(id){const a=document.getE
 
 const lMap=L.map('leafletMap',{zoomControl:false,attributionControl:false,worldCopyJump:true,zoomSnap:0.1,zoomDelta:0.25,wheelPxPerZoomLevel:120}).setView([37.5,137],5.2);
 const baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
+const animBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
+const weatherBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
 
 let geojsonLayer, tsunamiGeojsonLayer=null, obsLayer=L.layerGroup().addTo(lMap), latestQuakeMarker=null, epicenterMarkers=new Map(), prefData=null, currentTsunamiData=null; const shakeDetectLayer=L.layerGroup().addTo(lMap); window.jmaStationsJson=null;
 let animGeojsonLayer = null, weatherGeojsonLayer = null;
@@ -1635,7 +1642,10 @@ async function initAnnualAnimation() {
             zoomControl: false, attributionControl: false, 
             dragging: true, touchZoom: false, scrollWheelZoom: true, doubleClickZoom: false
         }).setView([37.5, 137], 4);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(animMap);
+        
+        if (userSettings.showMapTile !== false) {
+            animBaseTileLayer.addTo(animMap);
+        }
         
         animMap.createPane('epicenterPane');
         animMap.getPane('epicenterPane').style.zIndex = 650;
@@ -1827,11 +1837,13 @@ let latestWeatherValidtime = '';
 
 function initWeatherMap() {
     weatherMap = L.map('weatherMapInner', {
-        zoomControl: false, attributionControl: false, 
-        dragging: true, touchZoom: false, scrollWheelZoom: true, doubleClickZoom: false
+        zoomControl: true, attributionControl: false, 
+        dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true
     }).setView([37.5, 137], 4);
     
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(weatherMap);
+    if (userSettings.showMapTile !== false) {
+        weatherBaseTileLayer.addTo(weatherMap);
+    }
 
     weatherMap.createPane('radarPane');
     weatherMap.getPane('radarPane').style.zIndex = 450;
@@ -1846,7 +1858,7 @@ function initWeatherMap() {
     thnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
 
     fetchJmaWeatherData();
-    setInterval(fetchJmaWeatherData, 5 * 60 * 1000);
+    setInterval(fetchJmaWeatherData, 2 * 60 * 1000);
     setInterval(toggleWeatherMode, 60 * 1000);
 }
 
@@ -1880,7 +1892,7 @@ function updateWeatherDisplay() {
     const panelEl = document.getElementById('weatherMapPanel');
     
     if (currentWeathMode === 'hrpns') {
-        hrpnsLayer.setOpacity(1.0);
+        hrpnsLayer.setOpacity(0.7);
         thnsLayer.setOpacity(0);
         if(titleEl) {
             titleEl.innerText = "気象レーダー (RAIN)";
@@ -1889,7 +1901,7 @@ function updateWeatherDisplay() {
         if(panelEl) panelEl.style.borderTopColor = "#0055ff";
     } else {
         hrpnsLayer.setOpacity(0);
-        thnsLayer.setOpacity(1.0);
+        thnsLayer.setOpacity(0.7);
         if(titleEl) {
             titleEl.innerText = "気象レーダー (THUNDER)";
             titleEl.parentNode.style.color = "#FFD700";
