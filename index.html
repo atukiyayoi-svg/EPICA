@@ -314,10 +314,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
             <div id="lpgmDesc"></div>
         </div>
     </div>
-    <div id="dailySummaryPanel" class="base-panel" style="border-top: 8px solid #A020F0; display:none; height: 140px;">
-        <div class="axisHeader" style="color: #DDA0DD;">本日のまとめ (DAILY SUMMARY)</div>
-        <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">待機中...</div></div>
-    </div>
     
     <div id="annualAnimationPanel" class="base-panel" style="border-top: 8px solid #FF8C00; height: 350px;">
         <div class="axisHeader" style="color: #FF8C00; display:flex; justify-content: space-between;">
@@ -325,6 +321,18 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
             <span id="annualAnimTime" style="font-weight: 700; color: #FFF;">--/--/-- --:--</span>
         </div>
         <div id="annualAnimMap" style="flex: 1; background:#050505;"></div>
+    </div>
+
+    <div id="weatherMapPanel" class="base-panel" style="border-top: 8px solid #0055ff; height: 350px;">
+        <div class="axisHeader" style="color: #00BFFF; display:flex; justify-content: space-between;">
+            <span id="weatherMapTitle" style="font-weight: 700;">気象レーダー (RAIN)</span>
+        </div>
+        <div id="weatherMapInner" style="flex: 1; background:#050505;"></div>
+    </div>
+
+    <div id="dailySummaryPanel" class="base-panel" style="border-top: 8px solid #A020F0; display:none; height: 140px;">
+        <div class="axisHeader" style="color: #DDA0DD;">本日のまとめ (DAILY SUMMARY)</div>
+        <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">待機中...</div></div>
     </div>
     
     <div id="eqUpdatePanel" class="base-panel" style="display:none; border-top: 8px solid #FFD700; height: 190px;">
@@ -476,7 +484,7 @@ const depthColor = d => { if(d===-1||d===null)return "#666666"; if(d===0)return 
 const getContrastColor = hex => { if(!hex||hex==="#222"||hex==="#444444")return "#fff"; try{const c=hex.replace("#",""); if(c.length!==6)return "#fff"; const r=parseInt(c.substr(0,2),16), g=parseInt(c.substr(2,2),16), b=parseInt(c.substr(4,2),16); return (r*299+g*587+b*114)/1000>=140 ? "#000" : "#fff";}catch(e){return "#fff";} };
 
 function sendPushNotification(title, options) { if(userSettings.pushNotify && "Notification" in window && Notification.permission==="granted"){ try{new Notification(title, options);}catch(e){} } }
-function getPushIconDataURL(text, bgColor, textColor) { try{ const canvas=document.createElement('canvas'); canvas.width=256; canvas.height=256; const ctx=canvas.getContext('2d'); ctx.fillStyle=bgColor; ctx.fillRect(0,0,256,256); ctx.fillStyle=textColor; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='bold '+(text.length>1?'120px':'160px')+' sans-serif'; ctx.fillText(text, 128, 128); ctx.strokeStyle='#ffffff'; ctx.lineWidth=8; ctx.strokeRect(4,4,248,248); return canvas.toDataURL('image/png'); }catch(e){return null;} }
+function getPushIconDataURL(text, bgColor, textColor) { try{ const canvas=document.createElement('canvas'); canvas.width=256; canvas.height=256; const ctx=canvas.getContext('2d'); ctx.fillStyle=bgColor; ctx.fillRect(0,0,256,256); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='bold '+(text.length>1?'120px':'160px')+' sans-serif'; ctx.fillText(text, 128, 128); ctx.strokeStyle='#ffffff'; ctx.lineWidth=8; ctx.strokeRect(4,4,248,248); return canvas.toDataURL('image/png'); }catch(e){return null;} }
 
 let seFirst=new Audio('First.mp3'), seLast=new Audio('Last.mp3'), seTsunami=new Audio('Tsunami.mp3');
 let seUpdateApi=new Audio('UpdateAPI.mp3'), seUpdateEew=new Audio('UpdateEEW.mp3'), seWarning=new Audio('Warning.mp3');
@@ -1330,16 +1338,29 @@ function renderEewCards() {
                 dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false
             }).setView([eL || 35, eO || 135], 6);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(m);
+            let mk = null;
             if(eL && eO) {
-                L.marker([eL, eO], {
+                mk = L.marker([eL, eO], {
                     icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [30, 30], iconAnchor: [15, 15]})
                 }).addTo(m);
             }
-            eewMiniMaps.set(id, m);
+            eewMiniMaps.set(id, { map: m, marker: mk });
             setTimeout(() => m.invalidateSize(), 100);
         } else {
-            let m = eewMiniMaps.get(id);
-            if(eL && eO) m.setView([eL, eO], 6);
+            let obj = eewMiniMaps.get(id);
+            let m = obj.map;
+            let mk = obj.marker;
+            if(eL && eO) {
+                m.setView([eL, eO], 6);
+                if (mk) {
+                    mk.setLatLng([eL, eO]);
+                } else {
+                    mk = L.marker([eL, eO], {
+                        icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [30, 30], iconAnchor: [15, 15]})
+                    }).addTo(m);
+                    obj.marker = mk;
+                }
+            }
             m.invalidateSize();
         }
     }, 50);
@@ -1348,7 +1369,7 @@ function renderEewCards() {
 function clearEEWDisplay(eid=null){
     if(eid){
         activeEEWs.delete(eid); eewOffsets.delete(eid); if(epicenterMarkers.has(eid)){lMap.removeLayer(epicenterMarkers.get(eid)); epicenterMarkers.delete(eid);} const c=document.getElementById(eid); if(c)c.remove(); if(eewPollTimers.has(eid)){clearInterval(eewPollTimers.get(eid)); eewPollTimers.delete(eid);} if(eewTimeoutTimers.has(eid)){clearTimeout(eewTimeoutTimers.get(eid)); eewTimeoutTimers.delete(eid);}
-        if(eewMiniMaps.has(eid)){ eewMiniMaps.get(eid).remove(); eewMiniMaps.delete(eid); }
+        if(eewMiniMaps.has(eid)){ eewMiniMaps.get(eid).map.remove(); eewMiniMaps.delete(eid); }
         
         if(activeEEWs.size===0){
             isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
@@ -1361,7 +1382,7 @@ function clearEEWDisplay(eid=null){
         }
     }else{
         isEEWActive=false; stopEewRotationTimer(); activeEEWs.clear(); eewOffsets.clear(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; eewPollTimers.forEach(t=>clearInterval(t)); eewPollTimers.clear(); eewTimeoutTimers.forEach(t=>clearTimeout(t)); eewTimeoutTimers.clear(); waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const ct=document.getElementById("eewContainer"); if(ct)ct.innerHTML=""; const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; epicenterMarkers.forEach(m=>lMap.removeLayer(m)); epicenterMarkers.clear(); 
-        eewMiniMaps.forEach(m=>m.remove()); eewMiniMaps.clear();
+        eewMiniMaps.forEach(m=>m.map.remove()); eewMiniMaps.clear();
         if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
         renderLatestPanel();
     }
@@ -1602,7 +1623,6 @@ async function initAnnualAnimation() {
         }).setView([37.5, 137], 4);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(animMap);
         
-        // 修正箇所：animMap 用の epicenterPane を作成してエラーを防止
         animMap.createPane('epicenterPane');
         animMap.getPane('epicenterPane').style.zIndex = 650;
         animMap.getPane('epicenterPane').style.pointerEvents = 'none';
@@ -1734,7 +1754,6 @@ function spawnAnimMarker(q) {
         iconAnchor: [0, 0]
     });
     
-    // epicenterPaneが作成されたのでエラーなく描画されます
     const marker = L.marker([lat, lng], {icon: icon, pane: 'epicenterPane'}).addTo(animMap);
     
     setTimeout(() => {
@@ -1780,7 +1799,80 @@ styleSheet.innerText = `
 `;
 document.head.appendChild(styleSheet);
 
-async function startApp(){try{await checkSystemUpdate(); applyAppearance(); updateStartupStatus("観測点データ読み込み中..."); await loadSites(); updateStartupStatus("地図データ読み込み中..."); await initLeaflet(); updateStartupStatus("地震情報取得中..."); await loadQuakes(); pollJmaXml(); connectP2P(); connectWolfx(); connectAxis(); updateStartupStatus("リアルタイムデータ取得中..."); const d=await fetchKyoshin(); if(d)drawKyoshin(d); setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); initAnnualAnimation(); showStartupReady();}catch(e){updateStartupStatus("初期化エラー: "+e.message); showStartupReady();}}
+
+// --- 気象図レーダー関連 ---
+let weatherMap = null;
+let hrpnsLayer = null;
+let thnsLayer = null;
+let currentWeathMode = 'hrpns';
+let latestWeatherValidtime = '';
+
+function initWeatherMap() {
+    weatherMap = L.map('weatherMapInner', {
+        zoomControl: false, attributionControl: false, 
+        dragging: true, touchZoom: false, scrollWheelZoom: true, doubleClickZoom: false
+    }).setView([37.5, 137], 4);
+    
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(weatherMap);
+
+    const layerOptions = { opacity: 0, maxNativeZoom: 10, attribution: '気象庁' };
+    hrpnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
+    thnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
+
+    fetchJmaWeatherData();
+    setInterval(fetchJmaWeatherData, 5 * 60 * 1000);
+    setInterval(toggleWeatherMode, 60 * 1000);
+}
+
+async function fetchJmaWeatherData() {
+    try {
+        const response = await fetch('https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json');
+        const targetTimes = await response.json();
+        
+        if (targetTimes && targetTimes.length > 0) {
+            const basetime = targetTimes[0].basetime;
+            latestWeatherValidtime = targetTimes[0].validtime;
+
+            hrpnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/hrpns/{z}/{x}/{y}.png`);
+            thnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/thns/{z}/{x}/{y}.png`);
+            
+            updateWeatherDisplay();
+        }
+    } catch (error) {
+        console.error('気象データ取得失敗:', error);
+    }
+}
+
+function toggleWeatherMode() {
+    currentWeathMode = (currentWeathMode === 'hrpns') ? 'thns' : 'hrpns';
+    updateWeatherDisplay();
+}
+
+function updateWeatherDisplay() {
+    if (!latestWeatherValidtime) return;
+    const titleEl = document.getElementById('weatherMapTitle');
+    const panelEl = document.getElementById('weatherMapPanel');
+    
+    if (currentWeathMode === 'hrpns') {
+        hrpnsLayer.setOpacity(0.7);
+        thnsLayer.setOpacity(0);
+        if(titleEl) {
+            titleEl.innerText = "気象レーダー (RAIN)";
+            titleEl.parentNode.style.color = "#00BFFF";
+        }
+        if(panelEl) panelEl.style.borderTopColor = "#0055ff";
+    } else {
+        hrpnsLayer.setOpacity(0);
+        thnsLayer.setOpacity(0.7);
+        if(titleEl) {
+            titleEl.innerText = "気象レーダー (THUNDER)";
+            titleEl.parentNode.style.color = "#FFD700";
+        }
+        if(panelEl) panelEl.style.borderTopColor = "#d68900";
+    }
+}
+
+async function startApp(){try{await checkSystemUpdate(); applyAppearance(); updateStartupStatus("観測点データ読み込み中..."); await loadSites(); updateStartupStatus("地図データ読み込み中..."); await initLeaflet(); updateStartupStatus("地震情報取得中..."); await loadQuakes(); pollJmaXml(); connectP2P(); connectWolfx(); connectAxis(); updateStartupStatus("リアルタイムデータ取得中..."); const d=await fetchKyoshin(); if(d)drawKyoshin(d); setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); initAnnualAnimation(); initWeatherMap(); showStartupReady();}catch(e){updateStartupStatus("初期化エラー: "+e.message); showStartupReady();}}
 
 document.addEventListener("DOMContentLoaded", ()=>{startApp(); document.getElementById("btnStart").addEventListener("click", ()=>{document.getElementById("startupScreen").style.display="none"; initAudio();}); document.getElementById("btnSiyou").addEventListener("click", ()=>{document.getElementById("siyouIframe").src="siyou.html"; document.getElementById("siyouModal").style.display="flex";}); document.getElementById("btnCloseSiyou").addEventListener("click", ()=>{document.getElementById("siyouModal").style.display="none"; document.getElementById("siyouIframe").src="";});});
 </script>
