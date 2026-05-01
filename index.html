@@ -194,6 +194,18 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .info-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 6px; }
 .info-text { font-size: 14px; line-height: 1.5; color: #DDD; white-space: pre-wrap; word-wrap: break-word; font-weight: 700; }
 
+/* --- 揺れ検知パネル (左下へ移動) --- */
+#shakeDetectPanel {
+    position: fixed;
+    bottom: 60px;
+    left: 12px;
+    width: 420px;
+    height: 190px;
+    z-index: 150;
+    display: none;
+    border-top: 8px solid #00FF00;
+}
+
 /* --- 時計 --- */
 #clockPanel { width: 100%; background: rgba(0, 0, 0, 0.9); border: 2px solid #444; color: #fff; font-size: 28px; font-weight: 700; text-align: center; padding: 14px 0; z-index: 100; letter-spacing: 0.1em; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); margin-bottom: 0px; box-sizing: border-box; }
 
@@ -273,6 +285,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #clockPanel { position: relative !important; width: 100% !important; margin: 0 !important; order: 6; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     
     #eewContainer { bottom: 120px; flex-direction: column; }
+    #shakeDetectPanel { position: relative !important; bottom: auto !important; left: auto !important; width: 100% !important; margin-bottom: 12px; order: 7; }
 }
 
 @media screen and (max-width: 600px) {
@@ -369,10 +382,11 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div class="axisHeader" style="color: #FFD700;">震源要素更新のお知らせ</div>
         <div id="eqUpdateText" style="padding: 12px; font-size:14px; line-height:1.5;"></div>
     </div>
-    <div id="shakeDetectPanel" class="base-panel" style="border-top: 8px solid #00FF00; height: 190px; display: none;">
-        <div class="axisHeader" style="color: #00FF00;">揺れ検知情報 (SHAKE DETECTION)</div>
-        <div id="shakeDetectScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">検知待機中...</div></div>
-    </div>
+</div>
+
+<div id="shakeDetectPanel" class="base-panel">
+    <div class="axisHeader" style="color: #00FF00;">揺れ検知情報 (SHAKE DETECTION)</div>
+    <div id="shakeDetectScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">検知待機中...</div></div>
 </div>
 
 <div id="bottomPanelsContainer">
@@ -400,6 +414,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     <div id="displayModeWrap">
         <button id="btnNormalMode" class="modeBtn active">通常表示</button>
         <button id="btnRealtimeMode" class="modeBtn">リアルタイム揺れのみ</button>
+        <button id="btnWeatherWarningMap" class="modeBtn">気象警報マップ</button>
         <button id="btnSettings" class="modeBtn">⚙ 設定</button>
     </div>
     <div id="megaQuakeTelop">⚠️ 巨大地震警戒</div>
@@ -487,6 +502,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 <script type="module">
 window.latestFullQuakeList = []; window.eewOriginalTextList = []; let megaQuakeStatus = { nankai: null, nankaiTime: null, sanriku: null, sanrikuTime: null }; let wasTsunamiActive = false; let seaLevelChangeContinues = false;
 window.lpgmDataMap = new Map();
+let activeWeatherWarnings = {}; 
+let isWeatherWarningMapMode = false;
 
 const defaultSettings = {
     pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, bgColor: "#050505", customShindoColors: false,
@@ -515,7 +532,6 @@ const getContrastColor = hex => { if(!hex||hex==="#222"||hex==="#444444")return 
 
 function sendPushNotification(title, options) { if(userSettings.pushNotify && "Notification" in window && Notification.permission==="granted"){ try{new Notification(title, options);}catch(e){} } }
 
-// 通知アイコンで最大震度が正しく表示されるように修正
 function getPushIconDataURL(text, bgColor, textColor) { 
     try { 
         const canvas = document.createElement('canvas'); 
@@ -575,6 +591,10 @@ function toggleMapSwap() {
         
         anchor.parentNode.insertBefore(leafletWrap, anchor);
         leafletWrap.classList.add('sidebar-map-mode');
+        
+        setTimeout(() => {
+            if(weatherMap) weatherMap.setView([37.5, 137], 5);
+        }, 150);
     } else {
         lAnchor.parentNode.insertBefore(leafletWrap, lAnchor);
         leafletWrap.classList.remove('sidebar-map-mode');
@@ -682,7 +702,6 @@ document.getElementById('chkMapLandTransparent').addEventListener('change', e =>
     if(isEEWActive) updateEewGeojsonStyles();
     updateSubMapGeojsonStyles();
 });
-
 
 document.getElementById('chkPushNotify').checked=userSettings.pushNotify; document.getElementById('chkPushNotify').addEventListener('change', async e=>{if(e.target.checked){if(!("Notification" in window)){alert("非対応"); e.target.checked=false;}else{const p=await Notification.requestPermission(); if(p!=="granted"){alert("拒否されました"); e.target.checked=false;}}} userSettings.pushNotify=e.target.checked; saveSettings();});
 ['chkEewPrediction','chkEewRealtimePaint','chkShakeDetect','chkEstimateEpicenter'].forEach(id=>{let el=document.getElementById(id); el.checked=userSettings[id.replace('chk','')]; el.addEventListener('change',e=>{userSettings[id.replace('chk','')]=e.target.checked; saveSettings();});});
@@ -995,6 +1014,7 @@ async function processXmlString(xt, typ, ovUrl=null){
         }
 
         let wHtml="", hasW=false, wrns=bdy?.querySelectorAll('Warning');
+        let weatherWarningUpdated = false;
         if(wrns?.length){
             let tm=`<div style="border-bottom:2px solid #333; margin-bottom:12px; padding-bottom:8px;"><div class="p-info-title">${tit}</div><div style="font-size:12px; color:#CCC;">発表時刻: ${rTime}</div></div>`;
             if(hl)tm+=`<div style="background:#221100; border:2px solid #FF9900; padding:12px; margin-bottom:12px; font-weight:700; font-size:14px; color:#FFFF00; border-radius:4px;">${hl.replace(/\n/g,'<br>')}</div>`;
@@ -1002,11 +1022,57 @@ async function processXmlString(xt, typ, ovUrl=null){
                 const wT=w.getAttribute('type')||'情報'; if(wT.includes("津波"))return; hasW=true;
                 tm+=`<div class="p-info-section p-section-warning"><h3>⚠️ ${wT}</h3><div class="p-data-list">`;
                 w.querySelectorAll('Item').forEach(it=>{
-                    const aN=it.querySelector('Area > Name')?.textContent||'不明'; let kTxts=[];
-                    it.querySelectorAll('Kind').forEach(k=>{ const kn=k.querySelector('Name')?.textContent, st=k.querySelector('Status')?.textContent; if(kn&&st)kTxts.push(`<span style="margin-right:8px;"><strong>${kn}</strong> <span class="p-status-badge p-status-${st}"> ${st}</span></span>`); else if(kn)kTxts.push(`<strong>${kn}</strong>`); });
+                    const aN=it.querySelector('Area > Name')?.textContent||'不明'; 
+                    let kTxts=[];
+                    let areaMaxLevel = 0;
+                    let areaKinds = [];
+                    it.querySelectorAll('Kind').forEach(k=>{ 
+                        const kn=k.querySelector('Name')?.textContent, st=k.querySelector('Status')?.textContent; 
+                        if(kn&&st) {
+                            let wT_color = "#FFF";
+                            let level = 0;
+                            if (kn.includes("特別警報")) { wT_color = "#CC00CC"; level = 3; }
+                            else if (kn.includes("警報")) { wT_color = "#FF2800"; level = 2; }
+                            else if (kn.includes("注意報")) { wT_color = "#F2E700"; level = 1; }
+                            
+                            if(st === "発表" || st === "継続") {
+                                if(level > areaMaxLevel) areaMaxLevel = level;
+                                areaKinds.push(kn);
+                            }
+                            
+                            kTxts.push(`<span style="margin-right:8px; color:${wT_color};"><strong>${kn}</strong> <span class="p-status-badge p-status-${st}"> ${st}</span></span>`); 
+                        }
+                    });
+
+                    // 警報マップ用のデータ更新
+                    let prefName = aN;
+                    if(prefData) {
+                        let found = prefData.features.find(f => {
+                            let nm = f.properties.name||f.properties.nam_ja||f.properties.code;
+                            return aN.startsWith(nm) || nm.startsWith(aN);
+                        });
+                        if(found) prefName = found.properties.name||found.properties.nam_ja||found.properties.code;
+                    }
+
+                    if(areaMaxLevel > 0) {
+                        if(!activeWeatherWarnings[prefName] || activeWeatherWarnings[prefName].level <= areaMaxLevel) {
+                            activeWeatherWarnings[prefName] = { level: areaMaxLevel, kinds: areaKinds };
+                            weatherWarningUpdated = true;
+                        }
+                    } else {
+                        if(activeWeatherWarnings[prefName]) {
+                            delete activeWeatherWarnings[prefName];
+                            weatherWarningUpdated = true;
+                        }
+                    }
+
                     if(kTxts.length)tm+=`<div style="border-bottom:1px dashed #444; padding:8px 0;"><strong>${aN}</strong>: ${kTxts.join(' ')}</div>`;
                 }); tm+=`</div></div>`;
             }); if(hasW)wHtml=tm;
+            
+            if(weatherWarningUpdated && isWeatherWarningMapMode) {
+                refreshMapDisplay();
+            }
         }
 
         let ht=`<div style="border-bottom:2px solid #333; margin-bottom:12px; padding-bottom:8px;"><div class="p-info-title">${tit}</div><div style="font-size:12px; color:#CCC;">発表時刻: ${rTime}</div></div>`;
@@ -1050,19 +1116,80 @@ function handleTsunamiXml(doc,hl){
 function updateXmlTsunamiMap(){
     if(!xmlTsunamiGeojsonLayer){if(!tsunamiGeojsonLayer)return; xmlTsunamiGeojsonLayer=L.geoJSON(tsunamiGeojsonLayer.toGeoJSON(),{pane:'tsunamiPane',style:()=>({color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0})}).addTo(lMap);}
     const d=xmlTsunamiData; if(!d||d.cancelled||!d.areas?.length){xmlTsunamiGeojsonLayer.setStyle({color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0});return;}
-    let aG={}; d.areas.forEach(a=>aG[a.name]=a.grade); xmlTsunamiGeojsonLayer.setStyle(f=>{const g=aG[f.properties.name||f.properties.nam_ja||f.properties.code]; if(g){let c="#fff",o=0.5; if(g==="MajorWarning")c="#d946ef"; else if(g==="Warning")c="#ef4444"; else if(g==="Watch")c="#facc15"; else if(g==="SlightChange"){c="#06b6d4";o=0.3;} return {color:c,weight:8,opacity:0.8,fillColor:c,fillOpacity:o};} return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};});
+    let aG={}; d.areas.forEach(a=>aG[a.name]=a.grade); xmlTsunamiGeojsonLayer.setStyle(f=>{const g=aG[f.properties.name||f.properties.nam_ja||f.properties.code]; if(g){let c="#fff",o=0.5; if(g==="MajorWarning")c="#d946ef"; else if(g==="Warning")c="#ef4444"; else if(g==="Watch")c="#facc15"; else if(g==="SlightChange"||g==="Unknown"){c="#00BFFF";o=0.3;} return {color:c,weight:8,opacity:0.8,fillColor:c,fillOpacity:o};} return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};});
 }
 
 let isRealtimeOnlyMode=false; window.currentEarthquakeData=null; window.currentEarthquakePoints=null; window.currentEarthquakeIssue=null; let currentQuakeList=[]; let selectedHistoryQuake=null;
-document.getElementById('btnNormalMode').addEventListener('click', ()=>{if(!isRealtimeOnlyMode)return; isRealtimeOnlyMode=false; document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active'); refreshMapDisplay();});
-document.getElementById('btnRealtimeMode').addEventListener('click', ()=>{if(isRealtimeOnlyMode)return; isRealtimeOnlyMode=true; document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active'); refreshMapDisplay();});
+
+document.getElementById('btnNormalMode').addEventListener('click', ()=>{
+    if(document.getElementById('btnNormalMode').classList.contains('active'))return; 
+    isRealtimeOnlyMode=false; 
+    isWeatherWarningMapMode=false;
+    document.getElementById('btnNormalMode').classList.add('active'); 
+    document.getElementById('btnRealtimeMode').classList.remove('active'); 
+    document.getElementById('btnWeatherWarningMap').classList.remove('active');
+    refreshMapDisplay();
+});
+
+document.getElementById('btnRealtimeMode').addEventListener('click', ()=>{
+    if(isRealtimeOnlyMode)return; 
+    isRealtimeOnlyMode=true; 
+    isWeatherWarningMapMode=false;
+    document.getElementById('btnRealtimeMode').classList.add('active'); 
+    document.getElementById('btnNormalMode').classList.remove('active'); 
+    document.getElementById('btnWeatherWarningMap').classList.remove('active');
+    refreshMapDisplay();
+});
+
+document.getElementById('btnWeatherWarningMap').addEventListener('click', ()=>{
+    if(isWeatherWarningMapMode)return; 
+    isWeatherWarningMapMode=true; 
+    isRealtimeOnlyMode=false;
+    document.getElementById('btnWeatherWarningMap').classList.add('active'); 
+    document.getElementById('btnNormalMode').classList.remove('active'); 
+    document.getElementById('btnRealtimeMode').classList.remove('active'); 
+    refreshMapDisplay();
+});
+
 function refreshMapDisplay(){
     const eD=selectedHistoryQuake?selectedHistoryQuake.earthquake:window.currentEarthquakeData, 
           eP=selectedHistoryQuake?selectedHistoryQuake.points:window.currentEarthquakePoints, 
           eI=selectedHistoryQuake?selectedHistoryQuake.issue:window.currentEarthquakeIssue; 
     
-    if(eD&&eP) updateLeafletMap(eD,eP,eI,true); 
-    else if(geojsonLayer) geojsonLayer.setStyle(getLandDefaultStyle());
+    if(eD&&eP && !isWeatherWarningMapMode) {
+        updateLeafletMap(eD,eP,eI,true); 
+    }
+    else if(geojsonLayer) {
+        if(isWeatherWarningMapMode && !isEEWActive && !selectedHistoryQuake) {
+            geojsonLayer.setStyle(f => {
+                const nm = f.properties.name || f.properties.nam_ja || f.properties.code;
+                let wInfo = activeWeatherWarnings[nm];
+                if(!wInfo) {
+                    for(let key in activeWeatherWarnings) {
+                        if(key.includes(nm) || nm.includes(key)) {
+                            wInfo = activeWeatherWarnings[key];
+                            break;
+                        }
+                    }
+                }
+                if(wInfo) {
+                    let c = "#F2E700"; 
+                    if(wInfo.level === 3) c = "#6600CC"; 
+                    else if(wInfo.level === 2) c = "#FF2800"; 
+                    return {color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: c, fillOpacity: 0.8};
+                }
+                return getLandDefaultStyle();
+            });
+            if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);
+            if(obsLayer)obsLayer.clearLayers();
+        } else {
+            geojsonLayer.setStyle(getLandDefaultStyle());
+            if(isRealtimeOnlyMode) {
+                if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);
+                if(obsLayer)obsLayer.clearLayers();
+            }
+        }
+    }
     
     if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);
 }
@@ -1243,7 +1370,6 @@ const scrollStates=new Map(); function startAutoScroll(id){const a=document.getE
 
 const lMap=L.map('leafletMap',{zoomControl:false,attributionControl:false,worldCopyJump:true,zoomSnap:0.1,zoomDelta:0.25,wheelPxPerZoomLevel:120}).setView([37.5,137],5.2);
 
-// スワップ時のLeafletマップのイベントフック
 lMap.on('click', () => {
     if (isMapSwapped) toggleMapSwap();
 });
@@ -1300,23 +1426,26 @@ function updateEewGeojsonStyles(){
 
 function updateLeafletMap(e,p,i,skp=false){
     if(isEEWActive)return; if(obsLayer)obsLayer.clearLayers(); let bd=null, hsP=false;
-    if(e?.hypocenter){const{latitude:la,longitude:lo}=e.hypocenter; if(la&&la!==-200&&(i?.type!=="ScalePrompt")){bd=L.latLngBounds([la,lo],[la,lo]); if(latestQuakeMarker)latestQuakeMarker.setLatLng([la,lo]);else latestQuakeMarker=L.marker([la,lo],{icon:L.divIcon({className:'epicenter-icon',html:'×',iconSize:[50,50],iconAnchor:[25,25]}),pane:'epicenterPane'}).addTo(lMap); latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isEEWActive?0:1);}else if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);}
+    if(e?.hypocenter){const{latitude:la,longitude:lo}=e.hypocenter; if(la&&la!==-200&&(i?.type!=="ScalePrompt")){bd=L.latLngBounds([la,lo],[la,lo]); if(latestQuakeMarker)latestQuakeMarker.setLatLng([la,lo]);else latestQuakeMarker=L.marker([la,lo],{icon:L.divIcon({className:'epicenter-icon',html:'×',iconSize:[50,50],iconAnchor:[25,25]}),pane:'epicenterPane'}).addTo(lMap); latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isEEWActive||isWeatherWarningMapMode?0:1);}else if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);}
     if(geojsonLayer&&p){
-        const aM={}; let hO=isEEWActive||(isRealtimeOnlyMode&&!selectedHistoryQuake);
+        const aM={}; let hO=isEEWActive||(isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode;
         p.forEach(pt=>{let an=pt.isArea?pt.addr:null; if(!pt.isArea&&typeof JMAPoints!=='undefined'&&window.jmaStationsJson){let ix=JMAPoints.indexOf(pt.addr); if(ix!==-1&&window.jmaStationsJson[ix].area)an=window.jmaStationsJson[ix].area.name;} if(!an)an=pt.addr; if(!aM[an]||pt.scale>aM[an])aM[an]=pt.scale; if(userSettings.showObsPoints&&!hO&&!pt.isArea&&typeof JMAPoints!=='undefined'&&window.jmaStationsJson){let ix=JMAPoints.indexOf(pt.addr); if(ix!==-1){let sl=window.jmaStationsJson[ix].lat, slo=window.jmaStationsJson[ix].lon, sc=pt.scale, im="source/jqk_int"+(sc==45?"50":sc==50?"55":sc==55?"60":sc==60?"65":sc==70?"7":sc/10)+".png"; if(sc==46)im="source/jqk_int_.png"; let mk=L.marker([sl,slo],{icon:L.icon({iconUrl:im,iconSize:[16,16]}),zIndexOffset:sc*100}); obsLayer.addLayer(mk);}}});
         if((i?.type==="ScalePrompt"||i?.type==="Destination")&&!hO){geojsonLayer.eachLayer(l=>{const nm=l.feature.properties.name||l.feature.properties.nam_ja||l.feature.properties.code, sc=aM[nm]; if(sc>=10){const pt=getPolygonPoint(l.feature), im="source/jqk_int"+(sc==45?"50":sc==50?"55":sc==55?"60":sc==60?"65":sc==70?"7":sc/10)+".png"; let mk=L.marker([pt.lat,pt.lng],{icon:L.icon({iconUrl:sc==46?"source/jqk_int_.png":im,iconSize:[20,20]}),zIndexOffset:sc*100}); obsLayer.addLayer(mk);}});}
         geojsonLayer.eachLayer(l=>{const nm=l.feature.properties.name||l.feature.properties.nam_ja||l.feature.properties.code, sc=aM[nm]; if(sc>=10){if(!bd)bd=l.getBounds();else bd.extend(l.getBounds()); hsP=true;}});
-        geojsonLayer.setStyle(f=>{
-            const nm=f.properties.name||f.properties.nam_ja||f.properties.code; 
-            let hasColor = !(isRealtimeOnlyMode&&!isEEWActive&&!selectedHistoryQuake)&&aM[nm];
-            if(hasColor) {
-                return {color:MAP_BORDER_COLOR,weight:MAP_BORDER_WEIGHT,fillColor:scaleColor(fmt.shindo(aM[nm],e?.hypocenter?.depth)),fillOpacity:0.8};
-            } else {
-                return getLandDefaultStyle();
-            }
-        });
+        
+        if(!isWeatherWarningMapMode) {
+            geojsonLayer.setStyle(f=>{
+                const nm=f.properties.name||f.properties.nam_ja||f.properties.code; 
+                let hasColor = !(isRealtimeOnlyMode&&!isEEWActive&&!selectedHistoryQuake)&&aM[nm];
+                if(hasColor) {
+                    return {color:MAP_BORDER_COLOR,weight:MAP_BORDER_WEIGHT,fillColor:scaleColor(fmt.shindo(aM[nm],e?.hypocenter?.depth)),fillOpacity:0.8};
+                } else {
+                    return getLandDefaultStyle();
+                }
+            });
+        }
     }
-    if(!skp&&bd){if(hsP)lMap.flyToBounds(bd,{padding:[30,30],maxZoom:8,duration:1.5}); else if(e?.hypocenter?.latitude)lMap.flyTo([e.hypocenter.latitude,e.hypocenter.longitude],8,{duration:1.5});}
+    if(!skp&&bd&&!isWeatherWarningMapMode){if(hsP)lMap.flyToBounds(bd,{padding:[30,30],maxZoom:8,duration:1.5}); else if(e?.hypocenter?.latitude)lMap.flyTo([e.hypocenter.latitude,e.hypocenter.longitude],8,{duration:1.5});}
     const ar=document.getElementById("detailScrollArea"); if(ar&&p?.length>0){ar.innerHTML=""; [...p].sort((a,b)=>b.scale-a.scale).forEach(pt=>{const s=fmt.shindo(pt.scale,e?.hypocenter?.depth), c=scaleColor(s); let lpgmH = pt.lpgmInt ? `<div class="detailLpgmBox">長周期 階級${pt.lpgmInt}</div>` : ""; ar.innerHTML+=`<div class="detailItem"><div class="detailScaleBox" style="background:${c};color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${pt.pref} ${pt.addr||''}</div>${lpgmH}</div>`;}); ar.scrollTop=0; startAutoScroll("detailScrollArea"); applyAppearance();}
 }
 
@@ -1508,7 +1637,7 @@ function clearEEWDisplay(eid=null){
         if(eewMiniMaps.has(eid)){ eewMiniMaps.get(eid).map.remove(); eewMiniMaps.delete(eid); }
         
         if(activeEEWs.size===0){
-            isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
+            isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
             document.getElementById("eewContainer").innerHTML = "";
         }
         else{
@@ -1519,7 +1648,7 @@ function clearEEWDisplay(eid=null){
     }else{
         isEEWActive=false; stopEewRotationTimer(); activeEEWs.clear(); eewOffsets.clear(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; eewPollTimers.forEach(t=>clearInterval(t)); eewPollTimers.clear(); eewTimeoutTimers.forEach(t=>clearTimeout(t)); eewTimeoutTimers.clear(); waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const ct=document.getElementById("eewContainer"); if(ct)ct.innerHTML=""; const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; epicenterMarkers.forEach(m=>lMap.removeLayer(m)); epicenterMarkers.clear(); 
         eewMiniMaps.forEach(m=>m.map.remove()); eewMiniMaps.clear();
-        if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
+        if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
         renderLatestPanel();
     }
 }
@@ -1527,7 +1656,6 @@ function clearEEWDisplay(eid=null){
 async function updateWolfxEEW(d){
     if(d.type!=="jma_eew")return; 
     
-    // スワップ解除と揺れ検知の優先キャンセル
     resetMapSwap();
     if(isShakeDetectActive) cancelShakeDetectImmediate();
     
@@ -1561,16 +1689,27 @@ async function updateWolfxEEW(d){
     if(isN||(pD&&pD.Serial!==d.Serial)){let bT=`最大震度: ${d.MaxIntensity||"不明"}\n震源地: ${d.Hypocenter}\n規模: M${d.Magunitude} 深さ: ${fmt.depth(d.Depth)}`; if(d.WarnArea?.Chiiki)bT+=`\n【予測地域】\n${d.WarnArea.Chiiki}`; else if(d.Forecast?.length)bT+=`\n【予測地域】\n${d.Forecast.map(f=>f.Intensity?.To?`${f.Name}(最大${f.Intensity.To})`:f.Name).join("、")}`; sendPushNotification(`${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報`,{body:bT,icon:getPushIconDataURL(d.MaxIntensity||"?",scaleColor(d.MaxIntensity||"0"),getContrastColor(scaleColor(d.MaxIntensity||"0"))),tag:"eew_"+id});}
     
     let isSU=pD&&pD.Serial!==d.Serial; 
+    let isLocationUpdated = pD && (pD.Latitude !== d.Latitude || pD.Longitude !== d.Longitude);
+
     if(isN) {
         playEEWBeep(); seFirst.currentTime=0; seFirst.play().catch(e=>{});
     } else if(isSU && !d.isFinal) {
-        seUpdateEew.currentTime=0; seUpdateEew.play().catch(e=>{}); 
-        speakText(`緊急地震速報、第${d.Serial}報。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+        if(isLocationUpdated) {
+            seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});
+            speakText(`緊急地震速報、第${d.Serial}報。震源位置が更新されました。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+        } else {
+            seUpdateEew.currentTime=0; seUpdateEew.play().catch(e=>{}); 
+            speakText(`緊急地震速報、第${d.Serial}報。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+        }
     } 
     
     if(d.isFinal){
         seLast.currentTime=0; seLast.play().catch(e=>{});
-        speakText(`緊急地震速報、最終第${d.Serial}報。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+        if(isLocationUpdated) {
+            speakText(`緊急地震速報、最終第${d.Serial}報。震源位置が更新されました。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+        } else {
+            speakText(`緊急地震速報、最終第${d.Serial}報。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+        }
     } 
     
     if(d.MaxIntensity==="7" && isN){
@@ -1626,7 +1765,7 @@ function handleShakeDetection(validSites, evObj){
         isShakeDetectActive=true; 
         ii=true; 
         preShakeDetectMode=isRealtimeOnlyMode; 
-        if(!isRealtimeOnlyMode)setTimeout(()=>{isRealtimeOnlyMode=true; document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active'); refreshMapDisplay();},10); playPippiBeep();
+        if(!isRealtimeOnlyMode)setTimeout(()=>{isRealtimeOnlyMode=true; document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active'); document.getElementById('btnWeatherWarningMap').classList.remove('active'); isWeatherWarningMapMode=false; refreshMapDisplay();},10); playPippiBeep();
     }
     
     let cM=-1, tS=null; validSites.forEach(s=>{if(s.lv>cM){cM=s.lv; tS=s;}});
@@ -1683,7 +1822,7 @@ function renderKyoshinCanvas(d){
 function updateTsunamiMap(){
     if(!tsunamiGeojsonLayer)return; const d=currentTsunamiData;
     if(!d||d.cancelled||!d.areas?.length){if(!seaLevelChangeContinues)tsunamiGeojsonLayer.setStyle({color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0}); return;}
-    let aG={}; d.areas.forEach(a=>aG[a.name]=a.grade); tsunamiGeojsonLayer.setStyle(f=>{const g=aG[f.properties.name||f.properties.nam_ja||f.properties.code]; if(g){let c="#fff"; if(g==="MajorWarning"||g==="MajorTsunami")c="#FF00FF"; else if(g==="Warning"||g==="TsunamiWarning")c="#FF0000"; else if(g==="Watch"||g==="TsunamiAdvisory")c="#FFFF00"; return {color:c,weight:12,opacity:0.8,fillColor:c,fillOpacity:0.5};} else if(seaLevelChangeContinues)return {color:"#00BFFF",weight:4,opacity:0.5,fillColor:"transparent",fillOpacity:0}; return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};});
+    let aG={}; d.areas.forEach(a=>aG[a.name]=a.grade); tsunamiGeojsonLayer.setStyle(f=>{const g=aG[f.properties.name||f.properties.nam_ja||f.properties.code]; if(g){let c="#fff"; if(g==="MajorWarning"||g==="MajorTsunami")c="#FF00FF"; else if(g==="Warning"||g==="TsunamiWarning")c="#FF0000"; else if(g==="Watch"||g==="TsunamiAdvisory")c="#FFFF00"; else if(g==="SlightChange"||g==="Unknown")c="#00BFFF"; return {color:c,weight:12,opacity:0.8,fillColor:c,fillOpacity:0.5};} else if(seaLevelChangeContinues)return {color:"#00BFFF",weight:4,opacity:0.5,fillColor:"transparent",fillOpacity:0}; return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};});
 }
 function updateTsunamiDisplay(d,eD){
     currentTsunamiData=d; updateTsunamiMap(); const ar=document.getElementById("tsunamiScrollArea"); let hw=false, isC=d?.cancelled, xA=xmlTsunamiData&&!xmlTsunamiData.cancelled&&xmlTsunamiData.areas?.length>0;
@@ -1987,7 +2126,6 @@ function initWeatherMap() {
     hrpnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
     thnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
 
-    // スワップ時のLeafletマップのイベントフック
     weatherMap.on('click', () => {
         toggleMapSwap();
     });
@@ -1997,7 +2135,6 @@ function initWeatherMap() {
     setInterval(toggleWeatherMode, 60 * 1000);
 }
 
-// パネル領域クリックでスワップ
 document.getElementById('weatherMapPanel').addEventListener('click', (e) => {
     if(e.target.id === 'weatherMapPanel' || e.target.closest('.axisHeader')) {
         toggleMapSwap();
