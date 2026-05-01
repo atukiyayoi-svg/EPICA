@@ -218,12 +218,34 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #btnAxisConnect { background: #003366; color: #fff; border: 2px solid #00BFFF; padding: 12px; cursor: pointer; font-weight: 700; border-radius: 4px; transition: 0.2s; margin-top: 10px; width: 100%; font-size: 14px; }
 #btnAxisConnect:hover { background: #005599; }
 
+/* --- マップスワップ（メイン/サイドバー入れ替え）スタイル --- */
+#weatherMapPanel.main-map-mode {
+    position: fixed !important;
+    top: 12px; left: 444px; right: 404px; bottom: 362px;
+    height: auto !important;
+    z-index: 10;
+    border-top: none !important;
+    border: 2px solid #333;
+}
+#leafletWrap.sidebar-map-mode {
+    position: relative !important;
+    top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+    width: 100% !important;
+    height: 350px !important;
+    border: 2px solid #333 !important;
+    border-top: 8px solid #0055ff !important;
+    flex-shrink: 0;
+    z-index: 10;
+    margin: 0;
+}
+
 @keyframes blink{from{opacity:0.6}to{opacity:1}}
 
 /* レスポンシブ - PC・タブレット・スマホ対応 */
 @media screen and (max-width: 1300px) {
     #bottomPanelsContainer { left: 420px; right: 380px; }
     #leafletWrap { left: 420px; right: 380px; }
+    #weatherMapPanel.main-map-mode { left: 420px; right: 380px; }
 }
 
 @media screen and (max-width: 1024px) {
@@ -233,6 +255,13 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     
     #leafletWrap { position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px; z-index: 5; border: 2px solid #333; order: 1; margin: 0 0 12px 0 !important; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     
+    #weatherMapPanel.main-map-mode {
+        position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px;
+        z-index: 5; margin: 0 0 12px 0 !important; flex-shrink: 0;
+        left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;
+        order: 1; 
+    }
+
     #leftSidebar, #rightSidebar { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; overflow: visible !important; gap: 12px; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     #leftSidebar { order: 2; }
     #rightSidebar { order: 3; }
@@ -248,6 +277,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 
 @media screen and (max-width: 600px) {
     #leafletWrap { height: 40vh !important; min-height: 300px; }
+    #weatherMapPanel.main-map-mode { height: 40vh !important; min-height: 300px; }
     .latestTitle { font-size: 20px !important; }
     .latestScale { width: 80px; height: 80px; font-size: 42px; }
     .qItem { height: auto; min-height: 80px; }
@@ -323,7 +353,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div id="annualAnimMap" style="flex: 1; background:#050505;"></div>
     </div>
 
-    <div id="weatherMapPanel" class="base-panel" style="border-top: 8px solid #0055ff; height: 350px;">
+    <div id="weatherMapPanel" class="base-panel" style="border-top: 8px solid #0055ff; height: 350px; cursor:pointer;">
         <div class="axisHeader" style="color: #00BFFF; display:flex; justify-content: space-between;">
             <span id="weatherMapTitle" style="font-weight: 700;">気象レーダー (RAIN)</span>
         </div>
@@ -484,7 +514,86 @@ const depthColor = d => { if(d===-1||d===null)return "#666666"; if(d===0)return 
 const getContrastColor = hex => { if(!hex||hex==="#222"||hex==="#444444")return "#fff"; try{const c=hex.replace("#",""); if(c.length!==6)return "#fff"; const r=parseInt(c.substr(0,2),16), g=parseInt(c.substr(2,2),16), b=parseInt(c.substr(4,2),16); return (r*299+g*587+b*114)/1000>=140 ? "#000" : "#fff";}catch(e){return "#fff";} };
 
 function sendPushNotification(title, options) { if(userSettings.pushNotify && "Notification" in window && Notification.permission==="granted"){ try{new Notification(title, options);}catch(e){} } }
-function getPushIconDataURL(text, bgColor, textColor) { try{ const canvas=document.createElement('canvas'); canvas.width=256; canvas.height=256; const ctx=canvas.getContext('2d'); ctx.fillStyle=bgColor; ctx.fillRect(0,0,256,256); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='bold '+(text.length>1?'120px':'160px')+' sans-serif'; ctx.fillText(text, 128, 128); ctx.strokeStyle='#ffffff'; ctx.lineWidth=8; ctx.strokeRect(4,4,248,248); return canvas.toDataURL('image/png'); }catch(e){return null;} }
+
+// 通知アイコンで最大震度が正しく表示されるように修正
+function getPushIconDataURL(text, bgColor, textColor) { 
+    try { 
+        const canvas = document.createElement('canvas'); 
+        canvas.width = 256; 
+        canvas.height = 256; 
+        const ctx = canvas.getContext('2d'); 
+        ctx.fillStyle = bgColor; 
+        ctx.fillRect(0, 0, 256, 256); 
+        ctx.textAlign = 'center'; 
+        ctx.textBaseline = 'middle'; 
+        
+        let fontSize = '160px';
+        if (text.length === 2) fontSize = '120px';
+        else if (text.length >= 3) fontSize = '90px';
+        
+        ctx.font = 'bold ' + fontSize + ' sans-serif'; 
+        ctx.fillStyle = textColor || '#ffffff';
+        ctx.fillText(text, 128, 128); 
+        
+        ctx.strokeStyle = '#ffffff'; 
+        ctx.lineWidth = 8; 
+        ctx.strokeRect(4, 4, 248, 248); 
+        return canvas.toDataURL('image/png'); 
+    } catch(e) { return null; } 
+}
+
+// --- マップの入れ替え処理 ---
+let isMapSwapped = false;
+function toggleMapSwap() {
+    const leafletWrap = document.getElementById('leafletWrap');
+    const weatherMapPanel = document.getElementById('weatherMapPanel');
+    const rightSidebar = document.getElementById('rightSidebar');
+    
+    if (!leafletWrap || !weatherMapPanel || !rightSidebar) return;
+
+    if (!document.getElementById('weatherMapAnchor')) {
+        const anchor = document.createElement('div');
+        anchor.id = 'weatherMapAnchor';
+        anchor.style.display = 'none';
+        rightSidebar.insertBefore(anchor, weatherMapPanel);
+    }
+    const anchor = document.getElementById('weatherMapAnchor');
+    
+    if (!document.getElementById('leafletAnchor')) {
+        const lAnchor = document.createElement('div');
+        lAnchor.id = 'leafletAnchor';
+        lAnchor.style.display = 'none';
+        leafletWrap.parentNode.insertBefore(lAnchor, leafletWrap);
+    }
+    const lAnchor = document.getElementById('leafletAnchor');
+
+    isMapSwapped = !isMapSwapped;
+    
+    if (isMapSwapped) {
+        lAnchor.parentNode.insertBefore(weatherMapPanel, lAnchor);
+        weatherMapPanel.classList.add('main-map-mode');
+        
+        anchor.parentNode.insertBefore(leafletWrap, anchor);
+        leafletWrap.classList.add('sidebar-map-mode');
+    } else {
+        lAnchor.parentNode.insertBefore(leafletWrap, lAnchor);
+        leafletWrap.classList.remove('sidebar-map-mode');
+        
+        anchor.parentNode.insertBefore(weatherMapPanel, anchor);
+        weatherMapPanel.classList.remove('main-map-mode');
+    }
+    
+    setTimeout(() => {
+        if(lMap) lMap.invalidateSize();
+        if(weatherMap) weatherMap.invalidateSize();
+    }, 100);
+}
+
+function resetMapSwap() {
+    if (isMapSwapped) toggleMapSwap();
+}
+
+// ---------------------------
 
 let seFirst=new Audio('First.mp3'), seLast=new Audio('Last.mp3'), seTsunami=new Audio('Tsunami.mp3');
 let seUpdateApi=new Audio('UpdateAPI.mp3'), seUpdateEew=new Audio('UpdateEEW.mp3'), seWarning=new Audio('Warning.mp3');
@@ -1133,6 +1242,12 @@ function updateLPGMDisplay(m,d){const p=document.getElementById("lpgmBody"), dp=
 const scrollStates=new Map(); function startAutoScroll(id){const a=document.getElementById(id); if(!a)return; if(scrollStates.has(id))clearInterval(scrollStates.get(id).timer); const st={timer:null,md:0,wc:0,wl:80,fl:20}; st.timer=setInterval(()=>{const mP=a.scrollHeight-a.clientHeight; if(mP<=1){a.style.opacity=1;a.scrollTop=0;return;} switch(st.md){case 0:a.style.opacity=1;if(++st.wc>=st.wl){st.md=1;st.wc=0;}break;case 1:a.scrollTop+=1;if(a.scrollTop>=mP-1){st.md=2;st.wc=0;}break;case 2:if(++st.wc>=st.wl){st.md=3;st.wc=0;a.style.opacity=0;}break;case 3:if(++st.wc>=st.fl){a.scrollTop=0;st.md=4;st.wc=0;}break;case 4:a.style.opacity=1;if(++st.wc>=st.fl){st.md=0;st.wc=0;}break;}},45); scrollStates.set(id,st);}
 
 const lMap=L.map('leafletMap',{zoomControl:false,attributionControl:false,worldCopyJump:true,zoomSnap:0.1,zoomDelta:0.25,wheelPxPerZoomLevel:120}).setView([37.5,137],5.2);
+
+// スワップ時のLeafletマップのイベントフック
+lMap.on('click', () => {
+    if (isMapSwapped) toggleMapSwap();
+});
+
 const baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
 const animBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
 const weatherBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
@@ -1410,7 +1525,13 @@ function clearEEWDisplay(eid=null){
 }
 
 async function updateWolfxEEW(d){
-    if(d.type!=="jma_eew")return; const id=d.EventID||"wfx-tmp";
+    if(d.type!=="jma_eew")return; 
+    
+    // スワップ解除と揺れ検知の優先キャンセル
+    resetMapSwap();
+    if(isShakeDetectActive) cancelShakeDetectImmediate();
+    
+    const id=d.EventID||"wfx-tmp";
     if(d.OriginalText){const ex=Date.now()+3600000, exg=window.eewOriginalTextList.find(x=>x.id===id); if(exg){exg.text=d.OriginalText; exg.expiry=ex;}else{window.eewOriginalTextList.push({id:id,text:d.OriginalText,expiry:ex});} updateCommentDisplay(selectedHistoryQuake||(window.latestFullQuakeList?window.latestFullQuakeList.find(x=>x.code===551):null));}
     
     let isN = !activeEEWs.has(id), pD = activeEEWs.get(id);
@@ -1498,7 +1619,16 @@ function handleShakeDetection(validSites, evObj){
     shakeDetectLayer.clearLayers(); let iw=false; if(window.currentEarthquakeIssue&&(window.currentEarthquakeIssue.type==="ScalePrompt"||window.currentEarthquakeIssue.type==="Destination"))iw=true; if(isEEWActive||selectedHistoryQuake!==null||iw){if(isShakeDetectActive)cancelShakeDetectImmediate(); return;}
     if(!validSites||validSites.length<4){if(isShakeDetectActive&&!shakeDetectCooldown)shakeDetectCooldown=setTimeout(cancelShakeDetectImmediate,5000); return;}
     if(shakeDetectCooldown){clearTimeout(shakeDetectCooldown); shakeDetectCooldown=null;}
-    let ii=false; if(!isShakeDetectActive){isShakeDetectActive=true; ii=true; preShakeDetectMode=isRealtimeOnlyMode; if(!isRealtimeOnlyMode)setTimeout(()=>{isRealtimeOnlyMode=true; document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active'); refreshMapDisplay();},10); playPippiBeep();}
+    
+    let ii=false; 
+    if(!isShakeDetectActive){
+        resetMapSwap(); 
+        isShakeDetectActive=true; 
+        ii=true; 
+        preShakeDetectMode=isRealtimeOnlyMode; 
+        if(!isRealtimeOnlyMode)setTimeout(()=>{isRealtimeOnlyMode=true; document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active'); refreshMapDisplay();},10); playPippiBeep();
+    }
+    
     let cM=-1, tS=null; validSites.forEach(s=>{if(s.lv>cM){cM=s.lv; tS=s;}});
     if(tS&&ii)lMap.flyTo([tS.lat,tS.lng],8,{duration:1.5});
     let gd={}, gs=0.4, dR=new Set(); validSites.forEach(s=>{let gx=Math.floor(s.lng/gs), gy=Math.floor(s.lat/gs), k=`${gx}_${gy}`; if(!gd[k])gd[k]={maxLv:s.lv,sw:[gy*gs,gx*gs],ne:[(gy+1)*gs,(gx+1)*gs]}; else if(s.lv>gd[k].maxLv)gd[k].maxLv=s.lv; dR.add(getNearestRegion(s.lat,s.lng));});
@@ -1857,10 +1987,22 @@ function initWeatherMap() {
     hrpnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
     thnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
 
+    // スワップ時のLeafletマップのイベントフック
+    weatherMap.on('click', () => {
+        toggleMapSwap();
+    });
+
     fetchJmaWeatherData();
     setInterval(fetchJmaWeatherData, 2 * 60 * 1000);
     setInterval(toggleWeatherMode, 60 * 1000);
 }
+
+// パネル領域クリックでスワップ
+document.getElementById('weatherMapPanel').addEventListener('click', (e) => {
+    if(e.target.id === 'weatherMapPanel' || e.target.closest('.axisHeader')) {
+        toggleMapSwap();
+    }
+});
 
 async function fetchJmaWeatherData() {
     try {
