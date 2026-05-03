@@ -123,7 +123,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .eewBody { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
 .eewScaleBox { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; border: 2px solid #fff; font-size: 38px; border-radius: 4px; }
 .eewEpicenter { font-size: 22px; font-weight: 700; line-height: 1.2; color: #fff; margin-bottom: 6px; }
-.eewSubInfo { font-size: 16px; font-weight: 700; display: flex; gap: 12px; color: #CCC; }
+.eewSubInfo { font-size: 16px; font-weight: 700; display: flex; gap: 8px; color: #CCC; }
 .eewAreas { font-size: 14px; color: #FFF; font-weight: 700; background: #333; padding: 10px; border-left: 4px solid #FF9900; line-height: 1.4; max-height: 80px; overflow-y: auto; }
 .eew-mini-map { width: 100%; height: 160px; background: #050505; border: 2px solid #444; margin-top: 12px; }
 
@@ -464,6 +464,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         </div>
         <div class="setting-group">
             <div class="setting-group-title">拡張機能</div>
+            <div class="setting-item"><label>気象マップ拡大時ズームレベル <span class="setting-value" id="weatherMapZoomVal">5</span></label><input type="range" id="weatherMapZoomSlider" min="3" max="10" step="1" value="5"></div>
             <div class="setting-item"><label>プッシュ通知 (ブラウザ権限必要) <input type="checkbox" id="chkPushNotify"></label></div>
             <div class="setting-item"><label>EEW受信時の震度予測マップ表示 <input type="checkbox" id="chkEewPrediction"></label></div>
             <div class="setting-item"><label>EEW受信中リアルタイム揺れマップ塗分け <input type="checkbox" id="chkEewRealtimePaint"></label></div>
@@ -509,6 +510,19 @@ const obsImages = {};
 });
 window.currentObsPointsToDraw = [];
 window.currentAreaColors = {};
+
+window.jmaPointsMap = null;
+function getJmaPointIndex(addr) {
+    if (typeof JMAPoints === 'undefined') return -1;
+    if (!window.jmaPointsMap) {
+        window.jmaPointsMap = new Map();
+        for (let i = 0; i < JMAPoints.length; i++) {
+            window.jmaPointsMap.set(JMAPoints[i], i);
+        }
+    }
+    const idx = window.jmaPointsMap.get(addr);
+    return idx !== undefined ? idx : -1;
+}
 // ---------------------------------
 
 window.latestFullQuakeList = []; window.eewOriginalTextList = []; let megaQuakeStatus = { nankai: null, nankaiTime: null, sanriku: null, sanrikuTime: null }; let wasTsunamiActive = false; let seaLevelChangeContinues = false;
@@ -517,7 +531,7 @@ let activeWeatherWarnings = {};
 let isWeatherWarningMapMode = false;
 
 const defaultSettings = {
-    pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, bgColor: "#050505", customShindoColors: false,
+    pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, bgColor: "#050505", customShindoColors: false, weatherMapZoom: 5,
     shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" },
     showMapTile: true, mapOceanColor: "#050505", mapLandColor: "#222222", mapLandTransparent: true
 };
@@ -537,9 +551,9 @@ function getLandDefaultStyle() {
 }
 
 const scaleColor = s => { const code = String(s); const cols = userSettings.customShindoColors ? userSettings.shindoColors : defaultSettings.shindoColors; if(code==="1")return cols["1"]; if(code==="2")return cols["2"]; if(code==="3")return cols["3"]; if(code==="4")return cols["4"]; if(code.includes("5弱"))return cols["5弱"]; if(code.includes("5強"))return cols["5強"]; if(code.includes("6弱"))return cols["6弱"]; if(code.includes("6強"))return cols["6強"]; if(code==="7")return cols["7"]; return "#444444"; };
-const magColor = m => m>=7.5 ? "#FF0000" : m>=6.0 ? "#FF9900" : m>=4.0 ? "#FFFF00" : "#00BFFF";
-const depthColor = d => { if(d===-1||d===null)return "#666666"; if(d===0)return "#FF0000"; if(d<30)return "#FF9900"; if(d<70)return "#FFFF00"; if(d<150)return "#00BFFF"; return "#0000FF"; };
-const getContrastColor = hex => { if(!hex||hex==="#222"||hex==="#444444")return "#fff"; try{const c=hex.replace("#",""); if(c.length!==6)return "#fff"; const r=parseInt(c.substr(0,2),16), g=parseInt(c.substr(2,2),16), b=parseInt(c.substr(4,2),16); return (r*299+g*587+b*114)/1000>=140 ? "#000" : "#fff";}catch(e){return "#fff";} };
+const magColor = m => { const v=parseFloat(m); if(isNaN(v))return "#00BFFF"; return v>=7.5 ? "#FF0000" : v>=6.0 ? "#FF9900" : v>=4.0 ? "#FFFF00" : "#00BFFF"; };
+const depthColor = d => { const v=parseInt(d); if(v===-1||isNaN(v))return "#666666"; if(v===0)return "#FF0000"; if(v<30)return "#FF9900"; if(v<70)return "#FFFF00"; if(v<150)return "#00BFFF"; return "#0000FF"; };
+const getContrastColor = hex => { if(!hex||hex==="#222"||hex==="#444444"||hex==="#666666")return "#fff"; try{const c=hex.replace("#",""); if(c.length!==6)return "#fff"; const r=parseInt(c.substr(0,2),16), g=parseInt(c.substr(2,2),16), b=parseInt(c.substr(4,2),16); return (r*299+g*587+b*114)/1000>=140 ? "#000" : "#fff";}catch(e){return "#fff";} };
 
 function sendPushNotification(title, options) { if(userSettings.pushNotify && "Notification" in window && Notification.permission==="granted"){ try{new Notification(title, options);}catch(e){} } }
 
@@ -604,7 +618,7 @@ function toggleMapSwap() {
         leafletWrap.classList.add('sidebar-map-mode');
         
         setTimeout(() => {
-            if(weatherMap) weatherMap.setView([37.5, 137], 5);
+            if(weatherMap) weatherMap.setView([37.5, 137], userSettings.weatherMapZoom || 5);
         }, 150);
     } else {
         lAnchor.parentNode.insertBefore(leafletWrap, lAnchor);
@@ -679,7 +693,20 @@ function updateSubMapGeojsonStyles() {
     });
 }
 
-['fsLatest','fsDetail','fsTsunami','fsHistory','fsComment','fsXml','fsWeatherWarning'].forEach(k=>{ let sl=document.getElementById(k+'Slider'); let vl=document.getElementById(k+'Val'); if(sl&&vl){ sl.value=userSettings[k]; vl.innerText=userSettings[k]+"%"; sl.addEventListener('input', e=>{ userSettings[k]=parseInt(e.target.value); vl.innerText=userSettings[k]+"%"; saveSettings(); applyAppearance(); }); } });
+['fsLatest','fsDetail','fsTsunami','fsHistory','fsComment','fsXml','fsWeatherWarning','weatherMapZoom'].forEach(k=>{ 
+    let sl=document.getElementById(k+'Slider'); 
+    let vl=document.getElementById(k+'Val'); 
+    if(sl&&vl){ 
+        sl.value=userSettings[k]; 
+        vl.innerText=userSettings[k]+(k!=='weatherMapZoom'?"%":""); 
+        sl.addEventListener('input', e=>{ 
+            userSettings[k]=parseInt(e.target.value); 
+            vl.innerText=userSettings[k]+(k!=='weatherMapZoom'?"%":""); 
+            saveSettings(); 
+            if(k!=='weatherMapZoom')applyAppearance(); 
+        }); 
+    } 
+});
 document.getElementById('bgColorPicker').value = userSettings.bgColor; document.getElementById('bgColorPicker').addEventListener('input', e=>{userSettings.bgColor=e.target.value; saveSettings(); applyAppearance();});
 const customColorsArea = document.getElementById('customShindoColorsArea');
 ["1","2","3","4","5弱","5強","6弱","6強","7"].forEach(k=>{ const div=document.createElement('div'); div.style.display='flex'; div.style.flexDirection='column'; div.style.alignItems='center'; div.innerHTML=`<span style="font-size:12px; font-weight:700;">${k}</span><input type="color" value="${userSettings.shindoColors[k]}" style="width:36px;height:36px;cursor:pointer;border:none;padding:0;border-radius:4px;">`; customColorsArea.appendChild(div); div.querySelector('input').addEventListener('change', e=>{ userSettings.shindoColors[k]=e.target.value; saveSettings(); applyAppearance(); refreshMapDisplay(); renderHistoryPanel(); renderLatestPanel(); }); });
@@ -1252,11 +1279,15 @@ function handleHistoryClick(q){if(selectedHistoryQuake&&selectedHistoryQuake.ear
 function renderHistoryPanel(){
     const p=document.getElementById("quakePanel"); if(!p)return; p.innerHTML=""; 
     currentQuakeList.forEach(q=>{
-        const e=q.earthquake, s=fmt.shindo(e.maxScale,e.hypocenter.depth), b=scaleColor(s), mC=magColor(e.hypocenter.magnitude), dC=depthColor(e.hypocenter.depth), d=document.createElement("div"); 
+        const e=q.earthquake, s=fmt.shindo(e.maxScale,e.hypocenter.depth), b=scaleColor(s); 
+        const mC=magColor(e.hypocenter.magnitude), dC=depthColor(e.hypocenter.depth);
+        const mCTc=getContrastColor(mC), dCTc=getContrastColor(dC);
+        
+        const d=document.createElement("div"); 
         d.className="qItem"; if(selectedHistoryQuake&&selectedHistoryQuake.earthquake.time===e.time)d.classList.add("selected"); d.onclick=()=>handleHistoryClick(q); 
         let tN=e.hypocenter.name; if(q.issue?.type==="ScalePrompt")tN="[震度速報]"; 
         let lpgmHtml = q.earthquake.maxLpgmInt ? `<span class="lpgm-badge">長周期 階級${q.earthquake.maxLpgmInt}</span>` : "";
-        d.innerHTML=`<div class="scaleBox" style="background:${b};color:${getContrastColor(b)};font-size:${s.length>1?"24px":"32px"}">${s}</div><div class="qInfo"><div class="qName">${tN}${lpgmHtml}</div><div style="display:flex;align-items:center;"><span class="tag" style="background:rgba(0,0,0,0.6);color:${mC}; border:1px solid ${mC};">M${e.hypocenter.magnitude!==-1?e.hypocenter.magnitude.toFixed(1):'-.-'}</span><span class="tag" style="background:rgba(0,0,0,0.6);color:${dC}; border:1px solid ${dC};">${fmt.depth(e.hypocenter.depth)}</span><span style="font-size:12px;opacity:0.8;margin-left:auto;">${e.time.slice(5,16).replace("-","/")}</span></div></div>`; 
+        d.innerHTML=`<div class="scaleBox" style="background:${b};color:${getContrastColor(b)};font-size:${s.length>1?"24px":"32px"}">${s}</div><div class="qInfo"><div class="qName">${tN}${lpgmHtml}</div><div style="display:flex;align-items:center;gap:4px;"><span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:15px; border:none; padding:4px 8px;">M${e.hypocenter.magnitude!==-1?e.hypocenter.magnitude.toFixed(1):'-.-'}</span><span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:15px; border:none; padding:4px 8px;">${fmt.depth(e.hypocenter.depth)}</span><span style="font-size:12px;opacity:0.8;margin-left:auto;">${e.time.slice(5,16).replace("-","/")}</span></div></div>`; 
         p.appendChild(d);
     }); 
     applyAppearance();
@@ -1278,7 +1309,7 @@ function getNearestRegion(la,lo){let mD=Infinity, nN="不明な地域"; if(windo
 
 const arvCache=new Map(); async function fetchARVFromJSHIS(la,lo,ck){if(ck&&arvCache.has(ck))return arvCache.get(ck); try{const c=new AbortController(), tid=setTimeout(()=>c.abort(),800), rs=await fetch(`https://www.j-shis.bosai.go.jp/map/api/sstrct/V4/meshinfo.geojson?position=${lo},${la}&epsg=4326`,{signal:c.signal}); clearTimeout(tid); if(!rs.ok)throw new Error(); const d=await rs.json(); if(d?.features?.length){const a=parseFloat(d.features[0].properties.ARV); if(!isNaN(a)){if(ck)arvCache.set(ck,a); return a;}}}catch(e){} if(ck)arvCache.set(ck,null); return null;}
 async function calcPredictedIntensityRaw(m,d,el,eo,pl,po,pN,fI=null){const dt=getDistance(el,eo,pl,po), X=Math.sqrt(dt**2+d**2), lg=0.58*m+0.0038*d-1.29-Math.log10(X+0.0028*(10**(0.5*m)))-0.002*X, pg=10**lg; let am=await fetchARVFromJSHIS(pl,po,fI); if(!am){am=1.8; if(pN)for(let k in PREF_ARV)if(pN.includes(k)){am=PREF_ARV[k];break;}} return 2.68+1.72*Math.log10(pg*am);}
-function instrumentalToScale(i){if(i<0.5)return"0";if(i<1.5)return"1";if(i<2.5)return"2";if(i<3.5)return"3";if(i<4.5)return"4";if(i<5.0)return"5弱";if(i<5.5)return"5強";if(i<6.0)return"6弱";if(i<6.5)return"6強";return"7";}
+function instrumentalToScale(i){if(i<0.5)return"0";if(i<1.5)return"1";if(i<2.5)return"3";if(i<3.5)return"4";if(i<4.5)return"5弱";if(i<5.0)return"5強";if(i<5.5)return"6弱";if(i<6.0)return"6強";if(i<6.5)return"7";return"0";}
 async function calcPredictedIntensity(m,d,el,eo,pl,po,pN,os=0,fI=null){const r=await calcPredictedIntensityRaw(m,d,el,eo,pl,po,pN,fI); return instrumentalToScale(r+os);}
 function limitIntensity(c,m){return fmt.intensityToNum(c)>fmt.intensityToNum(m)?String(m):String(c);} function lvToShindoStr(l){return instrumentalToScale((l-6)*0.5);}
 function getMinInstrumental(s){if(s==="1")return 0.5;if(s==="2")return 1.5;if(s==="3")return 2.5;if(s==="4")return 3.5;if(s.includes("5弱"))return 4.5;if(s.includes("5強"))return 5.0;if(s.includes("6弱"))return 5.5;if(s.includes("6強"))return 6.0;if(s==="7")return 6.5;return 0;}
@@ -1394,13 +1425,20 @@ function updateLeafletMap(e,p,i,skp=false){
     
     if(geojsonLayer&&p){
         let hO=isEEWActive||(isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode;
+        let scaleColorCache = new Map();
+        const getScaleColorFast = (scale) => {
+            if(scaleColorCache.has(scale)) return scaleColorCache.get(scale);
+            const col = scaleColor(fmt.shindo(scale, e?.hypocenter?.depth));
+            scaleColorCache.set(scale, col);
+            return col;
+        };
         
         p.forEach(pt=>{
             let an=pt.isArea?pt.addr:null; 
             let lat=null, lon=null;
-            if(!pt.isArea&&typeof JMAPoints!=='undefined'&&window.jmaStationsJson){
-                let ix=JMAPoints.indexOf(pt.addr); 
-                if(ix!==-1){
+            if(!pt.isArea && window.jmaStationsJson){
+                let ix = getJmaPointIndex(pt.addr); 
+                if(ix !== -1){
                     if(window.jmaStationsJson[ix].area) an=window.jmaStationsJson[ix].area.name;
                     lat = window.jmaStationsJson[ix].lat;
                     lon = window.jmaStationsJson[ix].lon;
@@ -1409,7 +1447,7 @@ function updateLeafletMap(e,p,i,skp=false){
             if(!an)an=pt.addr; 
             
             if(!currentAreaColors[an]||pt.scale>currentAreaColors[an].scale) {
-                currentAreaColors[an]={scale:pt.scale, color:scaleColor(fmt.shindo(pt.scale,e?.hypocenter?.depth))};
+                currentAreaColors[an]={scale:pt.scale, color:getScaleColorFast(pt.scale)};
             }
             
             if(userSettings.showObsPoints&&!hO&&!pt.isArea&&lat!==null&&lon!==null){
@@ -1496,10 +1534,15 @@ function renderLatestPanel() {
         if(d.isTraining) th += `<span class="tag" style="background:#a855f7;color:#fff;">訓練</span>`;
         if(d.isAssumption) th += `<span class="tag" style="background:#3b82f6;color:#fff;">PLUM法</span>`;
         
-        let infoStr = d.isCancel ? `<div class="latestSub" style="color:#CCC; font-size:24px;">取り秒されました</div>` : `<div class="latestSub" style="color:#FFFF00; font-size:28px; font-weight:bold;">${d.Hypocenter}</div>
-        <div style="font-size:16px;">
-            <span class="tag" style="background:rgba(0,0,0,0.6); color:#00BFFF; border: 1px solid #00BFFF;">M${d.Magunitude}</span>
-            <span class="tag" style="background:rgba(0,0,0,0.6); color:#fff; border: 1px solid #fff;">${fmt.depth(d.Depth)}</span>
+        const mC = magColor(d.Magunitude);
+        const dC = depthColor(d.Depth);
+        const mCTc = getContrastColor(mC);
+        const dCTc = getContrastColor(dC);
+        
+        let infoStr = d.isCancel ? `<div class="latestSub" style="color:#CCC; font-size:24px;">取り消されました</div>` : `<div class="latestSub" style="color:#FFFF00; font-size:28px; font-weight:bold;">${d.Hypocenter}</div>
+        <div style="font-size:16px; display:flex; align-items:center; gap:8px;">
+            <span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">M${d.Magunitude}</span>
+            <span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">${fmt.depth(d.Depth)}</span>
             <span style="margin-left:8px; color:#CCC;">${(d.AnnouncedTime||"").slice(11,19)} 発表</span>
         </div>`;
 
@@ -1527,6 +1570,8 @@ function renderLatestPanel() {
             
             const mC = magColor(e0.hypocenter.magnitude);
             const dC = depthColor(e0.hypocenter.depth);
+            const mCTc = getContrastColor(mC);
+            const dCTc = getContrastColor(dC);
 
             lt.innerHTML = `
                 <div class="latestWrap">
@@ -1534,9 +1579,9 @@ function renderLatestPanel() {
                     <div class="latestLeft">
                         <div class="latestTitle">${ln} ${ct}</div>
                         <div class="latestSub">${e0.time.slice(5,16).replace("-","/")||''} 発生</div>
-                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
-                            <span class="tag" style="background:rgba(0,0,0,0.6); color:${mC}; border: 1px solid ${mC};">M${e0.hypocenter.magnitude !== -1 ? e0.hypocenter.magnitude.toFixed(1) : '-.-'}</span>
-                            <span class="tag" style="background:rgba(0,0,0,0.6); color:${dC}; border: 1px solid ${dC};">${fmt.depth(e0.hypocenter.depth)}</span>
+                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">M${e0.hypocenter.magnitude !== -1 ? e0.hypocenter.magnitude.toFixed(1) : '-.-'}</span>
+                            <span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">${fmt.depth(e0.hypocenter.depth)}</span>
                             ${lpgmHtml}
                         </div>
                     </div>
@@ -1588,7 +1633,12 @@ function renderEewCards() {
     const mapId = `eewMiniMap_${id}`;
     let mapHtml = `<div id="${mapId}" class="eew-mini-map"></div>`;
     
-    let eewSub = d.isCancel ? `<div class="eewEpicenter" style="color:#aaa; font-size:18px;">この緊急地震速報は取り消されました</div>` : `<div class="eewEpicenter">${d.Hypocenter}</div><div class="eewSubInfo"><span>M${d.Magunitude}</span><span>${fmt.depth(d.Depth)}</span></div>`;
+    const mC = magColor(d.Magunitude);
+    const dC = depthColor(d.Depth);
+    const mCTc = getContrastColor(mC);
+    const dCTc = getContrastColor(dC);
+    
+    let eewSub = d.isCancel ? `<div class="eewEpicenter" style="color:#aaa; font-size:18px;">この緊急地震速報は取り消されました</div>` : `<div class="eewEpicenter">${d.Hypocenter}</div><div class="eewSubInfo"><span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:15px; border:none; padding:4px 8px;">M${d.Magunitude}</span><span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:15px; border:none; padding:4px 8px;">${fmt.depth(d.Depth)}</span></div>`;
 
     cd.innerHTML = `
         <div class="eewHeader"><span style="display:flex;align-items:center;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</span></div>
@@ -1603,8 +1653,8 @@ function renderEewCards() {
     `;
 
     setTimeout(() => {
-        const eL = parseFloat(d.InitialLatitude);
-        const eO = parseFloat(d.InitialLongitude);
+        const eL = parseFloat(d.Latitude);
+        const eO = parseFloat(d.Longitude);
         if (!eewMiniMaps.has(id)) {
             let m = L.map(mapId, {
                 zoomControl: false, attributionControl: false, 
@@ -1684,6 +1734,8 @@ async function updateWolfxEEW(d){
     if (!isN && pD) {
         d.InitialLatitude = pD.InitialLatitude !== undefined ? pD.InitialLatitude : pD.Latitude;
         d.InitialLongitude = pD.InitialLongitude !== undefined ? pD.InitialLongitude : pD.Longitude;
+        if (!d.Latitude && pD.Latitude) d.Latitude = pD.Latitude;
+        if (!d.Longitude && pD.Longitude) d.Longitude = pD.Longitude;
     } else {
         d.InitialLatitude = d.Latitude;
         d.InitialLongitude = d.Longitude;
