@@ -57,7 +57,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #tsunamiEvacuateLabel { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); background: #FF0000; color: #FFFF00; border: 4px solid #FFFF00; padding: 12px 32px; font-size: 28px; font-weight: 700; border-radius: 4px; z-index: 2000; display: none; text-shadow: 2px 2px 0 #000; animation: blink 0.5s infinite alternate; pointer-events: none; white-space: nowrap; letter-spacing: 0.1em; }
 
 /* --- 表示切替 --- */
-#displayModeWrap { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; background: rgba(20, 20, 20, 0.9); border: 2px solid #444; border-radius: 4px; overflow: hidden; pointer-events: auto; }
+#displayModeWrap { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; background: rgba(20, 20, 20, 0.9); border: 2px solid #444; border-radius: 4px; overflow: hidden; pointer-events: auto; align-items: stretch; }
 .modeBtn { padding: 12px 24px; font-size: 14px; font-weight: 700; color: #CCC; background: transparent; border: none; cursor: pointer; transition: all 0.2s; outline: none; }
 .modeBtn:not(:last-child) { border-right: 2px solid #444; }
 .modeBtn.active { color: #FFF; background: #003366; border-bottom: 4px solid #00BFFF; padding-bottom: 8px; }
@@ -71,8 +71,10 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .legendItem { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; border-radius: 2px; }
 
 /* --- 最新情報 (兼 EEW表示領域) --- */
-#latestPanel{ padding: 16px; background: rgba(10, 10, 10, 0.95); border: 2px solid #444; border-radius: 4px; display: flex; flex-direction: column; min-height: 120px; justify-content: center; transition: all 0.3s; }
-.latestWrap{ display:flex; align-items: center; gap: 16px; width: 100%; }
+#latestPanel{ padding: 16px; background: rgba(10, 10, 10, 0.95); border: 2px solid #444; border-radius: 4px; display: flex; flex-direction: row; gap: 16px; overflow-x: auto; min-height: 120px; align-items: center; transition: all 0.3s; }
+#latestPanel::-webkit-scrollbar { height: 8px; }
+#latestPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+.latestWrap{ display:flex; align-items: center; gap: 16px; width: 100%; flex-shrink: 0; }
 .latestLeft{ flex:1; color:#fff; overflow:hidden; display: flex; flex-direction: column; gap: 6px; }
 .latestTitle{ font-size: 24px; font-weight: 700; color: #fff; line-height: 1.2; word-wrap: break-word; }
 .latestSub{ font-size: 16px; color: #FFFF00; font-weight: 700; }
@@ -113,7 +115,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 
 /* --- EEW詳細パネル (下部中央フローティング) --- */
 #eewContainer { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: row; gap: 16px; pointer-events: none; }
-#eewPopup { position:fixed; top:80px; left:444px; background: #FF0000; color:#FFFF00; border: 4px solid #FFFF00; padding: 16px 40px; font-size: 32px; font-weight: 700; display:none; z-index:9999; box-shadow: 4px 4px 0 #000; letter-spacing: 0.1em; }
+#eewPopup { position:fixed; top:12px; right:404px; left:auto; transform:none; background: #FF0000; color:#FFFF00; border: 4px solid #FFFF00; padding: 12px 24px; font-size: 28px; font-weight: 700; display:none; z-index:9999; box-shadow: 4px 4px 0 #000; letter-spacing: 0.1em; white-space: nowrap; }
 .eewCard { display: none; width: 420px; background: rgba(10, 10, 10, 0.98); border: 4px solid #FF9900; pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #fff; padding: 16px; flex-direction: column; border-radius: 4px; }
 .eewCard.active { display: flex; }
 .eewCard.warning { border-color: #FF0000; animation: eewBlinkNHK 1s infinite alternate; }
@@ -412,6 +414,9 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     <div id="leafletMap"></div>
     <div id="tsunamiEvacuateLabel">！津波逃げて！(Tsunami! Evacuate!)</div>
     <div id="displayModeWrap">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 0 16px; background: #111;">
+            <img src="2.svg" alt="" style="height: 24px; width: auto;">
+        </div>
         <button id="btnNormalMode" class="modeBtn active">通常表示</button>
         <button id="btnRealtimeMode" class="modeBtn">リアルタイム揺れのみ</button>
         <button id="btnWeatherWarningMap" class="modeBtn">気象警報マップ</button>
@@ -1504,10 +1509,9 @@ function startEewRotationTimer() {
     eewDisplayRotationTimer = setInterval(() => {
         if (activeEEWs.size > 1) {
             currentEewDisplayIndex = (currentEewDisplayIndex + 1) % activeEEWs.size;
-            renderLatestPanel();
             renderEewCards();
         }
-    }, 2000);
+    }, 1000);
 }
 
 function stopEewRotationTimer() {
@@ -1522,39 +1526,41 @@ function renderLatestPanel() {
 
     if (isEEWActive && activeEEWs.size > 0) {
         const eewArray = Array.from(activeEEWs.values());
-        if (currentEewDisplayIndex >= eewArray.length) currentEewDisplayIndex = 0;
-        const d = eewArray[currentEewDisplayIndex];
+        let htmlStr = '';
 
-        const ms = d.MaxIntensity || "0";
-        const sc = scaleColor(ms);
-        const stc = getContrastColor(sc);
-        const efs = ms.length > 1 ? (ms === "不明" ? "20px" : "32px") : "48px";
-        
-        let th = "";
-        if(d.isTraining) th += `<span class="tag" style="background:#a855f7;color:#fff;">訓練</span>`;
-        if(d.isAssumption) th += `<span class="tag" style="background:#3b82f6;color:#fff;">PLUM法</span>`;
-        
-        const mC = magColor(d.Magunitude);
-        const dC = depthColor(d.Depth);
-        const mCTc = getContrastColor(mC);
-        const dCTc = getContrastColor(dC);
-        
-        let infoStr = d.isCancel ? `<div class="latestSub" style="color:#CCC; font-size:24px;">取り消されました</div>` : `<div class="latestSub" style="color:#FFFF00; font-size:28px; font-weight:bold;">${d.Hypocenter}</div>
-        <div style="font-size:16px; display:flex; align-items:center; gap:8px;">
-            <span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">M${d.Magunitude}</span>
-            <span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">${fmt.depth(d.Depth)}</span>
-            <span style="margin-left:8px; color:#CCC;">${(d.AnnouncedTime||"").slice(11,19)} 発表</span>
-        </div>`;
+        eewArray.forEach(d => {
+            const ms = d.MaxIntensity || "0";
+            const sc = scaleColor(ms);
+            const stc = getContrastColor(sc);
+            const efs = ms.length > 1 ? (ms === "不明" ? "20px" : "32px") : "48px";
+            
+            let th = "";
+            if(d.isTraining) th += `<span class="tag" style="background:#a855f7;color:#fff;">訓練</span>`;
+            if(d.isAssumption) th += `<span class="tag" style="background:#3b82f6;color:#fff;">PLUM法</span>`;
+            
+            const mC = magColor(d.Magunitude);
+            const dC = depthColor(d.Depth);
+            const mCTc = getContrastColor(mC);
+            const dCTc = getContrastColor(dC);
+            
+            let infoStr = d.isCancel ? `<div class="latestSub" style="color:#CCC; font-size:24px;">取り消されました</div>` : `<div class="latestSub" style="color:#FFFF00; font-size:28px; font-weight:bold;">${d.Hypocenter}</div>
+            <div style="font-size:16px; display:flex; align-items:center; gap:8px;">
+                <span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">M${d.Magunitude}</span>
+                <span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:16px; border:none; padding:6px 12px;">${fmt.depth(d.Depth)}</span>
+                <span style="margin-left:8px; color:#CCC;">${(d.AnnouncedTime||"").slice(11,19)} 発表</span>
+            </div>`;
 
-        lt.innerHTML = `
-            <div class="latestWrap" style="border:4px solid ${d.isWarn ? '#FF0000' : (d.isCancel ? '#666' : '#FFFF00')}; background: #0A0A0A; padding: 8px;">
-                <div class="latestScale" style="background:${sc};color:${stc};font-size:${efs}; border: 2px solid ${sc}; width: 100px; height: 100px;">${ms}</div>
-                <div class="latestLeft">
-                    <div class="latestTitle" style="color:${d.isWarn ? '#FF0000' : (d.isCancel ? '#CCC' : '#FFFF00')}; font-size: 16px;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</div>
-                    ${infoStr}
+            htmlStr += `
+                <div class="latestWrap" style="min-width: 350px; flex-shrink: 0; border:4px solid ${d.isWarn ? '#FF0000' : (d.isCancel ? '#666' : '#FFFF00')}; background: #0A0A0A; padding: 8px;">
+                    <div class="latestScale" style="background:${sc};color:${stc};font-size:${efs}; border: 2px solid ${sc}; width: 100px; height: 100px;">${ms}</div>
+                    <div class="latestLeft">
+                        <div class="latestTitle" style="color:${d.isWarn ? '#FF0000' : (d.isCancel ? '#CCC' : '#FFFF00')}; font-size: 16px;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</div>
+                        ${infoStr}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        });
+        lt.innerHTML = htmlStr;
     } else {
         if (window.currentEarthquakeData) {
             const e0 = window.currentEarthquakeData;
@@ -1574,7 +1580,7 @@ function renderLatestPanel() {
             const dCTc = getContrastColor(dC);
 
             lt.innerHTML = `
-                <div class="latestWrap">
+                <div class="latestWrap" style="min-width: 100%; flex-shrink: 0;">
                     <div class="latestScale" style="background:${sb};color:${getContrastColor(sb)};font-size:${dfs}">${s0}</div>
                     <div class="latestLeft">
                         <div class="latestTitle">${ln} ${ct}</div>
@@ -1588,7 +1594,7 @@ function renderLatestPanel() {
                 </div>
             `;
         } else {
-            lt.innerHTML = `<div class="latestWrap"><div class="latestLeft"><div class="latestTitle">情報待機中...</div></div></div>`;
+            lt.innerHTML = `<div class="latestWrap" style="min-width: 100%;"><div class="latestLeft"><div class="latestTitle">情報待機中...</div></div></div>`;
         }
     }
     applyAppearance();
