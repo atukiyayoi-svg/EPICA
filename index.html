@@ -1996,7 +1996,14 @@ function updateLeafletMap(e,p,i,skp=false){
     currentObsPointsToDraw = [];
     currentAreaColors = {};
     
-    if(e?.hypocenter){const{latitude:la,longitude:lo}=e.hypocenter; if(la&&la!==-200&&(i?.type!=="ScalePrompt")){if(latestQuakeMarker)latestQuakeMarker.setLatLng([la,lo]);else latestQuakeMarker=L.marker([la,lo],{icon:L.divIcon({className:'epicenter-icon',html:'×',iconSize:[50,50],iconAnchor:[25,25]}),pane:'epicenterPane'}).addTo(lMap); latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isEEWActive||isWeatherWarningMapMode?0:1);}else if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);}
+    if(e?.hypocenter){
+        const{latitude:la,longitude:lo}=e.hypocenter; 
+        if(la&&la!==-200&&(i?.type!=="ScalePrompt")){
+            if(latestQuakeMarker)latestQuakeMarker.setLatLng([la,lo]);
+            else latestQuakeMarker=L.marker([la,lo],{icon:L.divIcon({className:'epicenter-icon',html:'×',iconSize:[50,50],iconAnchor:[25,25]}),pane:'epicenterPane'}).addTo(lMap); 
+            latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isEEWActive||isWeatherWarningMapMode?0:1);
+        }else if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);
+    }
     
     if(geojsonLayer&&p){
         let hO=isEEWActive||(isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode;
@@ -2008,6 +2015,12 @@ function updateLeafletMap(e,p,i,skp=false){
             return col;
         };
         
+        // ★修正2: ループ内で毎回「正規表現」を実行すると激重になるため、ループの前に一度だけクリーンな名前をキャッシュする
+        const jmaCache = window.jmaStationsJson ? window.jmaStationsJson.map(s => ({
+            ...s,
+            cleanName: s.name.replace(/測候所|観測所/g, '')
+        })) : null;
+
         p.forEach(pt=>{
             let an=pt.isArea?pt.addr:null; 
             let lat=null, lon=null;
@@ -2018,8 +2031,9 @@ function updateLeafletMap(e,p,i,skp=false){
                     if(window.jmaStationsJson[ix].area) an=window.jmaStationsJson[ix].area.name;
                     lat = window.jmaStationsJson[ix].lat;
                     lon = window.jmaStationsJson[ix].lon;
-                } else {
-                    let station = window.jmaStationsJson.find(s => s.name.startsWith(pt.addr) || pt.addr.startsWith(s.name.replace(/測候所|観測所/g,'')));
+                } else if (jmaCache) {
+                    // ★修正2: キャッシュを利用して高速にマッチング
+                    let station = jmaCache.find(s => s.name.startsWith(pt.addr) || pt.addr.startsWith(s.cleanName));
                     if(station && station.area) {
                         an = station.area.name;
                         lat = station.lat;
@@ -2067,7 +2081,23 @@ function updateLeafletMap(e,p,i,skp=false){
         }
         lMap.flyTo([e.hypocenter.latitude, e.hypocenter.longitude], zoomLvl, {duration:1.5});
     }
-    const ar=document.getElementById("detailScrollArea"); if(ar&&p?.length>0){ar.innerHTML=""; [...p].sort((a,b)=>b.scale-a.scale).forEach(pt=>{const s=fmt.shindo(pt.scale,e?.hypocenter?.depth), c=scaleColor(s); let lpgmH = pt.lpgmInt ? `<div class="detailLpgmBox">長周期 階級${pt.lpgmInt}</div>` : ""; ar.innerHTML+=`<div class="detailItem"><div class="detailScaleBox" style="background:${c};color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${pt.pref} ${pt.addr||''}</div>${lpgmH}</div>`;}); ar.scrollTop=0; startAutoScroll("detailScrollArea"); applyAppearance();}
+
+    // ★修正1: 激重の原因だった `innerHTML +=` を廃止し、文字列バッファで一括代入する
+    const ar=document.getElementById("detailScrollArea"); 
+    if(ar&&p?.length>0){
+        let htmlBuffer = ""; // 一旦ここに全て溜め込む
+        [...p].sort((a,b)=>b.scale-a.scale).forEach(pt=>{
+            const s=fmt.shindo(pt.scale,e?.hypocenter?.depth);
+            const c=scaleColor(s); 
+            let lpgmH = pt.lpgmInt ? `<div class="detailLpgmBox">長周期 階級${pt.lpgmInt}</div>` : ""; 
+            htmlBuffer += `<div class="detailItem"><div class="detailScaleBox" style="background:${c};color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${pt.pref} ${pt.addr||''}</div>${lpgmH}</div>`;
+        });
+        
+        ar.innerHTML = htmlBuffer; // 最後に1回だけDOMに書き込む（超高速）
+        ar.scrollTop = 0; 
+        startAutoScroll("detailScrollArea"); 
+        applyAppearance();
+    }
 }
 
 let currentEewDisplayIndex = 0;
