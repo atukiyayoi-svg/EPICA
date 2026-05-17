@@ -600,7 +600,6 @@ function applyStyleOptimized(layerGroup, styleComputeFn) {
         }
     });
 }
-
 let continuousPippiTimer = null;
 let animPauseUntil = 0;
 
@@ -916,6 +915,65 @@ const magColor = m => { const v=parseFloat(m); if(isNaN(v))return "#00BFFF"; ret
 const depthColor = d => { const v=parseInt(d); if(v===-1||isNaN(v))return "#666666"; if(v===0)return "#FF0000"; if(v<30)return "#FF9900"; if(v<70)return "#FFFF00"; if(v<150)return "#00BFFF"; return "#0000FF"; };
 const getContrastColor = hex => { if(!hex||hex==="#222"||hex==="#444444"||hex==="#666666")return "#fff"; try{const c=hex.replace("#",""); if(c.length!==6)return "#fff"; const r=parseInt(c.substr(0,2),16), g=parseInt(c.substr(2,2),16), b=parseInt(c.substr(4,2),16); return (r*299+g*587+b*114)/1000>=140 ? "#000" : "#fff";}catch(e){return "#fff";} };
 
+// ★追加：共通のポリゴンスタイル判定関数
+function getPolygonStyle(f) {
+    const nm = f.properties._epica_name;
+    const fi = f.id || nm;
+    const defaultStyle = getLandDefaultStyle();
+    
+    let fillColor = defaultStyle.fillColor;
+    let fillOpacity = defaultStyle.fillOpacity;
+    let color = MAP_BORDER_COLOR;
+    let weight = MAP_BORDER_WEIGHT;
+
+    if (isWeatherWarningMapMode && !isEEWActive && !selectedHistoryQuake) {
+        let wInfo = activeWeatherWarnings[nm];
+        if(!wInfo) {
+            for(let key in activeWeatherWarnings) {
+                if(key.includes(nm) || nm.includes(key)) {
+                    wInfo = activeWeatherWarnings[key]; break;
+                }
+            }
+        }
+        if(wInfo) {
+            fillColor = wInfo.level === 3 ? "#CC88FF" : (wInfo.level === 2 ? "#FF5555" : "#F2E700");
+            fillOpacity = 0.8;
+        }
+    } else if (isEEWActive) {
+        let pS = "0", iF = false; 
+        if(userSettings.eewPrediction && eewPredictedStyles.has(fi)){
+            let pd = eewPredictedStyles.get(fi); 
+            pS = pd.shindo; 
+            iF = pd.isForecastTarget;
+        } 
+        let rS = userSettings.eewRealtimePaint && eewRealtimeMaxLv.has(fi) ? lvToShindoStr(eewRealtimeMaxLv.get(fi)) : "0"; 
+        let mS = fmt.intensityToNum(pS) > fmt.intensityToNum(rS) ? pS : rS; 
+        
+        if (mS !== "0" && mS !== "不明") {
+            fillColor = scaleColor(mS);
+            fillOpacity = iF ? 0.9 : 0.7;
+        } else if (iF) {
+            fillColor = "transparent";
+            fillOpacity = 0;
+        }
+        color = iF ? "#FFFF00" : MAP_BORDER_COLOR;
+        weight = iF ? 3.0 : MAP_BORDER_WEIGHT;
+    } else {
+        let hasColor = !(isRealtimeOnlyMode && !isEEWActive && !selectedHistoryQuake) && currentAreaColors[nm];
+        if(hasColor) {
+            fillColor = currentAreaColors[nm].color;
+            fillOpacity = 0.8;
+        }
+    }
+
+    return {
+        color: color,
+        weight: weight,
+        fillColor: fillColor,
+        fillOpacity: fillOpacity
+    };
+}
+
 function sendPushNotification(title, options) { if(userSettings.pushNotify && "Notification" in window && Notification.permission==="granted"){ try{new Notification(title, options);}catch(e){} } }
 
 function getPushIconDataURL(text, bgColor, textColor) { 
@@ -1130,7 +1188,6 @@ document.getElementById('chkMapLandTransparent').addEventListener('change', e =>
 
 document.getElementById('chkPushNotify').checked=userSettings.pushNotify; document.getElementById('chkPushNotify').addEventListener('change', async e=>{if(e.target.checked){if(!("Notification" in window)){alert("非対応"); e.target.checked=false;}else{const p=await Notification.requestPermission(); if(p!=="granted"){alert("拒否されました"); e.target.checked=false;}}} userSettings.pushNotify=e.target.checked; saveSettings();});
 
-// ▼▼▼ ここから置き換えた部分 ▼▼▼
 ['chkEewPrediction','chkEewRealtimePaint','chkShakeDetect','chkEstimateEpicenter'].forEach(id => {
     let el = document.getElementById(id);
     if(el) {
@@ -1143,7 +1200,6 @@ document.getElementById('chkPushNotify').checked=userSettings.pushNotify; docume
         });
     }
 });
-// ▲▲▲ ここまで置き換えた部分 ▲▲▲
 
 document.getElementById('chkJAlert').checked = userSettings.jAlertEnable;
 document.getElementById('chkJAlert').addEventListener('change', e => {
@@ -1494,7 +1550,6 @@ function handleHypocenterUpdateXml(doc){
     speakText(`先ほど、${tS}ごろ${oP}で発生した最大震度${speakOS}、マグニチュード${oM}の地震について、震源要素が更新されました。震源地は${hA}、最大震度は${speakNS}、マグニチュードは${nMS}です。`);
 }
 
-// ★修正：LPGM（長周期地震動）のマッピング処理の正確化
 function handleLpgmXml(doc) {
     const bdy = doc.querySelector('Body');
     const eq = bdy?.querySelector('Earthquake');
@@ -1524,9 +1579,8 @@ function handleLpgmXml(doc) {
 
     let updated = false;
     let targetQuake = null;
-    let minDiff = 300000; // 最大5分の許容範囲
+    let minDiff = 300000; 
 
-    // 全ての履歴地震の中から、最も発生時刻が近いものを1件だけ特定する
     window.latestFullQuakeList.forEach(q => {
         let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
         let xTime = new Date(oR).getTime();
@@ -1723,130 +1777,11 @@ function handleTsunamiXml(doc,hl){
     } updateXmlTsunamiMap(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
 }
 
-const polyCanvas = document.createElement('canvas');
-polyCanvas.style.pointerEvents = 'none';
-polyCanvas.className = 'leaflet-zoom-animated';
-
-const PolygonCanvasLayer = L.Layer.extend({
-    onAdd: function(map) {
-        this._map = map;
-        this._canvas = polyCanvas;
-        map.getPane('polyFillPane').appendChild(this._canvas);
-        map.on('moveend', this._reset, this);
-        map.on('zoom', this._redraw, this);
-        this._reset();
-    },
-    onRemove: function(map) {
-        map.getPane('polyFillPane').removeChild(this._canvas);
-        map.off('moveend', this._reset, this);
-        map.off('zoom', this._redraw, this);
-    },
-    _reset: function() {
-        const size = this._map.getSize();
-        this._canvas.width = size.x;
-        this._canvas.height = size.y;
-        L.DomUtil.setPosition(this._canvas, this._map.containerPointToLayerPoint([0, 0]));
-        this._redraw();
-    },
-    _redraw: function() {
-        renderPolygonCanvas();
-    }
-});
-
-function renderPolygonCanvas() {
-    if (!polyCanvas.width || !prefData) return;
-    const ctx = polyCanvas.getContext('2d');
-    
-    ctx.clearRect(0, 0, polyCanvas.width, polyCanvas.height);
-
-    const colorGroups = {};
-    const defaultStyle = getLandDefaultStyle();
-
-    prefData.features.forEach(f => {
-        const nm = f.properties._epica_name;
-        const fi = f.id || nm;
-        
-        let fillColor = defaultStyle.fillColor;
-        let fillOpacity = defaultStyle.fillOpacity;
-
-        if (isWeatherWarningMapMode && !isEEWActive && !selectedHistoryQuake) {
-            let wInfo = activeWeatherWarnings[nm];
-            if(!wInfo) {
-                for(let key in activeWeatherWarnings) {
-                    if(key.includes(nm) || nm.includes(key)) {
-                        wInfo = activeWeatherWarnings[key];
-                        break;
-                    }
-                }
-            }
-            if(wInfo) {
-                fillColor = wInfo.level === 3 ? "#CC88FF" : (wInfo.level === 2 ? "#FF5555" : "#F2E700");
-                fillOpacity = 0.8;
-            }
-        } else if (isEEWActive) {
-            let pS = "0", iF = false; 
-            if(userSettings.eewPrediction && eewPredictedStyles.has(fi)){
-                let pd = eewPredictedStyles.get(fi); 
-                pS = pd.shindo; 
-                iF = pd.isForecastTarget;
-            } 
-            let rS = userSettings.eewRealtimePaint && eewRealtimeMaxLv.has(fi) ? lvToShindoStr(eewRealtimeMaxLv.get(fi)) : "0"; 
-            let mS = fmt.intensityToNum(pS) > fmt.intensityToNum(rS) ? pS : rS; 
-            
-            if (mS !== "0" && mS !== "不明") {
-                fillColor = scaleColor(mS);
-                fillOpacity = iF ? 0.9 : 0.7;
-            } else if (iF) {
-                fillColor = "transparent";
-                fillOpacity = 0;
-            }
-        } else {
-            let hasColor = !(isRealtimeOnlyMode && !isEEWActive && !selectedHistoryQuake) && currentAreaColors[nm];
-            if(hasColor) {
-                fillColor = currentAreaColors[nm].color;
-                fillOpacity = 0.8;
-            }
-        }
-
-        if (fillColor === "transparent" || fillOpacity === 0) return;
-
-        const styleKey = `${fillColor}_${fillOpacity}`;
-        if (!colorGroups[styleKey]) colorGroups[styleKey] = [];
-        colorGroups[styleKey].push(f);
-    });
-
-    for (const key in colorGroups) {
-        const [color, opacity] = key.split('_');
-        ctx.fillStyle = color;
-        ctx.globalAlpha = parseFloat(opacity);
-        ctx.beginPath();
-
-        colorGroups[key].forEach(f => {
-            const geometry = f.geometry;
-            if (!geometry) return;
-
-            const coordsList = geometry.type === 'MultiPolygon' ? geometry.coordinates : [geometry.coordinates];
-
-            coordsList.forEach(polygon => {
-                polygon.forEach(ring => {
-                    for (let i = 0; i < ring.length; i++) {
-                        const pt = lMap.latLngToContainerPoint([ring[i][1], ring[i][0]]);
-                        if (i === 0) {
-                            ctx.moveTo(pt.x, pt.y);
-                        } else {
-                            ctx.lineTo(pt.x, pt.y);
-                        }
-                    }
-                });
-            });
-        });
-        
-        ctx.fill();
-    }
-    
-    ctx.globalAlpha = 1.0; 
-}
-
+// -------------------------------------------------------------
+// 【削除】
+// polyCanvas および PolygonCanvasLayer、renderPolygonCanvas()
+// は全て削除されました。
+// -------------------------------------------------------------
 let isRealtimeOnlyMode=false; window.currentEarthquakeData=null; window.currentEarthquakePoints=null; window.currentEarthquakeIssue=null; let currentQuakeList=[]; let selectedHistoryQuake=null;
 
 document.getElementById('btnNormalMode').addEventListener('click', ()=>{
@@ -1889,6 +1824,7 @@ function getZoomByMagnitude(mag) {
     return 8;
 }
 
+// ★修正：重い renderPolygonCanvas() を削除し、getPolygonStyle でスタイルを一括適用する
 function refreshMapDisplay(){
     const eD=selectedHistoryQuake?selectedHistoryQuake.earthquake:window.currentEarthquakeData, 
           eP=selectedHistoryQuake?selectedHistoryQuake.points:window.currentEarthquakePoints, 
@@ -1898,12 +1834,7 @@ function refreshMapDisplay(){
         updateLeafletMap(eD,eP,eI,true); 
     }
     else if(geojsonLayer) {
-        applyStyleOptimized(geojsonLayer, f => ({
-            color: MAP_BORDER_COLOR, 
-            weight: MAP_BORDER_WEIGHT, 
-            fillColor: "transparent", 
-            fillOpacity: 0
-        }));
+        applyStyleOptimized(geojsonLayer, getPolygonStyle);
         
         if(isWeatherWarningMapMode && !isEEWActive && !selectedHistoryQuake) {
             if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);
@@ -1915,8 +1846,6 @@ function refreshMapDisplay(){
             }
         }
     }
-    
-    renderPolygonCanvas();
 
     if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);
 }
@@ -1970,7 +1899,6 @@ function calcLPGM(m,d){
     return 0;
 }
 
-// 描画補助関数: 数値部分を拡大
 function formatDepthLarge(d) {
     const v = parseInt(d);
     if(v === -1 || isNaN(v)) return "不明";
@@ -1998,9 +1926,7 @@ const weatherBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark
 let geojsonLayer, tsunamiGeojsonLayer=null, latestQuakeMarker=null, epicenterMarkers=new Map(), prefData=null, currentTsunamiData=null; const shakeDetectLayer=L.layerGroup().addTo(lMap); window.jmaStationsJson=null;
 let animGeojsonLayer = null, weatherGeojsonLayer = null;
 
-lMap.createPane('polyFillPane'); 
-lMap.getPane('polyFillPane').style.zIndex = 390; 
-lMap.getPane('polyFillPane').style.pointerEvents = 'none';
+// ★削除：lMap.createPane('polyFillPane'); とその設定の2行を削除
 
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex=410; lMap.getPane('tsunamiPane').style.pointerEvents='none'; lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex=450; lMap.getPane('kyoshinPane').style.pointerEvents='none'; lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex=460; lMap.getPane('wavePane').style.pointerEvents='none'; lMap.createPane('obsPane'); lMap.getPane('obsPane').style.zIndex=600; lMap.getPane('obsPane').style.pointerEvents='none'; lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex=650; lMap.getPane('epicenterPane').style.pointerEvents='none';
 
@@ -2034,6 +1960,7 @@ function drawWaves(){const ctx=waveCanvas.getContext('2d'); ctx.clearRect(0,0,wa
 
 let siteToFeatureId=[]; let isSiteMapReady=false; function tryPrecomputeSiteFeatures(){if(sites.length>0&&prefData?.features&&!isSiteMapReady){siteToFeatureId=new Array(sites.length).fill(null); for(let i=0;i<sites.length;i++){let mD=Infinity, bI=null; prefData.features.forEach((f,idx)=>{const pt=f.properties._epica_center, nm=f.properties._epica_name, d=getDistance(sites[i].lat,sites[i].lng,pt.lat,pt.lng); if(d<mD){mD=d;bI=f.id||nm||`feat_${idx}`;}}); siteToFeatureId[i]=bI;} isSiteMapReady=true;}}
 
+// ★修正：lMap.addLayer(new PolygonCanvasLayer()); を削除
 async function initLeaflet(){
     if(userSettings.showMapTile !== false) baseTileLayer.addTo(lMap);
     try{
@@ -2044,10 +1971,8 @@ async function initLeaflet(){
         });
         
         geojsonLayer=L.geoJSON(prefData,{
-            style:()=>({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0 })
+            style: getPolygonStyle
         }).addTo(lMap); 
-        
-        lMap.addLayer(new PolygonCanvasLayer());
 
         tryPrecomputeSiteFeatures();
     }catch(e){} 
@@ -2059,24 +1984,13 @@ async function initLeaflet(){
     }catch(e){}
 }
 
+// ★修正：renderPolygonCanvas()を削除し、getPolygonStyle を適用
 function updateEewGeojsonStyles(){
     if(!geojsonLayer)return; 
-    applyStyleOptimized(geojsonLayer, f=>{
-        const fi=f.id||f.properties._epica_name; 
-        let iF=false; 
-        if(userSettings.eewPrediction&&eewPredictedStyles.has(fi)){
-            iF=eewPredictedStyles.get(fi).isForecastTarget;
-        } 
-        return {
-            color: iF ? "#FFFF00" : MAP_BORDER_COLOR,
-            weight: iF ? 3.0 : MAP_BORDER_WEIGHT,
-            fillColor: "transparent",
-            fillOpacity: 0
-        };
-    });
-    renderPolygonCanvas();
+    applyStyleOptimized(geojsonLayer, getPolygonStyle);
 }
 
+// ★修正：renderPolygonCanvas()を削除し、getPolygonStyle を適用
 function updateLeafletMap(e,p,i,skp=false){
     if(isEEWActive)return; 
     currentObsPointsToDraw = [];
@@ -2136,16 +2050,10 @@ function updateLeafletMap(e,p,i,skp=false){
         }
         
         if(!isWeatherWarningMapMode) {
-            applyStyleOptimized(geojsonLayer, f => ({
-                color: MAP_BORDER_COLOR,
-                weight: MAP_BORDER_WEIGHT,
-                fillColor: "transparent",
-                fillOpacity: 0
-            }));
+            applyStyleOptimized(geojsonLayer, getPolygonStyle);
         }
     }
     
-    renderPolygonCanvas();
     renderObsCanvas();
     
     if(!skp && e?.hypocenter?.latitude && !isWeatherWarningMapMode && i?.type !== "ScalePrompt"){
@@ -2828,7 +2736,6 @@ async function loadQuakes(){
         
         currentQuakeList=ls.filter(x=>x.issue?.type!=="ScalePrompt"&&x.issue?.type!=="Destination"&&x.earthquake.maxScale!==-1&&x.earthquake.maxScale!=="-1").slice(0,30); 
         
-        // ★修正: LPGM（長周期地震動）のAPI履歴データ適用時も、1対1マッピングへ厳密化
         for (let [oR, lpgm] of window.lpgmDataMap.entries()) {
             let xTime = new Date(oR).getTime();
             let minDiff = 300000;
