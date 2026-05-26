@@ -11,7 +11,9 @@
 <script src="source/JMAPoints.js"></script>
 
 <style>
-/* --- NHK風・ユニバーサルデザインベース設定 --- */
+/* ==========================================================================
+   1. デスクトップ（1920×1080）基準 ベーススタイル設定
+   ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap');
 body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; color:#ffffff; letter-spacing: 0.05em; line-height: 1.4; }
 
@@ -20,64 +22,16 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #startupContent { text-align: center; }
 
 /* --- 起動時アニメーション (サイバー複雑化) --- */
-.loader {
-    position: relative;
-    width: 140px;
-    height: 140px;
-    margin: 0 auto 40px auto;
-}
-.loader::before, .loader::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    border: 3px solid rgba(0, 191, 255, 0.4);
-    box-shadow: 0 0 25px rgba(0, 191, 255, 0.8), inset 0 0 15px rgba(0, 191, 255, 0.6);
-    animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-}
-.loader::after {
-    animation-delay: 1.25s;
-    border-color: rgba(0, 255, 255, 0.5);
-}
-.loader-inner {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 70px; height: 70px;
-    border-radius: 50%;
-    border: 3px dashed #00BFFF;
-    animation: spin 6s linear infinite;
-}
-.loader-inner-reverse {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90px; height: 90px;
-    border-radius: 50%;
-    border: 2px dotted #00FFFF;
-    animation: spin-reverse 4s linear infinite;
-}
+.loader { position: relative; width: 140px; height: 140px; margin: 0 auto 40px auto; }
+.loader::before, .loader::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 3px solid rgba(0, 191, 255, 0.4); box-shadow: 0 0 25px rgba(0, 191, 255, 0.8), inset 0 0 15px rgba(0, 191, 255, 0.6); animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+.loader::after { animation-delay: 1.25s; border-color: rgba(0, 255, 255, 0.5); }
+.loader-inner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border-radius: 50%; border: 3px dashed #00BFFF; animation: spin 6s linear infinite; }
+.loader-inner-reverse { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90px; height: 90px; border-radius: 50%; border: 2px dotted #00FFFF; animation: spin-reverse 4s linear infinite; }
 @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 @keyframes spin-reverse { 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
-@keyframes pulse-ring {
-    0% { width: 40px; height: 40px; opacity: 1; border-width: 5px; }
-    100% { width: 100%; height: 100%; opacity: 0; border-width: 1px; }
-}
-.loader-core {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 24px; height: 24px;
-    background: #00BFFF;
-    border-radius: 50%;
-    box-shadow: 0 0 25px #00BFFF, 0 0 40px #00FFFF;
-    animation: core-pulse 0.8s ease-in-out infinite alternate;
-}
-@keyframes core-pulse {
-    0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.8; }
-    100% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
-}
+@keyframes pulse-ring { 0% { width: 40px; height: 40px; opacity: 1; border-width: 5px; } 100% { width: 100%; height: 100%; opacity: 0; border-width: 1px; } }
+.loader-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: #00BFFF; border-radius: 50%; box-shadow: 0 0 25px #00BFFF, 0 0 40px #00FFFF; animation: core-pulse 0.8s ease-in-out infinite alternate; }
+@keyframes core-pulse { 0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; } }
 
 #startupStatus { font-size: 18px; color: #E0E0E0; font-weight: 700; margin-bottom: 20px; letter-spacing: 0.1em; }
 .app-title { font-size: 54px; font-weight: 700; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(0,191,255,0.9); letter-spacing: 0.1em; }
@@ -86,50 +40,46 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .startup-btn { padding: 16px 42px; font-size: 18px; font-weight: 700; color: #fff; background: #003366; border: 2px solid #00BFFF; border-radius: 4px; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 15px rgba(0,191,255,0.4); }
 .startup-btn:hover { background: #005599; transform: translateY(-2px); box-shadow: 0 0 25px rgba(0,191,255,0.7); }
 
-/* --- モーダル --- */
+/* --- モーダル共通 --- */
 .iframeModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; height: 85%; background: rgba(5,5,5,0.98); border: 2px solid #333; box-shadow: 0 20px 40px rgba(0,0,0,0.9); z-index: 21000; border-radius: 4px; display: none; flex-direction: column; overflow: hidden; backdrop-filter: blur(8px); }
 .modalHeader { padding: 16px 20px; font-size: 18px; font-weight: 700; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; background: #111; color: #fff; }
 .modalHeader button { background: none; border: none; color: #ccc; font-size: 28px; cursor: pointer; line-height: 1; transition: color 0.2s; }
 .modalHeader button:hover { color: #FF0000; }
 .modalIframe { flex: 1; width: 100%; border: none; background: #050505; }
 
-/* --- 1920x1080向けレイアウト調整 --- */
+/* --- パネル基本デザイン (NHK風) --- */
+.base-panel { background: rgba(10, 10, 10, 0.95); border: 2px solid #333; border-radius: 4px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; }
+
+/* --- 各種配置（PC1920固定スタイル） --- */
 #leftSidebar { position: fixed; top: 12px; left: 16px; bottom: 64px; width: 450px; display: flex; flex-direction: column; gap: 16px; z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none; }
 #rightSidebar { position: fixed; top: 12px; right: 16px; bottom: 16px; width: 450px; display: flex; flex-direction: column; gap: 16px; z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none; }
 #leftSidebar::-webkit-scrollbar, #rightSidebar::-webkit-scrollbar { width: 6px; }
 #leftSidebar::-webkit-scrollbar-thumb, #rightSidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
 #leftSidebar > div, #rightSidebar > div { pointer-events: auto; flex-shrink: 0; width: 100%; }
 
-/* --- パネルベースデザイン (NHK風シャープ) --- */
-.base-panel { background: rgba(10, 10, 10, 0.95); border: 2px solid #333; border-radius: 4px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; }
-
-/* --- 下部パネルコンテナ --- */
 #bottomPanelsContainer { position: fixed; bottom: 94px; left: 482px; right: 482px; height: 300px; display: flex; gap: 16px; z-index: 100; pointer-events: none; }
 #bottomPanelsContainer > div { flex: 1; pointer-events: auto; height: 100%; }
 
-/* --- 2Dマップ --- */
 #leafletWrap { position: fixed; top: 12px; left: 482px; right: 482px; bottom: 410px; background: #050505; border: 2px solid #333; z-index: 10; overflow: hidden; }
 #leafletMap{ width:100%; height:100%; background: #050505 !important; }
 .epicenter-icon { display: flex; align-items: center; justify-content: center; font-size: 48px; color: #FF0000; font-weight: 700; text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff; }
 
-/* --- 津波避難ラベル --- */
+/* --- 警告類・装飾テロップ --- */
 #tsunamiEvacuateLabel { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); background: #FF0000; color: #FFFF00; border: 4px solid #FFFF00; padding: 14px 40px; font-size: 32px; font-weight: 700; border-radius: 4px; z-index: 2000; display: none; text-shadow: 2px 2px 0 #000; animation: blink 0.5s infinite alternate; pointer-events: none; white-space: nowrap; letter-spacing: 0.1em; }
+@keyframes blink { from { opacity: 1; } to { opacity: 0.2; } }
 
-/* --- 表示切替 --- */
 #displayModeWrap { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; background: rgba(20, 20, 20, 0.9); border: 2px solid #444; border-radius: 4px; overflow: hidden; pointer-events: auto; align-items: stretch; }
 .modeBtn { padding: 12px 24px; font-size: 15px; font-weight: 700; color: #CCC; background: transparent; border: none; cursor: pointer; transition: all 0.2s; outline: none; }
 .modeBtn:not(:last-child) { border-right: 2px solid #444; }
 .modeBtn.active { color: #FFF; background: #003366; border-bottom: 4px solid #00BFFF; padding-bottom: 8px; }
 .modeBtn:hover:not(.active) { background: #222; color: #FFF; }
 
-/* --- 巨大地震警戒テロップ --- */
 #megaQuakeTelop { background: #FF00FF; color: #FFF; border: 4px solid #FFF; padding: 16px 28px; font-size: 28px; font-weight: 700; z-index: 1000; pointer-events: none; animation: blink 0.8s infinite alternate; white-space: nowrap; display: none; text-align: center; border-radius: 4px; margin-bottom: 16px; box-shadow: 0 4px 25px rgba(255,0,255,0.6); letter-spacing: 0.1em; flex-shrink: 0; }
 
-/* --- 震度カラー凡例 --- */
 #shindoLegend { position: absolute; bottom: 16px; right: 16px; transform: none; left: auto; display: flex; flex-direction: column-reverse; gap: 3px; background: rgba(0,0,0,0.8); border: 2px solid #444; padding: 6px; z-index: 1000; pointer-events: none; }
 .legendItem { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; border-radius: 2px; }
 
-/* --- 最新情報 --- */
+/* --- 中央上部 最新地震情報パネル --- */
 #latestPanel { position: fixed; top: 12px; left: 482px; width: 750px; padding: 20px; background: rgba(10, 10, 10, 0.95); border: 2px solid #444; border-radius: 4px; display: flex; flex-direction: row; gap: 20px; overflow-x: auto; min-height: 140px; align-items: center; transition: all 0.3s; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
 #latestPanel::-webkit-scrollbar { height: 8px; }
 #latestPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
@@ -150,7 +100,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .jalert-card.cancel .jalert-title { color: #CCC; }
 .jalert-body { font-size: 16px; line-height: 1.6; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
 
-/* --- 震度詳細 --- */
+/* --- 内部スクロール・パネル個別要素設定 --- */
 #detailPanel{ height: 200px; }
 #detailScrollArea{ width:100%; height:100%; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1; }
 #detailScrollArea::-webkit-scrollbar { display: none; }
@@ -159,7 +109,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .detailPlace { font-size: 18px; font-weight: 700; color: #fff; flex: 1; }
 .detailLpgmBox { background: #FF6600; color: #000; font-size: 14px; font-weight: 700; padding: 6px 10px; border-radius: 2px; margin-left: auto; border: 1px solid #000; }
 
-/* --- 津波 --- */
 #tsunamiPanel{ height: 260px; border-left: 8px solid #00BFFF; }
 #tsunamiScrollArea{ width:100%; flex: 1; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1; }
 #tsunamiScrollArea::-webkit-scrollbar { display: none; }
@@ -169,7 +118,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .tsunamiInfo { flex: 1; font-size: 18px; font-weight: 700; line-height: 1.5; color: #fff; }
 .noTsunami{ height:100%; display:flex; align-items:center; justify-content:center; color:#CCC; font-weight: 700; font-size: 20px; text-align:center; padding:0 20px; }
 
-/* --- 履歴 --- */
 #quakePanel { flex: 1; min-height: 250px; display: flex; flex-direction: column; overflow-y: auto; gap: 10px; }
 #quakePanel::-webkit-scrollbar { width: 4px; }
 #quakePanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); }
@@ -181,7 +129,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .qName{ font-size: 20px; font-weight:700; word-wrap: break-word; }
 .lpgm-badge { display: inline-flex; align-items: center; justify-content: center; background: #FF6600; border: 1px solid #000; color: #000; font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 2px; margin-left: 10px; vertical-align: middle; }
 
-/* --- EEW詳細パネル --- */
+/* --- EEWポップアップ・コンテナ --- */
 #eewContainer { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: row; gap: 20px; pointer-events: none; }
 #eewPopup { position:fixed; top:12px; right:464px; left:auto; transform:none; background: #FF0000; color:#FFFF00; border: 4px solid #FFFF00; padding: 14px 30px; font-size: 32px; font-weight: 700; display:none; z-index:9999; box-shadow: 4px 4px 0 #000; letter-spacing: 0.1em; white-space: nowrap; }
 .eewCard { display: none; width: 450px; background: rgba(10, 10, 10, 0.98); border: 4px solid #FF9900; pointer-events: auto; box-shadow: 0 12px 35px rgba(0,0,0,0.8); color: #fff; padding: 20px; flex-direction: column; border-radius: 4px; }
@@ -197,7 +145,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .eewAreas { font-size: 16px; color: #FFF; font-weight: 700; background: #333; padding: 12px; border-left: 4px solid #FF0000; line-height: 1.5; max-height: 100px; overflow-y: auto; }
 .eew-info-container { display: flex; flex-direction: column; width: 100%; }
 .eew-mini-map { width: 100%; height: 180px; background: #050505; border: 2px solid #444; margin-top: 14px; }
-/* --- コメント --- */
+
 #commentPanel { height: 160px; border-top: 8px solid #00FFFF; }
 .commentHeader { background: #111; padding: 10px 20px; font-size: 15px; font-weight: 700; color: #00FFFF; border-bottom: 2px solid #333; }
 #commentScrollArea { width: 100%; height: calc(100% - 41px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
@@ -205,7 +153,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .commentBody { padding: 14px 20px; font-size: 15px; line-height: 1.5; font-weight: 700; white-space: pre-wrap; word-wrap: break-word; color: #fff; }
 .noComment { height: 100%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 16px; font-weight: 700; }
 
-/* --- JMA XML ウィンドウ --- */
 #xmlPanel { display: flex; flex-direction: column; border-top: 8px solid #00BFFF; }
 #xmlPanel .xmlHeader { background: #111; padding: 12px 20px; font-size: 15px; font-weight: 700; color: #00BFFF; border-bottom: 2px solid #333; }
 #xmlScrollArea { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
@@ -213,13 +160,11 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #btnXmlDetail { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; color: #fff; background: #003366; border: none; cursor: pointer; transition: all 0.2s; border-top: 2px solid #333; }
 #btnXmlDetail:hover { background: #005599; }
 
-/* --- 気象警報 --- */
 #weatherWarningPanel { display: flex; flex-direction: column; border-top: 8px solid #FF0000; }
 #weatherWarningPanel .warnHeader { background: #111; padding: 12px 20px; font-size: 15px; font-weight: 700; color: #FF6666; border-bottom: 2px solid #333; }
 #weatherWarningScrollArea { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
 #weatherWarningScrollArea::-webkit-scrollbar { display: none; }
 
-/* --- XML等内部スタイル --- */
 .p-info-section { background: #111; border: 2px solid #333; padding: 18px; border-radius: 4px; margin-bottom: 18px; color:#fff; }
 .p-info-section h3 { margin: 0 0 14px 0; border-bottom: 2px solid #444; padding-bottom: 10px; font-size: 18px; color: #FFF; }
 .p-info-section h4 { margin: 14px 0 10px 0; font-size: 16px; color: #00BFFF; background: #222; padding: 10px 14px; border-left: 4px solid #00BFFF; }
@@ -240,50 +185,27 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .p-table th { background: #222; color: #FFF; font-weight: 700; }
 .p-info-title { font-size: 20px; font-weight: 700; color: #FFFF00; margin-bottom: 10px; }
 
-/* --- 特別警報・臨時情報 --- */
 #megaQuakeAlertPanel { display: none; flex-direction: column; border-top: 8px solid #FF00FF; }
 .mega-quake-header { background: #111; padding: 12px 20px; font-size: 15px; font-weight: 700; color: #FF66FF; border-bottom: 2px solid #333; }
 .mega-quake-scroll { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
 .mega-quake-scroll::-webkit-scrollbar { display: none; }
 
-/* --- AXIS・揺れ検知 --- */
 .axisHeader { background: #111; padding: 12px 20px; font-size: 15px; font-weight: 700; border-bottom: 2px solid #333; }
 .axisScrollArea { width: 100%; height: calc(100% - 45px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
 .axisScrollArea::-webkit-scrollbar { display: none; }
 .info-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
 .info-text { font-size: 15px; line-height: 1.6; color: #DDD; white-space: pre-wrap; word-wrap: break-word; font-weight: 700; }
 
-/* --- 揺れ検知パネル --- */
 #shakeDetectPanel { position: fixed; bottom: 64px; left: 16px; width: 450px; height: 210px; z-index: 150; display: none; border-top: 8px solid #00FF00; }
 
-/* --- 震源要素更新のお知らせ --- */
-#eqUpdatePanel { 
-    position: fixed !important; 
-    top: auto !important; 
-    bottom: 410px !important; 
-    left: 50% !important; 
-    transform: translateX(-50%) !important; 
-    width: 650px !important; 
-    height: auto !important; 
-    min-height: 160px; 
-    z-index: 10000; 
-    background: rgba(10, 10, 10, 0.98); 
-    border: 4px solid #FFD700; 
-    border-radius: 4px; 
-    box-shadow: 0 12px 35px rgba(0,0,0,0.8); 
-    display: none; 
-    flex-direction: column; 
-}
+#eqUpdatePanel { position: fixed !important; top: auto !important; bottom: 410px !important; left: 50% !important; transform: translateX(-50%) !important; width: 650px !important; height: auto !important; min-height: 160px; z-index: 10000; background: rgba(10, 10, 10, 0.98); border: 4px solid #FFD700; border-radius: 4px; box-shadow: 0 12px 35px rgba(0,0,0,0.8); display: none; flex-direction: column; }
 #eqUpdatePanel .axisHeader { background: #111; color: #FFD700; font-size: 18px; padding: 14px 20px; border-bottom: 2px solid #555; }
 #eqUpdateText { padding: 20px; font-size: 16px; line-height: 1.6; color: #FFF; }
 
-/* --- 時計 --- */
 #clockPanel { width: 100%; background: rgba(0, 0, 0, 0.9); border: 2px solid #444; color: #fff; font-size: 32px; font-weight: 700; text-align: center; padding: 16px 0; z-index: 100; letter-spacing: 0.1em; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); margin-bottom: 0px; box-sizing: border-box; }
-
-/* --- システムログ --- */
 #wsLogPanel { position: fixed; bottom: 16px; right: 16px; width: 450px; height: 140px; background: rgba(0,0,0,0.8); border: 2px solid #00FF00; color: #00FF00; font-family: monospace; font-size: 13px; padding: 14px; overflow-y: auto; z-index: 150; box-sizing: border-box; display: none; border-radius: 4px; }
 
-/* --- 設定 --- */
+/* --- 設定画面モーダル --- */
 #settingsModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10, 10, 10, 0.98); border: 2px solid #555; box-shadow: 0 20px 60px rgba(0,0,0,0.9); z-index: 10000; width: 450px; max-height: 85vh; overflow-y: auto; border-radius: 4px; padding: 28px; color: #fff; display: none; }
 #settingsModal::-webkit-scrollbar { width: 6px; }
 #settingsModal::-webkit-scrollbar-thumb { background: #555; }
@@ -298,11 +220,9 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .setting-item input[type=checkbox] { width: 22px; height: 22px; cursor: pointer; accent-color: #00BFFF; }
 .setting-value { font-size: 15px; color: #00FF00; }
 #selEewSource, #axisTokenInput { background: #111; color: #fff; border: 1px solid #555; padding: 14px; border-radius: 4px; font-family: inherit; font-size: 15px; }
-#btnAxisConnect { background: #003366; color: #fff; border: 2px solid #00BFFF; padding: 14px; cursor: pointer; font-weight: 700; border-radius: 4px; transition: 0.2s; margin-top: 12px; width: 100%; font-size: 15px; }
+#btnAxisConnect { background: #003366; color: #fff; border: 2px solid #00BFFF; padding: 14px; cursor: pointer; font-weight: 700; border-radius: 4px; transition: 0.2s; margin-top: 12px; width: 100%; box-sizing: border-box; }
 #btnAxisConnect:hover { background: #005599; }
 
-/* --- マップスワップ --- */
-#weatherMapPanel.main-map-mode { position: fixed !important; top: 12px; left: 482px; right: 482px; bottom: 410px; height: auto !important; z-index: 10; border-top: none !important; border: 2px solid #333; }
 #leafletWrap.sidebar-map-mode { position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; width: 100% !important; height: 380px !important; border: 2px solid #333 !important; border-top: 8px solid #0055ff !important; flex-shrink: 0; z-index: 10; margin: 0; }
 
 /* --- 天気予報ティッカー --- */
@@ -310,19 +230,182 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .ticker-label { background-color: #d32f2f; color: #fff; font-weight: 700; font-size: 18px; padding: 0 20px; height: 100%; display: flex; align-items: center; white-space: nowrap; z-index: 2; box-shadow: 2px 0 5px rgba(0,0,0,0.1); border-right: 1px solid #ccc; }
 .ticker-viewport { overflow: hidden; width: 100%; height: 100%; position: relative; display: flex; align-items: center; }
 .ticker-content { display: inline-flex; white-space: nowrap; animation: ticker-scroll linear infinite; }
-.weather-item { display: inline-flex; align-items: center; padding: 0 35px; font-size: 20px; font-weight: bold; border-right: 1px solid #ccc; color: #333; }
-.region-name { margin-right: 12px; color: #333; }
-.weather-icon { width: 45px; height: 45px; margin: 0 12px; }
-.pop { color: #0288d1; margin-right: 18px; font-size: 18px; }
-.temp-max { color: #d32f2f; margin-right: 12px; font-size: 18px; }
-.temp-min { color: #1976d2; font-size: 18px; }
-@keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.weather-item { display: inline-flex; align-items: center; padding: 0 35px; font-size: 20px; font-weight: 700; color: #333; }
+.weather-icon { width: 36px; height: 36px; margin: 0 10px; }
+.temp-max { color: #d32f2f; margin-left: 8px; }
+.temp-min { color: #1976d2; margin-left: 8px; }
+.pop { color: #00796b; margin-left: 8px; }
+@keyframes ticker-scroll { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-50%, 0, 0); } }
 
-@keyframes blink{from{opacity:0.6}to{opacity:1}}
 
+/* ==========================================================================
+   2. スマートフォン・タブレット環境（画面幅 1024px 以下）特化型
+      オリジナル配置レスポンシブスタイル
+   ========================================================================== */
+@media (max-width: 1024px) {
+    body { overflow-y: auto !important; overflow-x: hidden !important; background: #000; padding: 10px; box-sizing: border-box; }
+
+    /* 固定配置を解除し、自然な縦並び（ストリームレイアウト）へ再ビルド。
+       JavaScript側の親要素組み換え（MapSwapなど）が発生してもデザイン崩れが起きないように設計 */
+    #leftSidebar, #rightSidebar, #bottomPanelsContainer, #leafletWrap, #latestPanel, #jalertContainer {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        margin: 0 0 16px 0 !important;
+        pointer-events: auto !important; /* スマホ操作性を担保 */
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    /* 子要素の不透過ポインタをリセット */
+    #leftSidebar > div, #rightSidebar > div, #bottomPanelsContainer > div {
+        pointer-events: auto !important;
+        width: 100% !important;
+    }
+
+    /* メインマップのスマートフォン用サイズ最適化 */
+    #leafletWrap {
+        height: 50vh !important; /* 画面の約半分をマップ表示エリアに */
+        min-height: 350px !important;
+        border: 2px solid #444 !important;
+    }
+    #leafletMap { height: 100% !important; width: 100% !important; }
+
+    /* 下部パネルコンテナ内の並列要素を縦並びに */
+    #bottomPanelsContainer {
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+    }
+    #bottomPanelsContainer > div {
+        height: 280px !important; /* 操作しやすい高さを固定配置から維持 */
+    }
+
+    /* 最新地震情報パネルをスマートフォン幅に最適化 */
+    #latestPanel {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        padding: 16px !important;
+        flex-direction: row !important; /* 横スクロールによる情報一覧性は維持 */
+    }
+
+    /* 国民保護情報（J-ALERT）の表示位置とフォント */
+    #jalertContainer {
+        width: 100% !important;
+    }
+    .jalert-card {
+        padding: 16px !important;
+    }
+    .jalert-title { font-size: 20px !important; }
+    .jalert-body { font-size: 15px !important; max-height: 250px !important; }
+
+    /* 緊急地震速報（EEW）ポップアップのスマートフォン用最適化 */
+    #eewPopup {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 22px !important;
+        padding: 12px !important;
+        text-align: center !important;
+        z-index: 25000 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.8) !important;
+    }
+    
+    /* EEW個別カードコンテナを画面下部に完全固定表示 */
+    #eewContainer {
+        position: fixed !important;
+        bottom: 70px !important; /* モード切替UIの上部に被らない配置 */
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        transform: none !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        z-index: 15000 !important;
+    }
+    .eewCard {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.9) !important;
+    }
+    .eewEpicenter { font-size: 20px !important; }
+    .eewScaleBox { width: 70px !important; height: 70px !important; font-size: 32px !important; }
+
+    /* 顕著な震源要素更新情報パネル */
+    #eqUpdatePanel {
+        position: fixed !important;
+        bottom: 80px !important;
+        top: auto !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        transform: none !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 画面下部表示切替・設定アクセスUIの最適化 */
+    #displayModeWrap {
+        position: fixed !important;
+        bottom: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        transform: none !important;
+        z-index: 20000 !important;
+        background: rgba(15, 15, 15, 0.95) !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.8) !important;
+    }
+    .modeBtn {
+        flex: 1 !important;
+        padding: 14px 4px !important;
+        font-size: 13px !important;
+        text-align: center !important;
+    }
+    
+    /* 震度カラー凡例のスマホ最適化（マップ上にコンパクトにフロート） */
+    #shindoLegend {
+        position: fixed !important;
+        bottom: 75px !important;
+        right: 10px !important;
+        flex-direction: row !important; /* 縦並びから横並びに変更し画面を圧迫しない */
+        background: rgba(5,5,5,0.9) !important;
+        border-color: #555 !important;
+        pointer-events: none !important;
+        z-index: 1005 !important;
+    }
+    .legendItem {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 12px !important;
+    }
+
+    /* 天気予報ティッカーの配置調整 */
+    #weatherTickerPanel {
+        position: static !important;
+        width: 100% !important;
+        height: 50px !important;
+        margin-bottom: 16px !important;
+    }
+    .weather-item { font-size: 16px !important; padding: 0 20px !important; }
+
+    /* 各種モーダル */
+    #settingsModal {
+        width: 90% !important;
+        box-sizing: border-box !important;
+    }
+}
 </style>
 </head>
 <body>
+
 <div id="startupScreen">
     <div id="startupContent">
         <div class="loader">
@@ -331,223 +414,222 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
             <div class="loader-core"></div>
         </div>
         <div id="startupStatus">システム初期化中...</div>
-        <div id="startupReady" style="display: none;">
-            <div class="app-title">EPICA</div>
-            <div class="app-version">V<span id="startup-version">4.5.0</span> R.ver</div>
-            <div class="btn-group">
-                <button id="btnStart" class="startup-btn">開始</button>
-                <button id="btnSiyou" class="startup-btn" style="background:#222; border-color:#555;">仕様確認</button>
-            </div>
+        <div class="app-title">EPICA</div>
+        <div class="app-version">v2.5 Professional Early Warning System</div>
+        <div class="btn-group">
+            <button class="startup-btn" id="btnStart">音声・システムを開始</button>
+            <button class="startup-btn" id="btnSiyou" style="background:#222; border-color:#555;">仕様・取説を表示</button>
         </div>
     </div>
 </div>
 
 <div id="siyouModal" class="iframeModal">
-    <div class="modalHeader">仕様確認 <button id="btnCloseSiyou">×</button></div>
-    <iframe id="siyouIframe" class="modalIframe" src=""></iframe>
-</div>
-
-<div id="xmlDetailModal" class="iframeModal">
-    <div class="modalHeader">気象庁防災情報XML 詳細 <button id="btnCloseXmlDetail">×</button></div>
-    <iframe id="xmlDetailIframe" class="modalIframe" src=""></iframe>
-</div>
-
-<div id="leftSidebar">
-    <div id="detailPanel" class="base-panel"><div id="detailScrollArea"></div></div>
-    <div id="tsunamiPanel" class="base-panel">
-        <div id="tsunamiScrollArea"><div class="noTsunami">国内での津波の心配はありません。<br>海外での津波の影響は不明です。</div></div>
+    <div class="modalHeader">
+        <span>EPICA - システム仕様・利用規約</span>
+        <button id="btnCloseSiyou">&times;</button>
     </div>
-    <div id="quakePanel"></div>
+    <iframe id="siyouIframe" class="modalIframe" src="about:blank"></div>
 </div>
 
-<div id="latestPanel"></div>
+<div id="megaQuakeTelop">⚠️ 巨大地震警戒情報が発表されています。</div>
+
+<div id="tsunamiEvacuateLabel">🌊 つなみ！にげて！ 🌊</div>
+
+<div id="eewPopup">緊急地震速報 (気象庁発表)</div>
+
+<div id="clockPanel">0000/00/00 00:00:00</div>
+
+<div id="latestPanel">
+    <div class="latestWrap" id="latestQuakeContent">
+        <div class="latestLeft">
+            <div class="latestTitle">地震情報を受信していません</div>
+            <div class="latestSub">API接続待機中...</div>
+        </div>
+        <div class="latestScale" style="background:#333;">-</div>
+    </div>
+</div>
+
 <div id="jalertContainer"></div>
 
-<div id="rightSidebar">
-    <div id="clockPanel">--/--/-- --:--:--</div>
-    <div id="commentPanel" class="base-panel">
-        <div class="commentHeader">自由付随コメント (FREE FORM COMMENT)</div>
-        <div id="commentScrollArea"><div class="noComment">受信待機中...</div></div>
+<div id="leafletWrap">
+    <div id="leafletMap"></div>
+</div>
+
+<div id="leftSidebar" id="lAnchor">
+    <div id="quakePanel" class="base-panel"></div>
+    
+    <div id="detailPanel" class="base-panel">
+        <div class="axisHeader" style="color: #FFCC00;">各地の震度 (SHINDO DETAILS)</div>
+        <div id="detailScrollArea"></div>
     </div>
     
-    <div id="tsunamiSubMapPanel" class="base-panel" style="border-top: 8px solid #FF00FF; height: 380px;">
-        <div class="axisHeader" style="color: #FF00FF; display:flex; justify-content: space-between;">
-            <span>津波 (TSUNAMI)</span>
+    <div id="tsunamiPanel" class="base-panel">
+        <div class="axisHeader" style="color: #00BFFF;">津波予報・発表状況 (TSUNAMI INFO)</div>
+        <div id="tsunamiScrollArea">
+            <div class="noTsunami">現在、津波情報はありません</div>
         </div>
-        <div id="tsunamiSubMap" style="flex: 1; background:#050505;"></div>
+    </div>
+</div>
+
+<div id="bottomPanelsContainer">
+    <div id="commentPanel" class="base-panel">
+        <div class="commentHeader">解説情報・付加文 (COMMENTS)</div>
+        <div id="commentScrollArea">
+            <div class="noComment">解説情報は発表されていません</div>
+        </div>
+    </div>
+    
+    <div id="xmlPanel" class="base-panel">
+        <div class="xmlHeader">気象庁XML電文 (JMA XML DECODER)</div>
+        <div id="xmlScrollArea">
+            <div class="info-text" style="text-align:center;padding-top:20px;">電文受信待機中...</div>
+        </div>
+        <button id="btnXmlDetail">選択中の電文ソースを全画面表示</button>
+    </div>
+    
+    <div id="weatherWarningPanel" class="base-panel">
+        <div class="warnHeader">気象警報・注意報 (WEATHER WARNINGS)</div>
+        <div id="weatherWarningScrollArea">
+            <div class="info-text" style="text-align:center;padding-top:20px;">警報情報読み込み中...</div>
+        </div>
+    </div>
+</div>
+
+<div id="rightSidebar" id="anchor">
+    <div id="megaQuakeAlertPanel" class="base-panel" style="height: 140px;">
+        <div class="mega-quake-header">巨大地震臨時情報 (MEGAQUAKE INFO)</div>
+        <div id="megaQuakeAlertScrollArea" class="mega-quake-scroll"></div>
     </div>
 
+    <div id="shakeDetectPanel" class="base-panel">
+        <div class="axisHeader" style="color: #00FF00;">揺れ検知情報 (SHAKE DETECTION)</div>
+        <div id="shakeDetectScrollArea" class="axisScrollArea">
+            <div class="info-text" style="text-align:center;padding-top:20px;">強震データ接続待機中...</div>
+        </div>
+    </div>
+
+    <div id="axisPanel" class="base-panel" style="border-top: 8px solid #FF9900; height: 180px;">
+        <div class="axisHeader" style="color: #FF9900;">AXIS 地震・津波即報 (AXIS API)</div>
+        <div id="axisScrollArea" class="axisScrollArea">
+            <div class="info-text" style="text-align:center;padding-top:20px;">AXIS 信号待機中...</div>
+        </div>
+    </div>
+    
     <div id="weatherMapPanel" class="base-panel" style="border-top: 8px solid #0055ff; height: 380px; cursor:pointer;">
         <div class="axisHeader" style="color: #00BFFF; display:flex; justify-content: space-between;">
             <span id="weatherMapTitle" style="font-weight: 700;">気象レーダー (RAIN)</span>
         </div>
         <div id="weatherMapInner" style="flex: 1; background:#050505;"></div>
     </div>
-
-    <div id="dailySummaryPanel" class="base-panel" style="display:none; border-top: 8px solid #A020F0; height: 160px;">
+    
+    <div id="dailySummaryPanel" class="base-panel" style="border-top: 8px solid #A020F0; height: 160px;">
         <div class="axisHeader" style="color: #DDA0DD;">本日のまとめ (DAILY SUMMARY)</div>
-        <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">待機中...</div></div>
-    </div>
-</div>
-
-<div id="shakeDetectPanel" class="base-panel">
-    <div class="axisHeader" style="color: #00FF00;">揺れ検知情報 (SHAKE DETECTION)</div>
-    <div id="shakeDetectScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">検知待機中...</div></div>
-</div>
-
-<div id="megaQuakeTelopWrap" style="position:fixed; bottom: 410px; left:482px; right:482px; display:flex; justify-content:center; pointer-events:none; z-index: 1000;">
-    <div id="megaQuakeTelop">⚠️ 巨大地震警戒 (南海トラフ臨時情報 発表中)</div>
-</div>
-
-<div id="bottomPanelsContainer">
-    <div id="megaQuakeAlertPanel" class="base-panel">
-        <div class="mega-quake-header">重大な地震情報 (MEGA QUAKE ALERT)</div>
-        <div id="megaQuakeAlertScrollArea" class="mega-quake-scroll"><div class="info-text" style="text-align:center;padding-top:20px;">現在発表されている情報はありません</div></div>
-    </div>
-    <div id="xmlPanel" class="base-panel" style="position: relative;">
-        <div id="eqUpdatePanel" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: rgba(10, 10, 10, 0.98); border: 4px solid #FFD700; box-sizing: border-box; display: none; flex-direction: column;">
-            <div class="axisHeader" style="background: #111; color: #FFD700; font-size: 16px; padding: 10px 16px; border-bottom: 2px solid #555; font-weight: bold;">震源要素更新のお知らせ</div>
-            <div id="eqUpdateText" style="padding: 12px; font-size: 14px; line-height: 1.5; color: #FFF; overflow-y: auto; flex: 1;"></div>
+        <div id="summaryScrollArea" class="axisScrollArea">
+            <div class="info-text" style="text-align:center;padding-top:20px;">集計待機中...</div>
         </div>
-
-        <div class="xmlHeader">気象庁防災情報XML (JMA XML) - 総合</div>
-        <div id="xmlScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
-        <button id="btnXmlDetail">詳細を見る</button>
-    </div>
-    <div id="weatherWarningPanel" class="base-panel">
-        <div class="warnHeader">気象警報・注意報 (WEATHER WARNING)</div>
-        <div id="weatherWarningScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
     </div>
 </div>
 
 <div id="weatherTickerPanel">
-    <div class="ticker-label" id="ticker-label">全国天気</div>
+    <div class="ticker-label">天気予報</div>
     <div class="ticker-viewport">
-        <div class="ticker-content" id="ticker-content">
-            <span class="weather-item" style="border: none;">気象庁のデータを取得しています...</span>
+        <div class="ticker-content" id="weatherTickerContent">
+            <div class="weather-item">各地の天気情報を取得しています...</div>
         </div>
     </div>
 </div>
 
-<div id="eewPopup"></div>
-<div id="eewContainer"></div>
-
-<div id="leafletWrap">
-    <div id="leafletMap"></div>
-    <div id="tsunamiEvacuateLabel">！津波逃げて！(Tsunami! Evacuate!)</div>
-    <div id="displayModeWrap">
-        <div id="displayLogoWrap" style="display: flex; align-items: center; justify-content: center; padding: 0 16px; background: #111;">
-            <img src="2.svg" alt="" style="height: 38px; width: auto;">
-        </div>
-        <button id="btnNormalMode" class="modeBtn active">通常表示</button>
-        <button id="btnRealtimeMode" class="modeBtn">リアルタイム揺れのみ</button>
-        <button id="btnWeatherWarningMap" class="modeBtn">気象警報マップ</button>
-        <button id="btnReproduce" class="modeBtn" style="color: #00FFFF;">▶ 再現</button>
-        <button id="btnSettings" class="modeBtn">⚙ 設定</button>
-    </div>
-    <div id="shindoLegend">
-        <div class="legendItem" style="background:#f2f2ff;color:#000;">1</div>
-        <div class="legendItem" style="background:#0000ff;color:#fff;">2</div>
-        <div class="legendItem" style="background:#00c800;color:#fff;">3</div>
-        <div class="legendItem" style="background:#fae600;color:#000;">4</div>
-        <div class="legendItem" style="background:#ff9900;color:#000;">5弱</div>
-        <div class="legendItem" style="background:#ff2800;color:#fff;">5強</div>
-        <div class="legendItem" style="background:#fa0000;color:#fff;">6弱</div>
-        <div class="legendItem" style="background:#a00000;color:#fff;">6強</div>
-        <div class="legendItem" style="background:#960096;color:#fff;">7</div>
-    </div>
+<div id="eqUpdatePanel">
+    <div class="axisHeader">⚠️ 顕著な地震の震源要素更新</div>
+    <div id="eqUpdateText"></div>
 </div>
 
-<div id="wsLogPanel">-- SYSTEM READY --<br>※「0」キーでリロード＆自動再開<br>※「2」キーでログ表示/非表示切替<br>※「1」キーで全画面揺れ表示切替<br>※「9」キーで再現機能実行</div>
+<div id="shindoLegend">
+    <div class="legendItem" style="background: #F5F5F5; color: #000;">1</div>
+    <div class="legendItem" style="background: #E6F2FF; color: #000;">2</div>
+    <div class="legendItem" style="background: #99CCFF; color: #000;">3</div>
+    <div class="legendItem" style="background: #3399FF; color: #FFF;">4</div>
+    <div class="legendItem" style="background: #FFCC00; color: #000;">5弱</div>
+    <div class="legendItem" style="background: #FF9900; color: #000;">5強</div>
+    <div class="legendItem" style="background: #FF3300; color: #FFF;">6弱</div>
+    <div class="legendItem" style="background: #CC0000; color: #FFF;">6強</div>
+    <div class="legendItem" style="background: #B30059; color: #FFF;">7</div>
+</div>
+
+<div id="displayModeWrap">
+    <button class="modeBtn active" id="btnRealtimeMode">リアルタイム強震</button>
+    <button class="modeBtn" id="btnQuakeHistoryMode">過去の地震履歴</button>
+    <button class="modeBtn" id="btnWeatherWarningMode">気象警報マップ</button>
+    <button class="modeBtn" id="btnToggleMapSwap" style="color:#FFFF00;">レーダー入替</button>
+    <button class="modeBtn" id="btnSettings" style="background:#222; border-top: 4px solid #FFFF00; padding-bottom:12px;">⚙️ 設定</button>
+    <button class="modeBtn" id="btnReproduce" style="background:#331111; border-top: 4px solid #FF3333; display:none;">🔴 再生中</button>
+</div>
 
 <div id="settingsModal">
-    <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
-    <div class="settingsBody">
-        <div class="setting-group">
-            <div class="setting-group-title">拡張機能・自動処理</div>
-            <div class="setting-item"><label>J-ALERT(国民保護情報)の受信 <input type="checkbox" id="chkJAlert"></label></div>
-            <div class="setting-item"><label>マップ自動切り替え (1分おき) <input type="checkbox" id="chkAutoMapSwap"></label></div>
+    <div class="settingsHeader">
+        <span>⚙️ EPICA システム環境設定</span>
+        <button id="btnSettingsClose">&times;</button>
+    </div>
+    
+    <div class="setting-group">
+        <div class="setting-group-title">音声・警告音量コントロール</div>
+        <div class="setting-item">
+            <label>EEW 初報/警告音 <span class="setting-value" id="volFirstVal">0.5</span></label>
+            <input type="range" id="volFirstSlider" min="0" max="1" step="0.1" value="0.5">
         </div>
-        <div class="setting-group">
-            <div class="setting-group-title">再現機能 (REPRODUCTION)</div>
-            <div class="setting-item">
-                <label>記録データ管理</label>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="btnExportRecord" style="flex:1; padding:12px; background:#005500; color:#fff; border:1px solid #00FF00; border-radius:4px; cursor:pointer; font-weight:bold;">エクスポート</button>
-                    <input type="file" id="importRecordFile" style="display:none;" accept=".json">
-                    <button id="btnImportRecord" style="flex:1; padding:12px; background:#003366; color:#fff; border:1px solid #00BFFF; border-radius:4px; cursor:pointer; font-weight:bold;">インポート</button>
-                </div>
-            </div>
-            <div class="setting-item" style="margin-top:10px;">
-                <button id="btnForceStopRecord" style="width:100%; padding:12px; background:#550000; color:#fff; border:1px solid #FF0000; border-radius:4px; cursor:pointer; font-weight:bold;">記録を強制終了</button>
-            </div>
+        <div class="setting-item">
+            <label>EEW 最終報/取消音 <span class="setting-value" id="volLastVal">0.5</span></label>
+            <input type="range" id="volLastSlider" min="0" max="1" step="0.1" value="0.5">
         </div>
-        <div class="setting-group">
-            <div class="setting-group-title">フォントサイズ個別設定</div>
-            <div class="setting-item"><label>最新情報パネル <span class="setting-value" id="fsLatestVal">100%</span></label><input type="range" id="fsLatestSlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>震度詳細パネル <span class="setting-value" id="fsDetailVal">100%</span></label><input type="range" id="fsDetailSlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>津波パネル <span class="setting-value" id="fsTsunamiVal">100%</span></label><input type="range" id="fsTsunamiSlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>履歴パネル <span class="setting-value" id="fsHistoryVal">100%</span></label><input type="range" id="fsHistorySlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>コメントパネル <span class="setting-value" id="fsCommentVal">100%</span></label><input type="range" id="fsCommentSlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>XMLパネル <span class="setting-value" id="fsXmlVal">100%</span></label><input type="range" id="fsXmlSlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>気象警報パネル <span class="setting-value" id="fsWeatherWarningVal">100%</span></label><input type="range" id="fsWeatherWarningSlider" min="80" max="150" step="5" value="100"></div>
+        <div class="setting-item">
+            <label>EEW 警報BGM音量 <span class="setting-value" id="volWarningVal">0.5</span></label>
+            <input type="range" id="volWarningSlider" min="0" max="1" step="0.1" value="0.5">
         </div>
-        <div class="setting-group">
-            <div class="setting-group-title">外観設定</div>
-            <div class="setting-item"><label>背景カラー</label><input type="color" id="bgColorPicker" value="#050505" style="width:100%; height:40px; cursor:pointer; border:none; padding:0; border-radius:4px;"></div>
-            
-            <div class="setting-item"><label>ベースマップ(地図タイル)を表示 <input type="checkbox" id="chkShowMapTile"></label></div>
-            <div class="setting-item"><label>メイン2Dマップ 津波沿岸部塗分け <input type="checkbox" id="chkTsunamiPaintMain"></label></div>
-            <div class="setting-item"><label>海のカラー (マップ背景)</label><input type="color" id="mapOceanColorPicker" value="#050505" style="width:100%; height:40px; cursor:pointer; border:none; padding:0; border-radius:4px;"></div>
-            <div class="setting-item"><label>陸地のベースカラー (非塗り分け時)</label>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="color" id="mapLandColorPicker" value="#222222" style="flex:1; height:40px; cursor:pointer; border:none; padding:0; border-radius:4px;">
-                    <label style="font-size:13px;"><input type="checkbox" id="chkMapLandTransparent"> 透過(マップ背景を透過)</label>
-                </div>
-            </div>
+        <div class="setting-item">
+            <label>地震情報API更新音 <span class="setting-value" id="volUpdateApiVal">0.5</span></label>
+            <input type="range" id="volUpdateApiSlider" min="0" max="1" step="0.1" value="0.5">
+        </div>
+        <div class="setting-item">
+            <label>津波情報 警告音量 <span class="setting-value" id="volTsunamiVal">0.5</span></label>
+            <input type="range" id="volTsunamiSlider" min="0" max="1" step="0.1" value="0.5">
+        </div>
+    </div>
+    
+    <div class="setting-group">
+        <div class="setting-group-title">データフィード ＆ 外部API連携</div>
+        <div class="setting-item">
+            <label>EEW 緊急地震速報データソース</label>
+            <select id="selEewSource">
+                <option value="wolfx">Wolfx API (BSC / NIED 統合)</option>
+                <option value="p2p">P2P地震情報 (インシデントフィード)</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <label>AXIS Websocket 認証トークン</label>
+            <input type="password" id="axisTokenInput" placeholder="Tokenを入力してください">
+            <button id="btnAxisConnect">AXISノードへ再接続</button>
+        </div>
+    </div>
 
-            <div class="setting-item"><label>震度カラーをカスタムする <input type="checkbox" id="chkCustomShindoColors"></label></div>
-            <div id="customShindoColorsArea" style="display:none; flex-wrap:wrap; gap:14px; margin-top:14px;"></div>
-        </div>
-        <div class="setting-group">
-            <div class="setting-group-title">拡張機能</div>
-            <div class="setting-item"><label>気象マップ拡大時ズームレベル <span class="setting-value" id="weatherMapZoomVal">5</span></label><input type="range" id="weatherMapZoomSlider" min="3" max="10" step="1" value="5"></div>
-            <div class="setting-item"><label>プッシュ通知 (ブラウザ権限必要) <input type="checkbox" id="chkPushNotify"></label></div>
-            <div class="setting-item"><label>EEW受信時の震度予測マップ表示 <input type="checkbox" id="chkEewPrediction"></label></div>
-            <div class="setting-item"><label>EEW受信中リアルタイム揺れマップ塗分け <input type="checkbox" id="chkEewRealtimePaint"></label></div>
-            <div class="setting-item"><label>観測点アイコンの表示 <input type="checkbox" id="chkShowObsPoints"></label></div>
-            <div class="setting-item"><label>揺れ検知機能 (自動追従表示) <input type="checkbox" id="chkShakeDetect"></label></div>
-            <div class="setting-item"><label>揺れ検知から震央を推定する (最適化) <input type="checkbox" id="chkEstimateEpicenter"></label></div>
-            <div class="setting-item"><label>揺れ検知 閾値 (計測震度目安) <span class="setting-value" id="shakeThresholdVal">1.0</span></label><input type="range" id="shakeThresholdSlider" min="5" max="15" step="1" value="8"></div>
-            <div class="setting-item"><label>EEW受信元<select id="selEewSource"><option value="wolfx">Wolfx</option><option value="axis">AXIS</option></select></label></div>
-        </div>
-        <div class="setting-group">
-            <div class="setting-group-title">AXIS API 連携設定</div>
-            <div class="setting-item"><label>アクセストークン</label><input type="password" id="axisTokenInput" placeholder="eyJhb..."></div>
-            <button id="btnAxisConnect">接続 / 更新</button>
-        </div>
-        <div class="setting-group">
-            <div class="setting-group-title">基本システム音設定</div>
-            <div class="setting-item"><label>基本音量 <span class="setting-value" id="volVal">0.5</span></label><input type="range" id="volSlider" min="0" max="1" step="0.1" value="0.5"></div>
-            <div class="setting-item"><label>通常時音楽 <span class="setting-value" id="volBgmVal">0.3</span></label><input type="range" id="volBgmSlider" min="0" max="1" step="0.1" value="0.3"></div>
-            <div class="setting-item"><label>EEWアラームピッチ <span class="setting-value" id="alarmPitchVal">1500</span></label><input type="range" id="alarmPitchSlider" min="500" max="3000" step="100" value="1500"></div>
-            <div class="setting-item"><label>読み上げ音量 <span class="setting-value" id="speechVolumeVal">1.0</span></label><input type="range" id="speechVolumeSlider" min="0" max="1" step="0.1" value="1.0"></div>
-            <div class="setting-item"><label>読み上げピッチ <span class="setting-value" id="speechPitchVal">1.0</span></label><input type="range" id="speechPitchSlider" min="0" max="2" step="0.1" value="1.0"></div>
-            <div class="setting-item"><label>読み上げスピード <span class="setting-value" id="speechRateVal">1.5</span></label><input type="range" id="speechRateSlider" min="0.5" max="3" step="0.1" value="1.5"></div>
-        </div>
-        <div class="setting-group" style="border-bottom:none;">
-            <div class="setting-group-title">通知SE 音量</div>
-            <div class="setting-item"><label>EEW 新規 <span class="setting-value" id="volFirstVal">0.5</span></label><input type="range" id="volFirstSlider" min="0" max="1" step="0.1" value="0.5"></div>
-            <div class="setting-item"><label>EEW 更新 <span class="setting-value" id="volUpdateEewVal">0.5</span></label><input type="range" id="volUpdateEewSlider" min="0" max="1" step="0.1" value="0.5"></div>
-            <div class="setting-item"><label>EEW 最終/取消 <span class="setting-value" id="volLastVal">0.5</span></label><input type="range" id="volLastSlider" min="0" max="1" step="0.1" value="0.5"></div>
-            <div class="setting-item"><label>EEW 警告 <span class="setting-value" id="volWarningVal">0.5</span></label><input type="range" id="volWarningSlider" min="0" max="1" step="0.1" value="0.5"></div>
-            <div class="setting-item"><label>地震更新 <span class="setting-value" id="volUpdateApiVal">0.5</span></label><input type="range" id="volUpdateApiSlider" min="0" max="1" step="0.1" value="0.5"></div>
-            <div class="setting-item"><label>津波 <span class="setting-value" id="volTsunamiVal">0.5</span></label><input type="range" id="volTsunamiSlider" min="0" max="1" step="0.1" value="0.5"></div>
+    <div class="setting-group">
+        <div class="setting-group-title">システムログ</div>
+        <div class="setting-item">
+            <label><input type="checkbox" id="chkShowLog"> システムデバッグログウィンドウを表示</label>
         </div>
     </div>
 </div>
-<script type="module">
 
+<div id="wsLogPanel"></div>
+
+<div id="xmlDetailModal" class="iframeModal">
+    <div class="modalHeader">
+        <span id="xmlDetailTitle">気象庁XML 電文ソースビューア</span>
+        <button id="btnXmlDetailClose">&times;</button>
+    </div>
+    <div id="xmlDetailBody" style="flex:1; padding:20px; background:#050505; color:#00FF00; font-family:monospace; white-space:pre-wrap; overflow-y:auto; font-size:14px; line-height:1.5;"></div>
+</div>
+
+<script type="module">
 // --- 共通TTS文字列生成 (津波の心配はありませんを削除) ---
 function getQuakeTTS(lE) {
     const dm=Math.floor((new Date()-new Date(lE.earthquake.time.replace(/\//g,"-").replace(" ","T")))/60000);
@@ -634,14 +716,13 @@ document.addEventListener('keydown', e => {
         const btnSettings = document.getElementById('btnSettings');
         const btnNormal = document.getElementById('btnNormalMode');
         const btnReal = document.getElementById('btnRealtimeMode');
-        const logoWrap = document.getElementById('displayLogoWrap');
+        const displayModeWrap = document.getElementById('displayModeWrap');
         
         if (btnWeather) btnWeather.style.display = isExtraButtonsHidden ? 'none' : '';
         if (btnReproduce) btnReproduce.style.display = isExtraButtonsHidden ? 'none' : '';
         if (btnSettings) btnSettings.style.display = isExtraButtonsHidden ? 'none' : '';
         if (btnNormal) btnNormal.style.display = isExtraButtonsHidden ? 'none' : '';
         if (btnReal) btnReal.style.display = isExtraButtonsHidden ? 'none' : '';
-        if (logoWrap) logoWrap.style.display = isExtraButtonsHidden ? 'none' : 'flex';
     } else if(e.key === '2') {
         e.preventDefault();
         e.stopPropagation();
@@ -1010,7 +1091,6 @@ function toggleMapSwap() {
     isMapSwapped = !isMapSwapped;
     const uiElements = [
         document.getElementById('tsunamiEvacuateLabel'),
-        document.getElementById('displayModeWrap'),
         document.getElementById('shindoLegend')
     ];
 
@@ -1046,9 +1126,10 @@ function updateSeVolumes(){
 }
 
 document.getElementById('btnSettings').addEventListener('click', ()=>document.getElementById('settingsModal').style.display='block');
-document.getElementById('btnCloseSettings').addEventListener('click', ()=>document.getElementById('settingsModal').style.display='none');
+document.getElementById('btnSettingsClose').addEventListener('click', ()=>document.getElementById('settingsModal').style.display='none');
 document.getElementById('btnXmlDetail').addEventListener('click', ()=>{ document.getElementById("xmlDetailIframe").src="p.html"; document.getElementById("xmlDetailModal").style.display="flex"; });
-document.getElementById('btnCloseXmlDetail').addEventListener('click', ()=>{ document.getElementById("xmlDetailModal").style.display="none"; document.getElementById("xmlDetailIframe").src=""; });
+document.getElementById('btnXmlDetailClose').addEventListener('click', ()=>{ document.getElementById("xmlDetailModal").style.display="none"; document.getElementById("xmlDetailIframe").src=""; });
+document.getElementById('btnToggleMapSwap').addEventListener('click', toggleMapSwap);
 
 function applyAppearance() {
     document.body.style.backgroundColor = userSettings.bgColor;
@@ -1137,6 +1218,11 @@ document.getElementById('chkPushNotify').checked=userSettings.pushNotify; docume
         el.checked = userSettings[key];
         el.addEventListener('change', e => { userSettings[key] = e.target.checked; saveSettings(); });
     }
+});
+
+document.getElementById('chkShowLog').addEventListener('change', e => {
+    const logPanel = document.getElementById('wsLogPanel');
+    if (logPanel) logPanel.style.display = e.target.checked ? 'block' : 'none';
 });
 
 document.getElementById('chkJAlert').checked = userSettings.jAlertEnable;
@@ -2425,8 +2511,6 @@ function initWeatherMap() {
     setInterval(fetchJmaWeatherData, 2 * 60 * 1000); setInterval(toggleWeatherMode, 60 * 1000); 
 } 
 
-document.getElementById('weatherMapPanel').addEventListener('click', (e) => { if(e.target.id === 'weatherMapPanel' || e.target.closest('.axisHeader')) { toggleMapSwap(); } }); 
-
 async function fetchJmaWeatherData() { 
     try { 
         const response = await fetch('https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json'); const targetTimes = await response.json(); 
@@ -2495,7 +2579,7 @@ function extractDailyWeather(data, todayStr, tomorrowStr) {
 
 async function initTicker() {
     try {
-        const targetInfo = getTargetDateInfo(); const tickerLabel = document.getElementById('ticker-label'); if (tickerLabel) tickerLabel.innerText = "全国天気 (今日/明日)";
+        const targetInfo = getTargetDateInfo(); const tickerLabel = document.querySelector('.ticker-label'); if (tickerLabel) tickerLabel.innerText = "全国天気";
         const areaRes = await fetch(API_AREA_URL); const areaData = await areaRes.json(); const offices = areaData.offices;
         let weatherItemsHTML = ""; let validRegionCount = 0; const codes = Object.keys(offices).sort((a, b) => a.localeCompare(b));
         const fetchPromises = codes.map(async (code) => {
@@ -2521,9 +2605,9 @@ async function initTicker() {
                 `; validRegionCount++;
             }
         });
-        const tickerContent = document.getElementById('ticker-content');
+        const tickerContent = document.getElementById('weatherTickerContent');
         if(tickerContent) { tickerContent.innerHTML = weatherItemsHTML + weatherItemsHTML; tickerContent.style.animationDuration = `${validRegionCount * 7}s`; }
-    } catch (error) { console.error("データ取得エラー:", error); const tickerContent = document.getElementById('ticker-content'); if(tickerContent) tickerContent.innerHTML = '<span class="weather-item">天気データの取得に失敗しました。</span>'; }
+    } catch (error) { console.error("データ取得エラー:", error); const tickerContent = document.getElementById('weatherTickerContent'); if(tickerContent) tickerContent.innerHTML = '<span class="weather-item">天気データの取得に失敗しました。</span>'; }
 }
 setInterval(initTicker, 3600000);
 
@@ -2554,8 +2638,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
     startApp(); 
     const btnStart = document.getElementById("btnStart");
     if(btnStart) { btnStart.addEventListener("click", ()=>{ document.getElementById("startupScreen").style.display="none"; initAudio(); }); }
-    document.getElementById("btnSiyou").addEventListener("click", ()=>{ document.getElementById("siyouIframe").src="siyou.html"; document.getElementById("siyouModal").style.display="flex"; }); 
-    document.getElementById("btnCloseSiyou").addEventListener("click", ()=>{ document.getElementById("siyouModal").style.display="none"; document.getElementById("siyouIframe").src=""; });
 });
 </script>
 </body>
