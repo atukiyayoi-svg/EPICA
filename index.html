@@ -574,7 +574,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         </div>
     </div>
 </div>
-
 <script type="module">
 
 // --- 共通TTS文字列生成 ---
@@ -1643,7 +1642,7 @@ async function processXmlString(xt, typ, ovUrl=null){
             if(intEl){const mx=intEl.querySelector('Observation > MaxInt')?.textContent; if(mx)ht+=`<p><strong>最大震度:</strong> <span style="font-size:1.5em; color:#FF5555; font-weight:700;">${mx}</span></p>`; const pr=intEl.querySelectorAll('Pref'); if(pr.length){ht+=`<h4>各地の震度</h4><div class="p-data-list">`; pr.forEach(p=>{ht+=`<div style="margin-bottom:10px;"><strong>${p.querySelector('Name')?.textContent} (最大 ${p.querySelector('MaxInt')?.textContent})</strong><ul style="list-style:none; margin:6px 0 0 14px; padding:0;">`; p.querySelectorAll('Area').forEach(a=>ht+=`<li>・${a.querySelector('Name')?.textContent} (震度 ${a.querySelector('MaxInt')?.textContent})</li>`); ht+=`</ul></div>`;}); ht+=`</div>`;}} ht+=`</div>`;
         }
 
-        if(!cFnd&&!eEl&&!intEl&&!hasW){const ga=Array.from(doc.querySelectorAll('Body > Area')); if(ga.length){ht+=`<div class="p-info-section"><h3>その他の情報</h3><table class="p-table"><tr><th>地域</th><th>詳細</th></tr>`; ga.slice(0,30).forEach(a=>ht+=`<tr><td>${a.querySelector('Name')?.textContent||"不明"}</td><td>${a.querySelector('MaxInt')?.textContent||a.querySelector('Kind > Name')?.textContent||"-"}</td></tr>`); ht+=`</table>`; if(ga.length>30)ht+=`<p><small>※他 ${ga.length-30} 件省略</small></p>`; ht+=`</div>`;}}
+if(!cFnd&&!eEl&&!intEl&&!hasW){const ga=Array.from(doc.querySelectorAll('Body > Area')); if(ga.length){ht+=`<div class="p-info-section"><h3>その他の情報</h3><table class="p-table"><tr><th>地域</th><th>詳細</th></tr>`; ga.slice(0,30).forEach(a=>ht+=`<tr><td>${a.querySelector('Name')?.textContent||"不明"}</td><td>${a.querySelector('MaxInt')?.textContent||a.querySelector('Kind > Name')?.textContent||"-"}</td></tr>`); ht+=`</table>`; if(ga.length>30)ht+=`<p><small>※他 ${ga.length-30} 件省略</small></p>`; ht+=`</div>`;}}
         const cmts=bdy?.querySelector('Comments'); if(cmts){const ts=Array.from(cmts.querySelectorAll('Text')).map(t=>t.textContent); if(ts.length)ht+=`<div class="p-info-section" style="background:#0A0A0A; border-style:dashed;"><h4 style="margin-top:0;">📝 付加事項</h4><p style="margin:0; white-space:pre-wrap;">${ts.join('\n')}</p></div>`;}
         
         const entry = { html: ht, time: pTime, isMega: isMega };
@@ -2449,10 +2448,17 @@ let usgsActiveEvents = new Map();
 let usgsMarkers = new Map();
 let usgsWaveTimer = null;
 let lastUsgsWaveDrawTime = 0;
+let lastUsgsWsMessageTime = 0;
+let usgsWs = null;
 
 function initUsgsMap() {
     usgsMap = L.map('usgsMapInner', { zoomControl: true, attributionControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true }).setView([37.5, 137], userSettings.usgsMapZoom || 2);
-    usgsBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10});
+    
+    // OSMタイルの適用
+    usgsBaseTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    });
     if (userSettings.showMapTile !== false) usgsBaseTileLayer.addTo(usgsMap);
     
     usgsMap.createPane('usgsWavePane'); usgsMap.getPane('usgsWavePane').style.zIndex = 460; usgsMap.getPane('usgsWavePane').style.pointerEvents = 'none';
@@ -2526,14 +2532,14 @@ function drawUsgsWaves(timestamp) {
 
 function handleUsgsEarthquake(prod) {
     const p = prod.properties;
-    const id = prod.source + p.eventsourcecode;
-    const mag = parseFloat(p.magnitude);
-    const lat = parseFloat(p.latitude);
-    const lon = parseFloat(p.longitude);
+    const id = prod.source + (p.eventsourcecode || p.id || Date.now());
+    const mag = parseFloat(p.magnitude || p.mag);
+    const lat = parseFloat(p.latitude || p.lat);
+    const lon = parseFloat(p.longitude || p.lon);
     const depth = parseFloat(p.depth) || 10;
     
     // イベント時刻のパース (USGSはISO 8601フォーマット)
-    const evtTime = new Date(p.eventtime).getTime();
+    const evtTime = new Date(p.eventtime || p.time).getTime();
 
     // 15分以上前の古いデータは無視する
     if (Date.now() - evtTime > 15 * 60 * 1000) return;
@@ -2542,7 +2548,7 @@ function handleUsgsEarthquake(prod) {
     usgsActiveEvents.set(id, { id, lat, lon, mag, depth, time: evtTime, title: p.title || `M ${mag.toFixed(1)} - USGS` });
 
     if (isNew) {
-        // 新規検知時はピッと音を鳴らすだけ (読み上げやEEWパネルは出さない)
+        // 新規検知時はピッと音を鳴らすだけ
         playPippiBeep();
         
         let mk = L.marker([lat, lon], {
@@ -2607,11 +2613,11 @@ setInterval(() => {
     if(changed) updateUsgsDetailPanel();
 }, 60000);
 
-let usgsWs = null;
 function connectUSGS() {
     usgsWs = new WebSocket("wss://earthquake.usgs.gov/pdl/east/products/notifications/subscribe");
     usgsWs.onopen = () => { addLog("📡 USGS API Connected"); };
     usgsWs.onmessage = (e) => {
+        lastUsgsWsMessageTime = Date.now();
         try {
             const d = JSON.parse(e.data);
             if (d.action === "product" && d.product && d.product.properties) {
@@ -2625,6 +2631,42 @@ function connectUSGS() {
     };
     usgsWs.onclose = () => { addLog("📡 USGS API Disconnected"); setTimeout(connectUSGS, 5000); };
 }
+
+// WebSocket受信がない場合に、USGS REST APIを利用して補完するポーリング関数
+async function pollUsgsApi() {
+    // WebSocket経由での受信が2分以上ない場合にAPIポーリングを実行
+    if (Date.now() - lastUsgsWsMessageTime < 120000) return;
+    try {
+        const rs = await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson");
+        if (!rs.ok) return;
+        const data = await rs.json();
+        if (data && data.features) {
+            data.features.forEach(f => {
+                if (f.properties && f.geometry) {
+                    const p = f.properties;
+                    const evtTime = p.time;
+                    // 15分以上前のデータは無視
+                    if (Date.now() - evtTime > 15 * 60 * 1000) return;
+                    const prod = {
+                        source: "api_",
+                        properties: {
+                            eventsourcecode: f.id,
+                            magnitude: p.mag,
+                            latitude: f.geometry.coordinates[1],
+                            longitude: f.geometry.coordinates[0],
+                            depth: f.geometry.coordinates[2],
+                            eventtime: new Date(p.time).toISOString(),
+                            title: p.title
+                        }
+                    };
+                    handleUsgsEarthquake(prod);
+                }
+            });
+        }
+    } catch(e) {}
+}
+// APIポーリングを1分間隔で実行
+setInterval(pollUsgsApi, 60000);
 
 document.getElementById('usgsMapPanel').addEventListener('click', (e) => { 
     if(e.target.id === 'usgsMapPanel' || e.target.closest('.axisHeader')) { 
@@ -2723,9 +2765,10 @@ async function startApp(){
         const d=await fetchKyoshin(); if(d)drawKyoshin(d); 
         setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); 
         
-        // 気象マップを廃止し、USGSマップを初期化
         initUsgsMap(); 
         connectUSGS();
+        // 初回起動時にもAPIをポーリングして直近データを取得
+        pollUsgsApi();
 
         document.getElementById("startupScreen").style.display="none"; initAudio();
     }catch(e){ updateStartupStatus("初期化エラー: "+e.message); }
