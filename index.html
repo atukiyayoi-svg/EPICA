@@ -265,8 +265,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #btnAxisConnect:hover { background: #005599; }
 
 /* --- マップスワップ --- */
-#weatherMapPanel.main-map-mode { position: fixed !important; top: var(--sidebar-gap); left: var(--center-offset); right: var(--center-offset); bottom: calc(var(--bottom-panel-height) + var(--ticker-height) + var(--sidebar-gap) * 3); height: auto !important; z-index: 10; border-top: none !important; border: 2px solid #333; }
-#leafletWrap.sidebar-map-mode { position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; width: 100% !important; height: clamp(250px, 30vh, 380px) !important; border: 2px solid #333 !important; border-top: 8px solid #0055ff !important; flex-shrink: 0; z-index: 10; margin: 0; }
+#usgsMapPanel.main-map-mode { position: fixed !important; top: var(--sidebar-gap); left: var(--center-offset); right: var(--center-offset); bottom: calc(var(--bottom-panel-height) + var(--ticker-height) + var(--sidebar-gap) * 3); height: auto !important; z-index: 10; border-top: none !important; border: 2px solid #333; }
+#leafletWrap.sidebar-map-mode { position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; width: 100% !important; height: clamp(250px, 30vh, 380px) !important; border: 2px solid #333 !important; border-top: 8px solid #FF8800 !important; flex-shrink: 0; z-index: 10; margin: 0; }
 
 /* --- 天気予報ティッカー --- */
 #weatherTickerPanel { position: fixed; bottom: calc(var(--sidebar-gap) * 0.5); left: var(--center-offset); right: var(--center-offset); height: var(--ticker-height); display: flex; z-index: 100; background: rgba(255, 255, 255, 0.95); border: 2px solid #ddd; border-radius: 4px; overflow: hidden; pointer-events: auto; }
@@ -297,7 +297,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 
     /* 各コンポーネントの固定解除と順序(order)指定 */
     #leftSidebar, #rightSidebar, #bottomPanelsContainer, 
-    #leafletWrap, #weatherMapPanel.main-map-mode, #weatherTickerPanel,
+    #leafletWrap, #usgsMapPanel.main-map-mode, #weatherTickerPanel,
     #latestPanel, #jalertContainer, #shakeDetectPanel, #megaQuakeTelopWrap {
         position: relative !important;
         top: auto !important;
@@ -317,7 +317,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #jalertContainer { order: 2; }
     #latestPanel { order: 3; flex-direction: column; align-items: stretch; border-radius: 0; border-left: none; border-right: none; }
     #leafletWrap { order: 4; height: 55vh !important; min-height: 350px; border-radius: 0; border-left: none; border-right: none; }
-    #weatherMapPanel.main-map-mode { order: 4; height: 55vh !important; min-height: 350px; border-radius: 0; border-left: none; border-right: none; }
+    #usgsMapPanel.main-map-mode { order: 4; height: 55vh !important; min-height: 350px; border-radius: 0; border-left: none; border-right: none; }
     #eewContainer { order: 5; position: relative !important; width: 100% !important; max-width: 100% !important; transform: none !important; margin: 10px 0 !important; }
     #leftSidebar { order: 6; padding: 0 10px; box-sizing: border-box; }
     #rightSidebar { order: 7; padding: 0 10px; box-sizing: border-box; }
@@ -344,6 +344,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 
 </style>
 </head>
+
 <body>
 <div id="startupScreen">
     <div id="startupContent">
@@ -399,11 +400,16 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div id="tsunamiSubMap" style="flex: 1; background:#050505;"></div>
     </div>
 
-    <div id="weatherMapPanel" class="base-panel" style="border-top: 8px solid #0055ff; height: clamp(250px, 30vh, 380px); cursor:pointer;">
-        <div class="axisHeader" style="color: #00BFFF; display:flex; justify-content: space-between;">
-            <span id="weatherMapTitle" style="font-weight: 700;">気象レーダー (RAIN)</span>
+    <div id="usgsMapPanel" class="base-panel" style="border-top: 8px solid #FF8800; height: clamp(250px, 30vh, 380px); cursor:pointer;">
+        <div class="axisHeader" style="color: #FF8800; display:flex; justify-content: space-between;">
+            <span id="usgsMapTitle" style="font-weight: 700;">海外地震 (USGS)</span>
         </div>
-        <div id="weatherMapInner" style="flex: 1; background:#050505;"></div>
+        <div id="usgsMapInner" style="flex: 1; background:#050505;"></div>
+    </div>
+    
+    <div id="usgsDetailPanel" class="base-panel" style="border-top: 8px solid #FF8800; height: clamp(120px, 15vh, 160px);">
+        <div class="axisHeader" style="color: #FF8800;">USGS 震源詳細情報</div>
+        <div id="usgsDetailScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">待機中...</div></div>
     </div>
 
     <div id="dailySummaryPanel" class="base-panel" style="display:none; border-top: 8px solid #A020F0; height: 160px;">
@@ -533,7 +539,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         </div>
         <div class="setting-group">
             <div class="setting-group-title">拡張機能</div>
-            <div class="setting-item"><label>気象マップ拡大時ズームレベル <span class="setting-value" id="weatherMapZoomVal">5</span></label><input type="range" id="weatherMapZoomSlider" min="3" max="10" step="1" value="5"></div>
+            <div class="setting-item"><label>USGSマップ拡大時ズームレベル <span class="setting-value" id="usgsMapZoomVal">2</span></label><input type="range" id="usgsMapZoomSlider" min="1" max="8" step="1" value="2"></div>
             <div class="setting-item"><label>プッシュ通知 (ブラウザ権限必要) <input type="checkbox" id="chkPushNotify"></label></div>
             <div class="setting-item"><label>EEW受信時の震度予測マップ表示 <input type="checkbox" id="chkEewPrediction"></label></div>
             <div class="setting-item"><label>EEW受信中リアルタイム揺れマップ塗分け <input type="checkbox" id="chkEewRealtimePaint"></label></div>
@@ -614,6 +620,7 @@ function applyStyleOptimized(layerGroup, styleComputeFn) {
         }
     });
 }
+
 let continuousPippiTimer = null;
 let animPauseUntil = 0;
 
@@ -905,7 +912,7 @@ let isWeatherWarningMapMode = false;
 
 const defaultSettings = {
     jAlertEnable: true, autoMapSwap: false, tsunamiPaintMain: true,
-    pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, bgColor: "#050505", customShindoColors: false, weatherMapZoom: 5,
+    pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, bgColor: "#050505", customShindoColors: false, usgsMapZoom: 2,
     shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" },
     showMapTile: true, mapOceanColor: "#050505", mapLandColor: "#222222", mapLandTransparent: true
 };
@@ -1010,17 +1017,17 @@ function getPushIconDataURL(text, bgColor, textColor) {
 let isMapSwapped = false;
 function toggleMapSwap() {
     const leafletWrap = document.getElementById('leafletWrap');
-    const weatherMapPanel = document.getElementById('weatherMapPanel');
+    const usgsMapPanel = document.getElementById('usgsMapPanel');
     const rightSidebar = document.getElementById('rightSidebar');
-    if (!leafletWrap || !weatherMapPanel || !rightSidebar) return;
+    if (!leafletWrap || !usgsMapPanel || !rightSidebar) return;
 
-    if (!document.getElementById('weatherMapAnchor')) {
+    if (!document.getElementById('usgsMapAnchor')) {
         const anchor = document.createElement('div');
-        anchor.id = 'weatherMapAnchor';
+        anchor.id = 'usgsMapAnchor';
         anchor.style.display = 'none';
-        rightSidebar.insertBefore(anchor, weatherMapPanel);
+        rightSidebar.insertBefore(anchor, usgsMapPanel);
     }
-    const anchor = document.getElementById('weatherMapAnchor');
+    const anchor = document.getElementById('usgsMapAnchor');
     
     if (!document.getElementById('leafletAnchor')) {
         const lAnchor = document.createElement('div');
@@ -1038,20 +1045,20 @@ function toggleMapSwap() {
     ];
 
     if (isMapSwapped) {
-        lAnchor.parentNode.insertBefore(weatherMapPanel, lAnchor);
-        weatherMapPanel.classList.add('main-map-mode');
+        lAnchor.parentNode.insertBefore(usgsMapPanel, lAnchor);
+        usgsMapPanel.classList.add('main-map-mode');
         anchor.parentNode.insertBefore(leafletWrap, anchor);
         leafletWrap.classList.add('sidebar-map-mode');
-        uiElements.forEach(el => { if(el) weatherMapPanel.appendChild(el); });
-        setTimeout(() => { if(weatherMap) weatherMap.setView([37.5, 137], userSettings.weatherMapZoom || 5); }, 150);
+        uiElements.forEach(el => { if(el) usgsMapPanel.appendChild(el); });
+        setTimeout(() => { if(usgsMap) usgsMap.setView([37.5, 137], userSettings.usgsMapZoom || 2); }, 150);
     } else {
         lAnchor.parentNode.insertBefore(leafletWrap, lAnchor);
         leafletWrap.classList.remove('sidebar-map-mode');
-        anchor.parentNode.insertBefore(weatherMapPanel, anchor);
-        weatherMapPanel.classList.remove('main-map-mode');
+        anchor.parentNode.insertBefore(usgsMapPanel, anchor);
+        usgsMapPanel.classList.remove('main-map-mode');
         uiElements.forEach(el => { if(el) leafletWrap.appendChild(el); });
     }
-    setTimeout(() => { if(lMap) lMap.invalidateSize(); if(weatherMap) weatherMap.invalidateSize(); }, 100);
+    setTimeout(() => { if(lMap) lMap.invalidateSize(); if(usgsMap) usgsMap.invalidateSize(); }, 100);
 }
 function resetMapSwap() { if (isMapSwapped) toggleMapSwap(); }
 
@@ -1078,7 +1085,7 @@ function applyAppearance() {
     if(document.getElementById('startupScreen')) document.getElementById('startupScreen').style.backgroundColor = userSettings.bgColor;
     const mapEl = document.getElementById('leafletMap'); if(mapEl) mapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
     const animMapEl = document.getElementById('tsunamiSubMap'); if(animMapEl) animMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
-    const weatherMapEl = document.getElementById('weatherMapInner'); if(weatherMapEl) weatherMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
+    const usgsMapEl = document.getElementById('usgsMapInner'); if(usgsMapEl) usgsMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
 
     let st = document.getElementById('dynamicAppearance'); if(!st){st=document.createElement('style'); st.id='dynamicAppearance'; document.head.appendChild(st);}
     st.innerHTML = `
@@ -1097,7 +1104,6 @@ function applyAppearance() {
 
 function updateSubMapGeojsonStyles() {
     let style = getLandDefaultStyle();
-    if (weatherGeojsonLayer) weatherGeojsonLayer.setStyle(style);
     if (tsunamiSubGeojsonLayer) tsunamiSubGeojsonLayer.setStyle(style);
     eewMiniMaps.forEach(obj => {
         if (obj.geo) obj.geo.setStyle(style);
@@ -1110,10 +1116,10 @@ function updateSubMapGeojsonStyles() {
     });
 }
 
-['fsLatest','fsDetail','fsTsunami','fsHistory','fsComment','fsXml','fsWeatherWarning','weatherMapZoom'].forEach(k=>{ 
+['fsLatest','fsDetail','fsTsunami','fsHistory','fsComment','fsXml','fsWeatherWarning','usgsMapZoom'].forEach(k=>{ 
     let sl=document.getElementById(k+'Slider'); let vl=document.getElementById(k+'Val'); 
-    if(sl&&vl){ sl.value=userSettings[k]; vl.innerText=userSettings[k]+(k!=='weatherMapZoom'?"%":""); 
-        sl.addEventListener('input', e=>{ userSettings[k]=parseInt(e.target.value); vl.innerText=userSettings[k]+(k!=='weatherMapZoom'?"%":""); saveSettings(); if(k!=='weatherMapZoom')applyAppearance(); }); 
+    if(sl&&vl){ sl.value=userSettings[k]; vl.innerText=userSettings[k]+(k!=='usgsMapZoom'?"%":""); 
+        sl.addEventListener('input', e=>{ userSettings[k]=parseInt(e.target.value); vl.innerText=userSettings[k]+(k!=='usgsMapZoom'?"%":""); saveSettings(); if(k!=='usgsMapZoom')applyAppearance(); }); 
     } 
 });
 document.getElementById('bgColorPicker').value = userSettings.bgColor; document.getElementById('bgColorPicker').addEventListener('input', e=>{userSettings.bgColor=e.target.value; saveSettings(); applyAppearance();});
@@ -1127,11 +1133,11 @@ document.getElementById('chkShowMapTile').addEventListener('change', e => {
     if(userSettings.showMapTile) {
         baseTileLayer.addTo(lMap);
         if(tsubMap) animBaseTileLayer.addTo(tsubMap);
-        if(weatherMap) weatherBaseTileLayer.addTo(weatherMap);
+        if(usgsMap) usgsBaseTileLayer.addTo(usgsMap);
     } else {
         baseTileLayer.remove();
         if(tsubMap) animBaseTileLayer.remove();
-        if(weatherMap) weatherBaseTileLayer.remove();
+        if(usgsMap) usgsBaseTileLayer.remove();
     }
     updateSubMapGeojsonStyles();
 });
@@ -1626,7 +1632,7 @@ async function processXmlString(xt, typ, ovUrl=null){
         const tEl=bdy?.querySelector('Tsunami');
         if(tEl){
             cFnd=true; ht+=`<div class="p-info-section p-section-tsunami"><h3>🌊 津波情報</h3>`;
-            const fc=tEl.querySelectorAll('Forecast > Item'); if(fc.length){ht+=`<h4>予報・警報</h4><table class="p-table"><tr><th>予報区</th><th>種別</th><th>到達予想</th><th>高さ</th></tr>`; fc.forEach(i=>{const aN=i.querySelector('Area > Name')?.textContent, k=i.querySelector('Category > Kind > Name')?.textContent, fh=i.querySelector('FirstHeight'); let ar='-'; if(fh){ar=formatTimeXml(fh.querySelector('ArrivalTime')?.textContent)||fh.querySelector('Condition')?.textContent;} ht+=`<tr><td>${aN}</td><td><strong>${k}</strong></td><td>${ar}</td><td>${getHeightDescXml(i.querySelector('MaxHeight'))}</td></tr>`;}); ht+=`</table>`;}
+            const fc=tEl.querySelectorAll('Forecast > Item'); if(fc.length){ht+=`<h4>予報・警報</h4><table class="p-table"><tr><th>予報区</th><th>種別</th><th>到達予想</th><th>高さ</th></tr>`; fc.forEach(i=>{const aN=i.querySelector('Area > Name')?.textContent, k=i.querySelector('Category > Kind > Name')?.textContent, fh=i.querySelector('FirstHeight'); let ar='-'; if(fh){ar=formatTimeXml(fh.querySelector('ArrivalTime')?.textContent)||fh.querySelector('Condition')?.textContent;} ht+=`<tr><td>${aN}</td><td><strong>${k}</strong></td><td>${formatTimeXml(i.querySelector('MaxHeight > ArrivalTime')?.textContent)}</td><td>${getHeightDescXml(i.querySelector('MaxHeight'))}</td></tr>`;}); ht+=`</table>`;}
             const ob=tEl.querySelectorAll('Observation > Item'); if(ob.length){ht+=`<h4>観測実績</h4><table class="p-table"><tr><th>地域</th><th>観測所</th><th>時刻</th><th>最大波</th></tr>`; ob.forEach(i=>{const aN=i.querySelector('Area > Name')?.textContent; i.querySelectorAll('Station').forEach(s=>{ht+=`<tr><td>${aN}</td><td>${s.querySelector('Name')?.textContent}</td><td>${formatTimeXml(s.querySelector('Time')?.textContent)}</td><td>${getHeightDescXml(s.querySelector('MaxHeight'))}</td></tr>`;});}); ht+=`</table>`;} ht+=`</div>`;
         }
 
@@ -1770,10 +1776,8 @@ const lMap=L.map('leafletMap',{preferCanvas:true,zoomControl:false,attributionCo
 lMap.on('click', () => { if (isMapSwapped) toggleMapSwap(); });
 const baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
 const animBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
-const weatherBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
 
 let geojsonLayer, tsunamiGeojsonLayer=null, tsunamiSubGeojsonLayer=null, latestQuakeMarker=null, epicenterMarkers=new Map(), prefData=null, currentTsunamiData=null; const shakeDetectLayer=L.layerGroup().addTo(lMap); window.jmaStationsJson=null;
-let weatherGeojsonLayer = null;
 
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex=410; lMap.getPane('tsunamiPane').style.pointerEvents='none'; lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex=450; lMap.getPane('kyoshinPane').style.pointerEvents='none'; lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex=460; lMap.getPane('wavePane').style.pointerEvents='none'; lMap.createPane('obsPane'); lMap.getPane('obsPane').style.zIndex=600; lMap.getPane('obsPane').style.pointerEvents='none'; lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex=650; lMap.getPane('epicenterPane').style.pointerEvents='none';
 
@@ -1983,7 +1987,6 @@ function renderEewCards() {
     const ms = d.MaxIntensity || "0"; const sc = scaleColor(ms); const stc = getContrastColor(sc); const efs = ms.length > 1 ? (ms === "不明" ? "22px" : "42px") : "52px";
     let th = ""; if (d.isTraining) th += `<span class="tag" style="background:#a855f7;color:#fff;">訓練</span>`; if (d.isAssumption) th += `<span class="tag" style="background:#3b82f6;color:#fff;">PLUM法</span>`;
     
-    // 地名のみの表示に修正
     let ah = "";
     if (d.Forecast?.length && !d.isCancel) ah = `<div class="eewAreas">【予測地域】<br>${d.Forecast.map(f => f.Name).join("、")}</div>`;
     else if (d.WarnArea?.Chiiki && !d.isCancel) ah = `<div class="eewAreas">【予測地域】<br>${d.WarnArea.Chiiki}</div>`;
@@ -2435,47 +2438,199 @@ function initTsunamiSubMap() {
     if (userSettings.showMapTile !== false) animBaseTileLayer.addTo(tsubMap);
 }
 
-let weatherMap = null; let hrpnsLayer = null; let thnsLayer = null; let currentWeathMode = 'hrpns'; let latestWeatherValidtime = '';
+// =====================================================================
+// USGS (海外地震) リアルタイム表示機能
+// =====================================================================
 
-function initWeatherMap() {
-    weatherMap = L.map('weatherMapInner', { zoomControl: true, attributionControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true }).setView([37.5, 137], 4);
-    if (userSettings.showMapTile !== false) weatherBaseTileLayer.addTo(weatherMap);
-    weatherMap.createPane('radarPane'); weatherMap.getPane('radarPane').style.zIndex = 450; weatherMap.getPane('radarPane').style.pointerEvents = 'none';
-    if(prefData && !weatherGeojsonLayer) { weatherGeojsonLayer = L.geoJSON(prefData, {style: () => getLandDefaultStyle(), interactive: false}).addTo(weatherMap); }
-    const layerOptions = { opacity: 0, maxNativeZoom: 10, attribution: '気象庁', pane: 'radarPane' };
-    hrpnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap); thnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
-    weatherMap.on('click', () => { toggleMapSwap(); }); fetchJmaWeatherData(); 
-    setInterval(fetchJmaWeatherData, 2 * 60 * 1000); setInterval(toggleWeatherMode, 60 * 1000); 
-} 
+let usgsMap = null;
+let usgsBaseTileLayer = null;
+let usgsGeojsonLayer = null;
+let usgsActiveEvents = new Map();
+let usgsMarkers = new Map();
+let usgsWaveTimer = null;
+let lastUsgsWaveDrawTime = 0;
 
-document.getElementById('weatherMapPanel').addEventListener('click', (e) => { if(e.target.id === 'weatherMapPanel' || e.target.closest('.axisHeader')) { toggleMapSwap(); } }); 
+function initUsgsMap() {
+    usgsMap = L.map('usgsMapInner', { zoomControl: true, attributionControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true }).setView([37.5, 137], userSettings.usgsMapZoom || 2);
+    usgsBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10});
+    if (userSettings.showMapTile !== false) usgsBaseTileLayer.addTo(usgsMap);
+    
+    usgsMap.createPane('usgsWavePane'); usgsMap.getPane('usgsWavePane').style.zIndex = 460; usgsMap.getPane('usgsWavePane').style.pointerEvents = 'none';
+    usgsMap.createPane('usgsMarkerPane'); usgsMap.getPane('usgsMarkerPane').style.zIndex = 650; usgsMap.getPane('usgsMarkerPane').style.pointerEvents = 'none';
 
-async function fetchJmaWeatherData() { 
-    try { 
-        const response = await fetch('https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json'); const targetTimes = await response.json(); 
-        if (targetTimes && targetTimes.length > 0) { 
-            const basetime = targetTimes[0].basetime; latestWeatherValidtime = targetTimes[0].validtime; 
-            hrpnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/hrpns/{z}/{x}/{y}.png`); 
-            thnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/thns/{z}/{x}/{y}.png`); 
-            updateWeatherDisplay(); 
-        } 
-    } catch (error) { console.error('気象データ取得失敗:', error); } 
-} 
+    if(prefData) { usgsGeojsonLayer = L.geoJSON(prefData, {style: () => getLandDefaultStyle(), interactive: false}).addTo(usgsMap); }
+    usgsMap.on('click', () => { toggleMapSwap(); });
 
-function toggleWeatherMode() { currentWeathMode = (currentWeathMode === 'hrpns') ? 'thns' : 'hrpns'; updateWeatherDisplay(); } 
-function updateWeatherDisplay() { 
-    if (!latestWeatherValidtime) return; 
-    const titleEl = document.getElementById('weatherMapTitle'); const panelEl = document.getElementById('weatherMapPanel'); 
-    if (currentWeathMode === 'hrpns') { 
-        hrpnsLayer.setOpacity(0.7); thnsLayer.setOpacity(0); 
-        if(titleEl) { titleEl.innerText = "気象レーダー (RAIN)"; titleEl.parentNode.style.color = "#00BFFF"; } 
-        if(panelEl) panelEl.style.borderTopColor = "#0055ff"; 
-    } else { 
-        hrpnsLayer.setOpacity(0); thnsLayer.setOpacity(0.7); 
-        if(titleEl) { titleEl.innerText = "気象レーダー (THUNDER)"; titleEl.parentNode.style.color = "#FFD700"; } 
-        if(panelEl) panelEl.style.borderTopColor = "#d68900"; 
+    // 波紋描画用レイヤー追加
+    usgsMap.addLayer(new UsgsWaveLayer());
+}
+
+const usgsWaveCanvas = document.createElement('canvas'); 
+usgsWaveCanvas.style.pointerEvents = 'none'; 
+usgsWaveCanvas.className = 'leaflet-zoom-animated'; 
+const UsgsWaveLayer = L.Layer.extend({
+    onAdd: function(m) {
+        this._m = m;
+        this._c = usgsWaveCanvas;
+        m.getPane('usgsWavePane').appendChild(this._c);
+        m.on('moveend', this._rs, this);
+        this._rs();
+    },
+    onRemove: function(m) {
+        m.getPane('usgsWavePane').removeChild(this._c);
+        m.off('moveend', this._rs, this);
+    },
+    _rs: function() {
+        const sz = this._m.getSize();
+        this._c.width = sz.x;
+        this._c.height = sz.y;
+        L.DomUtil.setPosition(this._c, this._m.containerPointToLayerPoint([0,0]));
+    }
+});
+
+function drawUsgsWaves(timestamp) {
+    if (!lastUsgsWaveDrawTime) lastUsgsWaveDrawTime = timestamp;
+    if (!usgsWaveCanvas.width) { usgsWaveTimer = requestAnimationFrame(drawUsgsWaves); return; }
+    
+    const ctx = usgsWaveCanvas.getContext('2d'); 
+    ctx.clearRect(0, 0, usgsWaveCanvas.width, usgsWaveCanvas.height);
+    
+    if (usgsActiveEvents.size === 0) { 
+        lastUsgsWaveDrawTime = 0; 
+        usgsWaveTimer = null; 
+        return; 
+    }
+    
+    const nt = Date.now();
+    usgsActiveEvents.forEach(d => {
+        const el = (nt - d.time) / 1000;
+        // 発生から10分(600秒)を超えたら描画しない
+        if (el < 0 || el > 600) return; 
+        
+        // グローバルな概算P波/S波速度(km/s)
+        const pD = el * 8.0, sD = el * 4.0, dp = d.depth; 
+        const pR = pD > dp ? Math.sqrt(pD * pD - dp * dp) : 0;
+        const sR = sD > dp ? Math.sqrt(sD * sD - dp * dp) : 0;
+        
+        const c = usgsMap.latLngToContainerPoint([d.lat, d.lon]);
+        const k2p = k => Math.abs(usgsMap.latLngToContainerPoint([d.lat, d.lon + (k / 111.32)]).x - c.x);
+        
+        const pPx = k2p(pR), sPx = k2p(sR);
+        if (sPx > 0) { ctx.beginPath(); ctx.arc(c.x, c.y, sPx, 0, Math.PI * 2); ctx.strokeStyle = "#FF0000"; ctx.lineWidth = 2; ctx.stroke(); }
+        if (pPx > 0) { ctx.beginPath(); ctx.arc(c.x, c.y, pPx, 0, Math.PI * 2); ctx.strokeStyle = "#00BFFF"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    });
+    
+    lastUsgsWaveDrawTime = timestamp;
+    usgsWaveTimer = requestAnimationFrame(drawUsgsWaves);
+}
+
+function handleUsgsEarthquake(prod) {
+    const p = prod.properties;
+    const id = prod.source + p.eventsourcecode;
+    const mag = parseFloat(p.magnitude);
+    const lat = parseFloat(p.latitude);
+    const lon = parseFloat(p.longitude);
+    const depth = parseFloat(p.depth) || 10;
+    
+    // イベント時刻のパース (USGSはISO 8601フォーマット)
+    const evtTime = new Date(p.eventtime).getTime();
+
+    // 15分以上前の古いデータは無視する
+    if (Date.now() - evtTime > 15 * 60 * 1000) return;
+
+    const isNew = !usgsActiveEvents.has(id);
+    usgsActiveEvents.set(id, { id, lat, lon, mag, depth, time: evtTime, title: p.title || `M ${mag.toFixed(1)} - USGS` });
+
+    if (isNew) {
+        // 新規検知時はピッと音を鳴らすだけ (読み上げやEEWパネルは出さない)
+        playPippiBeep();
+        
+        let mk = L.marker([lat, lon], {
+            icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [40, 40], iconAnchor: [20, 20]}),
+            pane: 'usgsMarkerPane'
+        }).addTo(usgsMap);
+        
+        usgsMarkers.set(id, mk);
+        if (!usgsWaveTimer) usgsWaveTimer = requestAnimationFrame(drawUsgsWaves);
+    } else {
+        // 更新時
+        let mk = usgsMarkers.get(id);
+        if (mk) mk.setLatLng([lat, lon]);
+    }
+
+    updateUsgsDetailPanel();
+}
+
+function updateUsgsDetailPanel() {
+    const ar = document.getElementById("usgsDetailScrollArea");
+    if (!ar) return;
+    
+    let html = "";
+    let sorted = Array.from(usgsActiveEvents.values()).sort((a,b) => b.time - a.time);
+    
+    if (sorted.length === 0) {
+        html = '<div class="info-text" style="text-align:center;padding-top:20px;">現在リアルタイムのデータはありません</div>';
+    } else {
+        sorted.forEach(eq => {
+            const dObj = new Date(eq.time);
+            const tStr = `${dObj.getFullYear()}/${(dObj.getMonth()+1).toString().padStart(2,'0')}/${dObj.getDate().toString().padStart(2,'0')} ${dObj.getHours().toString().padStart(2,'0')}:${dObj.getMinutes().toString().padStart(2,'0')}:${dObj.getSeconds().toString().padStart(2,'0')}`;
+            
+            html += `
+                <div style="border-bottom:1px solid #444; padding: 12px 16px;">
+                    <div style="font-size:13px; color:#CCC;">${tStr} 発生</div>
+                    <div style="font-size:17px; font-weight:700; color:#FFF; margin: 6px 0;">${eq.title}</div>
+                    <div style="font-size:14px; display:flex; gap: 8px;">
+                        <span class="tag" style="background:${magColor(eq.mag)}; color:${getContrastColor(magColor(eq.mag))}; padding:4px 8px; font-weight:bold;">M ${eq.mag.toFixed(1)}</span>
+                        <span class="tag" style="background:${depthColor(eq.depth)}; color:${getContrastColor(depthColor(eq.depth))}; padding:4px 8px; font-weight:bold;">深さ ${eq.depth.toFixed(1)}km</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    ar.innerHTML = html;
+}
+
+// 15分以上経過したUSGSイベントを削除
+setInterval(() => {
+    const now = Date.now();
+    let changed = false;
+    usgsActiveEvents.forEach((ev, id) => {
+        if(now - ev.time > 15 * 60 * 1000) {
+            usgsActiveEvents.delete(id);
+            if(usgsMarkers.has(id)) { 
+                usgsMap.removeLayer(usgsMarkers.get(id)); 
+                usgsMarkers.delete(id); 
+            }
+            changed = true;
+        }
+    });
+    if(changed) updateUsgsDetailPanel();
+}, 60000);
+
+let usgsWs = null;
+function connectUSGS() {
+    usgsWs = new WebSocket("wss://earthquake.usgs.gov/pdl/east/products/notifications/subscribe");
+    usgsWs.onopen = () => { addLog("📡 USGS API Connected"); };
+    usgsWs.onmessage = (e) => {
+        try {
+            const d = JSON.parse(e.data);
+            if (d.action === "product" && d.product && d.product.properties) {
+                const p = d.product.properties;
+                // originまたはphase-dataで、緯度経度・マグニチュードがあるものを抽出
+                if (p.magnitude && p.latitude && p.longitude && p.eventtime) {
+                    handleUsgsEarthquake(d.product);
+                }
+            }
+        } catch(err) {}
+    };
+    usgsWs.onclose = () => { addLog("📡 USGS API Disconnected"); setTimeout(connectUSGS, 5000); };
+}
+
+document.getElementById('usgsMapPanel').addEventListener('click', (e) => { 
+    if(e.target.id === 'usgsMapPanel' || e.target.closest('.axisHeader')) { 
+        toggleMapSwap(); 
     } 
-} 
+}); 
 
 const API_AREA_URL = "https://www.jma.go.jp/bosai/common/const/area.json";
 const API_FORECAST_BASE = "https://www.jma.go.jp/bosai/forecast/data/forecast/";
@@ -2568,7 +2723,10 @@ async function startApp(){
         const d=await fetchKyoshin(); if(d)drawKyoshin(d); 
         setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); 
         
-        initWeatherMap(); 
+        // 気象マップを廃止し、USGSマップを初期化
+        initUsgsMap(); 
+        connectUSGS();
+
         document.getElementById("startupScreen").style.display="none"; initAudio();
     }catch(e){ updateStartupStatus("初期化エラー: "+e.message); }
 } 
