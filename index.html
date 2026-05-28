@@ -146,7 +146,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 /* --- EEW詳細パネル (NHK風ニュースデザイン) --- */
 #eewContainer { 
     position: fixed; 
-    bottom: calc(var(--bottom-panel-height) + var(--ticker-height) + var(--sidebar-gap) * 2); 
+    bottom: calc(var(--ticker-height) + var(--sidebar-gap)); /* 全国天気 (ticker) の直上に配置 */
     left: 50%; 
     transform: translateX(-50%); 
     z-index: 10000; 
@@ -416,10 +416,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #eqUpdatePanel { position: fixed !important; top: 10vh !important; bottom: auto !important; left: 5vw !important; right: 5vw !important; width: 90vw !important; transform: none !important; }
     #eewPopup { position: fixed !important; top: 10px !important; left: 50% !important; transform: translateX(-50%) !important; right: auto !important; }
 }
-
 </style>
 </head>
-
 <body>
 <div id="startupScreen">
     <div id="startupContent">
@@ -693,6 +691,16 @@ function applyStyleOptimized(layerGroup, styleComputeFn) {
             layer._epicaLastStyleCode = styleCode;
         }
     });
+}
+
+// 県・地方名などを省略して短い名称にする関数
+function formatShortRegionName(name) {
+    if(!name) return "";
+    if(name === "北海道") return name;
+    // 「都」「府」「県」「地方」以降を削除（例: 岩手県内陸南部 -> 岩手, 関東地方 -> 関東）
+    let m = name.match(/^(.*?)(都|府|県|地方)/);
+    if (m) return m[1];
+    return name;
 }
 
 let continuousPippiTimer = null;
@@ -1037,21 +1045,17 @@ function getPolygonStyle(f) {
         if(userSettings.eewPrediction && eewPredictedStyles.has(fi)){
             let pd = eewPredictedStyles.get(fi); 
             pS = pd.shindo; 
-            iF = pd.isForecastTarget;
-            isWarnTarget = pd.isWarning;
         } 
         let rS = userSettings.eewRealtimePaint && eewRealtimeMaxLv.has(fi) ? lvToShindoStr(eewRealtimeMaxLv.get(fi)) : "0"; 
         let mS = fmt.intensityToNum(pS) > fmt.intensityToNum(rS) ? pS : rS; 
         
         if (mS !== "0" && mS !== "不明") {
             fillColor = scaleColor(mS);
-            fillOpacity = iF ? 0.9 : 0.7;
-        } else if (iF) {
-            fillColor = "transparent";
-            fillOpacity = 0;
+            fillOpacity = 0.7; // リアルタイムまたは予測震度に基づく塗りつぶし
         }
-        color = iF ? (isWarnTarget ? "#FF0000" : "#FFFF00") : MAP_BORDER_COLOR;
-        weight = iF ? 3.0 : MAP_BORDER_WEIGHT;
+        // EEWパネルで塗りつぶすため、メインマップでの黄色/赤の予測枠表示は廃止
+        color = MAP_BORDER_COLOR;
+        weight = MAP_BORDER_WEIGHT;
     } else {
         let hasColor = !(isRealtimeOnlyMode && !isEEWActive && !selectedHistoryQuake) && currentAreaColors[nm];
         if(hasColor) {
@@ -1067,7 +1071,6 @@ function getPolygonStyle(f) {
         fillOpacity: fillOpacity
     };
 }
-
 function sendPushNotification(title, options) { if(userSettings.pushNotify && "Notification" in window && Notification.permission==="granted"){ try{new Notification(title, options);}catch(e){} } }
 
 function getPushIconDataURL(text, bgColor, textColor) { 
@@ -1192,10 +1195,9 @@ function updateSubMapGeojsonStyles() {
     let style = getLandDefaultStyle();
     if (tsunamiSubGeojsonLayer) tsunamiSubGeojsonLayer.setStyle(style);
     eewMiniMaps.forEach(obj => {
-        if (obj.geo) obj.geo.setStyle(style);
-        obj.map.getContainer().style.setProperty('background', userSettings.mapOceanColor, 'important');
+        if (obj.map) obj.map.getContainer().style.setProperty('background', userSettings.mapOceanColor, 'important');
         if (userSettings.showMapTile) {
-            if (!obj.tile) obj.tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(obj.map);
+            if (!obj.tile && obj.map) obj.tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(obj.map);
         } else {
             if (obj.tile) { obj.tile.remove(); obj.tile = null; }
         }
@@ -1236,10 +1238,10 @@ document.getElementById('mapOceanColorPicker').value = userSettings.mapOceanColo
 document.getElementById('mapOceanColorPicker').addEventListener('input', e => { userSettings.mapOceanColor = e.target.value; saveSettings(); applyAppearance(); updateSubMapGeojsonStyles(); });
 
 document.getElementById('mapLandColorPicker').value = userSettings.mapLandColor;
-document.getElementById('mapLandColorPicker').addEventListener('input', e => { userSettings.mapLandColor = e.target.value; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); if(isEEWActive) updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); });
+document.getElementById('mapLandColorPicker').addEventListener('input', e => { userSettings.mapLandColor = e.target.value; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); });
 
 document.getElementById('chkMapLandTransparent').checked = userSettings.mapLandTransparent;
-document.getElementById('chkMapLandTransparent').addEventListener('change', e => { userSettings.mapLandTransparent = e.target.checked; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); if(isEEWActive) updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); });
+document.getElementById('chkMapLandTransparent').addEventListener('change', e => { userSettings.mapLandTransparent = e.target.checked; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); });
 
 document.getElementById('chkPushNotify').checked=userSettings.pushNotify; document.getElementById('chkPushNotify').addEventListener('change', async e=>{if(e.target.checked){if(!("Notification" in window)){alert("非対応"); e.target.checked=false;}else{const p=await Notification.requestPermission(); if(p!=="granted"){alert("拒否されました"); e.target.checked=false;}}} userSettings.pushNotify=e.target.checked; saveSettings();});
 
@@ -1727,7 +1729,7 @@ async function processXmlString(xt, typ, ovUrl=null){
             if(intEl){const mx=intEl.querySelector('Observation > MaxInt')?.textContent; if(mx)ht+=`<p><strong>最大震度:</strong> <span style="font-size:1.5em; color:#FF5555; font-weight:700;">${mx}</span></p>`; const pr=intEl.querySelectorAll('Pref'); if(pr.length){ht+=`<h4>各地の震度</h4><div class="p-data-list">`; pr.forEach(p=>{ht+=`<div style="margin-bottom:10px;"><strong>${p.querySelector('Name')?.textContent} (最大 ${p.querySelector('MaxInt')?.textContent})</strong><ul style="list-style:none; margin:6px 0 0 14px; padding:0;">`; p.querySelectorAll('Area').forEach(a=>ht+=`<li>・${a.querySelector('Name')?.textContent} (震度 ${a.querySelector('MaxInt')?.textContent})</li>`); ht+=`</ul></div>`;}); ht+=`</div>`;}} ht+=`</div>`;
         }
 
-if(!cFnd&&!eEl&&!intEl&&!hasW){const ga=Array.from(doc.querySelectorAll('Body > Area')); if(ga.length){ht+=`<div class="p-info-section"><h3>その他の情報</h3><table class="p-table"><tr><th>地域</th><th>詳細</th></tr>`; ga.slice(0,30).forEach(a=>ht+=`<tr><td>${a.querySelector('Name')?.textContent||"不明"}</td><td>${a.querySelector('MaxInt')?.textContent||a.querySelector('Kind > Name')?.textContent||"-"}</td></tr>`); ht+=`</table>`; if(ga.length>30)ht+=`<p><small>※他 ${ga.length-30} 件省略</small></p>`; ht+=`</div>`;}}
+        if(!cFnd&&!eEl&&!intEl&&!hasW){const ga=Array.from(doc.querySelectorAll('Body > Area')); if(ga.length){ht+=`<div class="p-info-section"><h3>その他の情報</h3><table class="p-table"><tr><th>地域</th><th>詳細</th></tr>`; ga.slice(0,30).forEach(a=>ht+=`<tr><td>${a.querySelector('Name')?.textContent||"不明"}</td><td>${a.querySelector('MaxInt')?.textContent||a.querySelector('Kind > Name')?.textContent||"-"}</td></tr>`); ht+=`</table>`; if(ga.length>30)ht+=`<p><small>※他 ${ga.length-30} 件省略</small></p>`; ht+=`</div>`;}}
         const cmts=bdy?.querySelector('Comments'); if(cmts){const ts=Array.from(cmts.querySelectorAll('Text')).map(t=>t.textContent); if(ts.length)ht+=`<div class="p-info-section" style="background:#0A0A0A; border-style:dashed;"><h4 style="margin-top:0;">📝 付加事項</h4><p style="margin:0; white-space:pre-wrap;">${ts.join('\n')}</p></div>`;}
         
         const entry = { html: ht, time: pTime, isMega: isMega };
@@ -2064,8 +2066,36 @@ function renderEewCards() {
     const eewArray = Array.from(activeEEWs.entries());
     if (currentEewDisplayIndex >= eewArray.length) currentEewDisplayIndex = 0;
     const [id, d] = eewArray[currentEewDisplayIndex];
-    let cd = document.getElementById(id); let isNew = false;
-    if (!cd) { cn.innerHTML = ""; cd = document.createElement("div"); cd.id = id; cn.appendChild(cd); isNew = true; }
+    let cd = document.getElementById(id); 
+    
+    // 地図コンテナを破壊しないように要素の存在チェックと作成
+    if (!cd) { 
+        cn.innerHTML = ""; // 他のカードをクリア
+        cd = document.createElement("div"); 
+        cd.id = id; 
+        cn.appendChild(cd); 
+        
+        cd.innerHTML = `
+            <div style="display:flex; flex-direction:column; width:100%;">
+                <div class="nhk-eew-header" id="eewHeader_${id}"></div>
+                <div style="display:flex; flex:1; flex-direction:row;">
+                    <div class="nhk-eew-left" id="eewMiniMap_${id}"></div>
+                    <div class="nhk-eew-right">
+                        <div id="eewSubtext_${id}" style="background:#3B63A8; color:#FFFF00; padding:12px 20px; font-size:26px; font-weight:bold; border-bottom:2px solid #FFF;">
+                        </div>
+                        <div class="nhk-eew-body">
+                            <div class="nhk-eew-areas" id="eewAreas_${id}"></div>
+                            <div class="nhk-eew-details">
+                                <span id="eewSerial_${id}"></span>
+                                <span id="eewMaxInt_${id}" style="color:#FF9900;"></span>
+                                <span id="eewMag_${id}"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
     cd.className = "nhk-eew-card active" + (d.isCancel ? " cancel" : (d.isWarn ? " warning" : ""));
     const ms = d.MaxIntensity || "0"; 
@@ -2075,36 +2105,22 @@ function renderEewCards() {
     if (d.isCancel) subText = `<span style="color:#CCC;">${subText}</span>`;
     
     let ah = "";
-    if (d.Forecast?.length && !d.isCancel) ah = d.Forecast.map(f => f.Name).join("　");
-    else if (d.WarnArea?.Chiiki && !d.isCancel) ah = d.WarnArea.Chiiki.replace(/、/g, "　");
+    if (d.Forecast?.length && !d.isCancel) {
+        ah = d.Forecast.map(f => formatShortRegionName(f.Name)).join("　");
+    } else if (d.WarnArea?.Chiiki && !d.isCancel) {
+        ah = d.WarnArea.Chiiki.split("、").map(formatShortRegionName).join("　");
+    }
 
     const mapId = `eewMiniMap_${id}`;
     let th = ""; if (d.isTraining) th += `[訓練] `; if (d.isAssumption) th += `[PLUM法] `;
 
-    const infoHtml = `
-        <div style="display:flex; flex-direction:column; width:100%;">
-            <div class="nhk-eew-header">${th}${headerText}</div>
-            <div style="display:flex; flex:1; flex-direction:row;">
-                <div class="nhk-eew-left" id="${mapId}"></div>
-                <div class="nhk-eew-right">
-                    <div style="background:#3B63A8; color:#FFFF00; padding:12px 20px; font-size:26px; font-weight:bold; border-bottom:2px solid #FFF;">
-                        ${subText}
-                    </div>
-                    <div class="nhk-eew-body">
-                        <div class="nhk-eew-areas">${ah}</div>
-                        <div class="nhk-eew-details">
-                            <span>第${d.Serial}${d.isFinal?'(最終)':''}報</span>
-                            <span style="color:#FF9900;">予測最大震度: ${ms}</span>
-                            <span>M ${d.Magunitude !== undefined ? d.Magunitude : "-.-"}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    if (isNew) { cd.innerHTML = infoHtml; } 
-    else { cd.innerHTML = infoHtml; }
+    // 情報をテキスト要素に挿入
+    document.getElementById(`eewHeader_${id}`).innerHTML = `${th}${headerText}`;
+    document.getElementById(`eewSubtext_${id}`).innerHTML = subText;
+    document.getElementById(`eewAreas_${id}`).innerHTML = ah;
+    document.getElementById(`eewSerial_${id}`).innerText = `第${d.Serial}${d.isFinal?'(最終)':''}報`;
+    document.getElementById(`eewMaxInt_${id}`).innerText = `予測最大震度: ${ms}`;
+    document.getElementById(`eewMag_${id}`).innerText = `M ${d.Magunitude !== undefined ? d.Magunitude : "-.-"}`;
 
     setTimeout(() => {
         const eL = parseFloat(d.Latitude); const eO = parseFloat(d.Longitude);
@@ -2112,12 +2128,48 @@ function renderEewCards() {
             let m = L.map(mapId, { preferCanvas: true, zoomControl: false, attributionControl: false, dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false }).setView([eL || 35, eO || 135], 6);
             m.getContainer().style.setProperty('background', userSettings.mapOceanColor, 'important');
             let tileLayer = null; if (userSettings.showMapTile !== false) tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(m);
-            let geoLayer = null; if (prefData) geoLayer = L.geoJSON(prefData, { style: () => getLandDefaultStyle(), interactive: false }).addTo(m);
+            let geoLayer = null; 
+            if (prefData) {
+                geoLayer = L.geoJSON(prefData, { 
+                    style: (f) => {
+                        let nm = f.properties._epica_name;
+                        let isTarget = false;
+                        if (d.Forecast && d.Forecast.some(fc => nm.includes(formatShortRegionName(fc.Name)) || fc.Name.includes(nm))) isTarget = true;
+                        if (d.WarnArea && d.WarnArea.Chiiki && d.WarnArea.Chiiki.includes(nm)) isTarget = true;
+                        
+                        return {
+                            color: isTarget ? "#FFFF00" : MAP_BORDER_COLOR,
+                            weight: isTarget ? 2.0 : 1.0,
+                            fillColor: isTarget ? "#FFFF00" : userSettings.mapLandColor,
+                            fillOpacity: isTarget ? 0.8 : 0.5
+                        };
+                    }, 
+                    interactive: false 
+                }).addTo(m);
+            }
             let mk = null; if(eL && eO) mk = L.marker([eL, eO], { icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [40, 40], iconAnchor: [20, 20]}) }).addTo(m);
             eewMiniMaps.set(id, { map: m, marker: mk, tile: tileLayer, geo: geoLayer }); setTimeout(() => m.invalidateSize(), 100);
         } else {
             let obj = eewMiniMaps.get(id); let m = obj.map; let mk = obj.marker;
-            if(eL && eO) { m.setView([eL, eO], 6); if (!mk) { mk = L.marker([eL, eO], { icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [40, 40], iconAnchor: [20, 20]}) }).addTo(m); obj.marker = mk; } else { mk.setLatLng([eL, eO]); } }
+            if(eL && eO) { 
+                m.setView([eL, eO], 6); 
+                if (!mk) { mk = L.marker([eL, eO], { icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [40, 40], iconAnchor: [20, 20]}) }).addTo(m); obj.marker = mk; } else { mk.setLatLng([eL, eO]); } 
+            }
+            if (obj.geo) {
+                obj.geo.setStyle((f) => {
+                    let nm = f.properties._epica_name;
+                    let isTarget = false;
+                    if (d.Forecast && d.Forecast.some(fc => nm.includes(formatShortRegionName(fc.Name)) || fc.Name.includes(nm))) isTarget = true;
+                    if (d.WarnArea && d.WarnArea.Chiiki && d.WarnArea.Chiiki.includes(nm)) isTarget = true;
+                    
+                    return {
+                        color: isTarget ? "#FFFF00" : MAP_BORDER_COLOR,
+                        weight: isTarget ? 2.0 : 1.0,
+                        fillColor: isTarget ? "#FFFF00" : userSettings.mapLandColor,
+                        fillOpacity: isTarget ? 0.8 : 0.5
+                    };
+                });
+            }
             m.invalidateSize();
         }
     }, 50);
@@ -2196,9 +2248,15 @@ async function updateWolfxEEW(d){
             let hwA=false;
             if(geojsonLayer&&prefData?.features){
                 const pms=prefData.features.map(async (f,idx)=>{
-                    const pN=f.properties._epica_name, pt=f.properties._epica_center, fI=f.id||pN||`feat_${idx}`; let mSN=0, mSR="0", iFT=false, isWarnTarget = false;
-                    for(let [eI,ew] of activeEEWs.entries()){if(ew.Forecast&&ew.Forecast.some(fc=>pN.includes(fc.Name)||fc.Name.includes(pN))){ iFT=true; if(ew.isWarn) isWarnTarget=true; } const wL=parseFloat(ew.Latitude), wO=parseFloat(ew.Longitude), wM=parseFloat(ew.Magunitude), wD=parseInt(ew.Depth), wMS=ew.MaxIntensity||"0"; if(wL&&wO){const cO=eewOffsets.get(eI)||0, rS=await calcPredictedIntensity(wM,wD,wL,wO,pt.lat,pt.lng,pN,cO,fI), lS=limitIntensity(rS,wMS), nm=fmt.intensityToNum(lS); if(nm>mSN){mSN=nm; mSR=lS;}}}
-                    if(iFT&&mSN<4){mSR="4"; mSN=4;} eewPredictedStyles.set(fI,{shindo:mSR,isForecastTarget:iFT,isWarning:isWarnTarget}); if(mSN>=1)hwA=true; return null;
+                    const pN=f.properties._epica_name, pt=f.properties._epica_center, fI=f.id||pN||`feat_${idx}`; let mSN=0, mSR="0";
+                    for(let [eI,ew] of activeEEWs.entries()){
+                        const wL=parseFloat(ew.Latitude), wO=parseFloat(ew.Longitude), wM=parseFloat(ew.Magunitude), wD=parseInt(ew.Depth), wMS=ew.MaxIntensity||"0"; 
+                        if(wL&&wO){
+                            const cO=eewOffsets.get(eI)||0, rS=await calcPredictedIntensity(wM,wD,wL,wO,pt.lat,pt.lng,pN,cO,fI), lS=limitIntensity(rS,wMS), nm=fmt.intensityToNum(lS); 
+                            if(nm>mSN){mSN=nm; mSR=lS;}
+                        }
+                    }
+                    eewPredictedStyles.set(fI,{shindo:mSR}); if(mSN>=1)hwA=true; return null;
                 }); await Promise.all(pms); updateEewGeojsonStyles();
             } if(activeEEWs.size===1){
                 let zoomLvl = 8; const m = parseFloat(d.Magunitude);
@@ -2541,14 +2599,12 @@ function initTsunamiSubMap() {
 
 let usgsMap = null;
 let usgsBaseTileLayer = null;
-let usgsGeojsonLayer = null;
 let usgsActiveEvents = new Map();
 let usgsMarkers = new Map();
 let usgsWaveTimer = null;
 let lastUsgsWaveDrawTime = 0;
 let lastUsgsWsMessageTime = 0;
 let usgsWs = null;
-let usgsWaveAnimStartTime = 0;
 
 function initUsgsMap() {
     usgsMap = L.map('usgsMapInner', { zoomControl: true, attributionControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true }).setView([37.5, 137], userSettings.usgsMapZoom || 2);
@@ -2605,9 +2661,13 @@ function drawUsgsWaves(timestamp) {
     
     const nt = Date.now();
     usgsActiveEvents.forEach(d => {
-        const el = (nt - usgsWaveAnimStartTime) / 1000;
-        if (el < 0 || el > 600) return; 
+        // d.time (地震の発生時刻) と現在時刻 (nt) との差から経過秒数を計算
+        const el = (nt - d.time) / 1000;
         
+        // 発生時刻が未来（誤差など）または、1時間(3600秒)以上経過した波紋は描画しない
+        if (el < 0 || el > 3600) return; 
+        
+        // 簡易的な波の速度計算 (P波: 8km/s, S波: 4km/s)
         const pD = el * 8.0, sD = el * 4.0, dp = d.depth; 
         const pR = pD > dp ? Math.sqrt(pD * pD - dp * dp) : 0;
         const sR = sD > dp ? Math.sqrt(sD * sD - dp * dp) : 0;
@@ -2651,7 +2711,6 @@ function handleUsgsEarthquake(prod) {
         
         usgsMarkers.set(id, mk);
 
-        // マップの自動移動（一旦ズームアウトしてズームイン）
         if (usgsMap) {
             usgsMap.flyTo([lat, lon], Math.max(1, (userSettings.usgsMapZoom || 2) - 2), {duration: 1.0});
             setTimeout(() => {
@@ -2659,12 +2718,10 @@ function handleUsgsEarthquake(prod) {
             }, 1200);
         }
 
-        usgsWaveAnimStartTime = Date.now();
         lastUsgsWaveDrawTime = 0;
         if (!usgsWaveTimer) usgsWaveTimer = requestAnimationFrame(drawUsgsWaves);
 
     } else {
-        // 更新時
         usgsActiveEvents.set(id, { id, lat, lon, mag, depth, time: evtTime, title: p.title || `M ${mag.toFixed(1)} - USGS` });
         let mk = usgsMarkers.get(id);
         if (mk) mk.setLatLng([lat, lon]);
