@@ -28,7 +28,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #startupScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050505; z-index: 20000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
 #startupContent { text-align: center; }
 
-/* --- 起動時アニメーション (サイバー複雑化) --- */
+/* --- 起動時アニメーション --- */
 .loader { position: relative; width: 140px; height: 140px; margin: 0 auto 40px auto; }
 .loader::before, .loader::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 3px solid rgba(0, 191, 255, 0.4); box-shadow: 0 0 25px rgba(0, 191, 255, 0.8), inset 0 0 15px rgba(0, 191, 255, 0.6); animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
 .loader::after { animation-delay: 1.25s; border-color: rgba(0, 255, 255, 0.5); }
@@ -143,22 +143,96 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .qName{ font-size: 20px; font-weight:700; word-wrap: break-word; }
 .lpgm-badge { display: inline-flex; align-items: center; justify-content: center; background: #FF6600; border: 1px solid #000; color: #000; font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 2px; margin-left: 10px; vertical-align: middle; }
 
-/* --- EEW詳細パネル --- */
-#eewContainer { position: fixed; bottom: calc(var(--ticker-height) + var(--sidebar-gap)); left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: row; gap: 20px; pointer-events: none; flex-wrap: wrap; justify-content: center; max-width: 95vw; }
+/* --- EEW詳細パネル (NHK風ニュースデザイン) --- */
+#eewContainer { 
+    position: fixed; 
+    bottom: calc(var(--bottom-panel-height) + var(--ticker-height) + var(--sidebar-gap) * 2); 
+    left: 50%; 
+    transform: translateX(-50%); 
+    z-index: 10000; 
+    display: flex; 
+    flex-direction: row; 
+    gap: 20px; 
+    pointer-events: none; 
+    flex-wrap: wrap; 
+    justify-content: center; 
+    max-width: 95vw; 
+}
 #eewPopup { position:fixed; top:12px; right:var(--center-offset); left:auto; transform:none; background: #FF0000; color:#FFFF00; border: 4px solid #FFFF00; padding: 14px 30px; font-size: clamp(20px, 2vw, 32px); font-weight: 700; display:none; z-index:9999; box-shadow: 4px 4px 0 #000; letter-spacing: 0.1em; white-space: nowrap; }
-.eewCard { display: none; width: clamp(300px, 40vw, 450px); background: rgba(10, 10, 10, 0.98); border: 4px solid #FF9900; pointer-events: auto; box-shadow: 0 12px 35px rgba(0,0,0,0.8); color: #fff; padding: 20px; flex-direction: column; border-radius: 4px; }
-.eewCard.active { display: flex; }
-.eewCard.warning { border-color: #FF0000; animation: eewBlinkNHK 1s infinite alternate; }
-@keyframes eewBlinkNHK { from { border-color: #FF0000; } to { border-color: #FF6666; } }
-.eewCard.cancel { border-color: #666; background: #111; animation: none; }
-.eewHeader { font-size: 18px; font-weight: 700; border-bottom: 2px solid #555; margin-bottom: 14px; padding-bottom: 10px; color: #FFFF00; }
-.eewBody { display: flex; align-items: center; gap: 20px; margin-bottom: 14px; }
-.eewScaleBox { width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; border: 2px solid #fff; font-size: 42px; border-radius: 4px; }
-.eewEpicenter { font-size: 24px; font-weight: 700; line-height: 1.3; color: #fff; margin-bottom: 8px; }
-.eewSubInfo { font-size: clamp(14px, 1.5vw, 18px); font-weight: 700; display: flex; gap: 10px; color: #CCC; flex-wrap: wrap;}
-.eewAreas { font-size: 16px; color: #FFF; font-weight: 700; background: #333; padding: 12px; border-left: 4px solid #FF0000; line-height: 1.5; max-height: 100px; overflow-y: auto; }
-.eew-info-container { display: flex; flex-direction: column; width: 100%; }
-.eew-mini-map { width: 100%; height: 180px; background: #050505; border: 2px solid #444; margin-top: 14px; }
+
+.nhk-eew-card {
+    display: none;
+    flex-direction: row;
+    background: #3B63A8;
+    border: 4px solid #FFFFFF;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    width: clamp(600px, 80vw, 900px);
+    border-radius: 4px;
+    overflow: hidden;
+    pointer-events: auto;
+}
+.nhk-eew-card.active { display: flex; }
+.nhk-eew-card.warning .nhk-eew-header { background: #D33838; }
+.nhk-eew-card.cancel { filter: grayscale(80%); }
+
+.nhk-eew-left {
+    width: 35%;
+    background: #000;
+    border-right: 4px solid #FFF;
+    position: relative;
+    min-height: 250px;
+}
+.nhk-eew-right {
+    width: 65%;
+    display: flex;
+    flex-direction: column;
+}
+.nhk-eew-header {
+    background: #4B78CC; /* デフォルト青、警報時は赤に上書き */
+    color: #FFF;
+    font-size: 28px;
+    font-weight: 900;
+    text-align: center;
+    padding: 10px 0;
+    border-bottom: 2px solid #FFF;
+    box-shadow: inset 0 3px 0 rgba(255,255,255,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    letter-spacing: 0.1em;
+}
+.nhk-eew-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex: 1;
+}
+.nhk-eew-warning-text {
+    color: #FFFF00;
+    font-size: 26px;
+    font-weight: 900;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+.nhk-eew-areas {
+    color: #FFF;
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1.4;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.nhk-eew-details {
+    margin-top: auto;
+    font-size: 20px;
+    color: #FFF;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px dashed rgba(255,255,255,0.5);
+    padding-top: 10px;
+}
+.eew-mini-map { width: 100%; height: 100%; position: absolute; top:0; left:0; background: #050505; }
 
 /* --- コメント --- */
 #commentPanel { height: clamp(120px, 15vh, 160px); border-top: 8px solid #00FFFF; }
@@ -329,7 +403,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     /* 内部レイアウトの微調整 */
     .latestWrap { flex-direction: column; align-items: center; text-align: center; }
     .latestLeft { align-items: center; }
-    .eewCard { width: 95vw !important; }
+    .nhk-eew-card { width: 95vw !important; flex-direction: column !important; }
+    .nhk-eew-left, .nhk-eew-right { width: 100% !important; }
     
     #displayModeWrap { bottom: 10px; max-width: 95vw; flex-wrap: wrap; }
     .modeBtn { padding: 8px 10px; font-size: 12px; }
@@ -1050,7 +1125,6 @@ function toggleMapSwap() {
         leafletWrap.classList.add('sidebar-map-mode');
         uiElements.forEach(el => { if(el) usgsMapPanel.appendChild(el); });
         
-        // 複数マーカーがあればすべて収まるようにする
         setTimeout(() => { 
             if(usgsMap) {
                 const markers = Array.from(usgsMarkers.values());
@@ -1099,9 +1173,6 @@ function applyAppearance() {
     const mapEl = document.getElementById('leafletMap'); if(mapEl) mapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
     const animMapEl = document.getElementById('tsunamiSubMap'); if(animMapEl) animMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
     
-    // USGSマップはOSM固定なので背景色反映は除外する
-    // const usgsMapEl = document.getElementById('usgsMapInner'); if(usgsMapEl) usgsMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
-
     let st = document.getElementById('dynamicAppearance'); if(!st){st=document.createElement('style'); st.id='dynamicAppearance'; document.head.appendChild(st);}
     st.innerHTML = `
         .latestTitle { font-size: calc(26px * ${userSettings.fsLatest / 100}) !important; }
@@ -1148,7 +1219,6 @@ document.getElementById('chkShowMapTile').addEventListener('change', e => {
     if(userSettings.showMapTile) {
         baseTileLayer.addTo(lMap);
         if(tsubMap) animBaseTileLayer.addTo(tsubMap);
-        // USGSマップはOSM固定なのでここでの操作は除外
     } else {
         baseTileLayer.remove();
         if(tsubMap) animBaseTileLayer.remove();
@@ -1997,31 +2067,44 @@ function renderEewCards() {
     let cd = document.getElementById(id); let isNew = false;
     if (!cd) { cn.innerHTML = ""; cd = document.createElement("div"); cd.id = id; cn.appendChild(cd); isNew = true; }
 
-    cd.className = "eewCard active" + (d.isCancel ? " cancel" : (d.isWarn ? " warning" : ""));
-    const ms = d.MaxIntensity || "0"; const sc = scaleColor(ms); const stc = getContrastColor(sc); const efs = ms.length > 1 ? (ms === "不明" ? "22px" : "42px") : "52px";
-    let th = ""; if (d.isTraining) th += `<span class="tag" style="background:#a855f7;color:#fff;">訓練</span>`; if (d.isAssumption) th += `<span class="tag" style="background:#3b82f6;color:#fff;">PLUM法</span>`;
+    cd.className = "nhk-eew-card active" + (d.isCancel ? " cancel" : (d.isWarn ? " warning" : ""));
+    const ms = d.MaxIntensity || "0"; 
+    
+    let headerText = d.isCancel ? "緊急地震速報 (取消)" : (d.isWarn ? "緊急地震速報 (気象庁)" : "緊急地震速報 (予報)");
+    let subText = d.isCancel ? "先ほどの緊急地震速報は取り消されました" : `${d.Hypocenter}で地震　強い揺れに警戒`;
+    if (d.isCancel) subText = `<span style="color:#CCC;">${subText}</span>`;
     
     let ah = "";
-    if (d.Forecast?.length && !d.isCancel) ah = `<div class="eewAreas">【予測地域】<br>${d.Forecast.map(f => f.Name).join("、")}</div>`;
-    else if (d.WarnArea?.Chiiki && !d.isCancel) ah = `<div class="eewAreas">【予測地域】<br>${d.WarnArea.Chiiki}</div>`;
+    if (d.Forecast?.length && !d.isCancel) ah = d.Forecast.map(f => f.Name).join("　");
+    else if (d.WarnArea?.Chiiki && !d.isCancel) ah = d.WarnArea.Chiiki.replace(/、/g, "　");
 
     const mapId = `eewMiniMap_${id}`;
-    const mC = magColor(d.Magunitude), dC = depthColor(d.Depth), mCTc = getContrastColor(mC), dCTc = getContrastColor(dC);
-    const lpgmLv = calcLPGM(d.Magunitude, d.Depth);
-    let lpgmHtml = lpgmLv > 0 ? `<span class="tag" style="background:#FF6600;color:#000; font-weight:900; font-size:15px; border:none; padding:5px 10px;">予測長周期階級 <span style="font-size:1.4em;">${lpgmLv}</span></span>` : "";
-    let eewSub = d.isCancel ? `<div class="eewEpicenter" style="color:#aaa; font-size:20px;">この緊急地震速報は取り消されました</div>` : `<div class="eewEpicenter">${d.Hypocenter}</div><div class="eewSubInfo"><span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:15px; border:none; padding:5px 10px;">M ${formatMagLarge(d.Magunitude)}</span><span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:15px; border:none; padding:5px 10px;">${formatDepthLarge(d.Depth)}</span>${lpgmHtml}</div>`;
+    let th = ""; if (d.isTraining) th += `[訓練] `; if (d.isAssumption) th += `[PLUM法] `;
 
     const infoHtml = `
-        <div class="eewHeader"><span style="display:flex;align-items:center;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</span></div>
-        <div class="eewBody">
-            <div class="eewScaleBox" style="background:${sc};color:${stc};border:3px solid ${sc};font-size:${efs};">${ms}</div>
-            <div class="eewInfoBox">${eewSub}</div>
+        <div style="display:flex; flex-direction:column; width:100%;">
+            <div class="nhk-eew-header">${th}${headerText}</div>
+            <div style="display:flex; flex:1; flex-direction:row;">
+                <div class="nhk-eew-left" id="${mapId}"></div>
+                <div class="nhk-eew-right">
+                    <div style="background:#3B63A8; color:#FFFF00; padding:12px 20px; font-size:26px; font-weight:bold; border-bottom:2px solid #FFF;">
+                        ${subText}
+                    </div>
+                    <div class="nhk-eew-body">
+                        <div class="nhk-eew-areas">${ah}</div>
+                        <div class="nhk-eew-details">
+                            <span>第${d.Serial}${d.isFinal?'(最終)':''}報</span>
+                            <span style="color:#FF9900;">予測最大震度: ${ms}</span>
+                            <span>M ${d.Magunitude !== undefined ? d.Magunitude : "-.-"}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        ${ah}
     `;
 
-    if (isNew) { cd.innerHTML = `<div class="eew-info-container">${infoHtml}</div><div id="${mapId}" class="eew-mini-map"></div>`; } 
-    else { let infoContainer = cd.querySelector('.eew-info-container'); if(infoContainer) infoContainer.innerHTML = infoHtml; }
+    if (isNew) { cd.innerHTML = infoHtml; } 
+    else { cd.innerHTML = infoHtml; }
 
     setTimeout(() => {
         const eL = parseFloat(d.Latitude); const eO = parseFloat(d.Longitude);
@@ -2465,6 +2548,7 @@ let usgsWaveTimer = null;
 let lastUsgsWaveDrawTime = 0;
 let lastUsgsWsMessageTime = 0;
 let usgsWs = null;
+let usgsWaveAnimStartTime = 0;
 
 function initUsgsMap() {
     usgsMap = L.map('usgsMapInner', { zoomControl: true, attributionControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true }).setView([37.5, 137], userSettings.usgsMapZoom || 2);
@@ -2479,11 +2563,7 @@ function initUsgsMap() {
     usgsMap.createPane('usgsWavePane'); usgsMap.getPane('usgsWavePane').style.zIndex = 460; usgsMap.getPane('usgsWavePane').style.pointerEvents = 'none';
     usgsMap.createPane('usgsMarkerPane'); usgsMap.getPane('usgsMarkerPane').style.zIndex = 650; usgsMap.getPane('usgsMarkerPane').style.pointerEvents = 'none';
 
-    // GeoJSON (saibun.geojson) の読み込みを除外する要件のため、
-    // if(prefData) { usgsGeojsonLayer = L.geoJSON(prefData, ...).addTo(usgsMap); } は削除しました
     usgsMap.on('click', () => { toggleMapSwap(); });
-
-    // 波紋描画用レイヤー追加
     usgsMap.addLayer(new UsgsWaveLayer());
 }
 
@@ -2525,11 +2605,9 @@ function drawUsgsWaves(timestamp) {
     
     const nt = Date.now();
     usgsActiveEvents.forEach(d => {
-        const el = (nt - d.time) / 1000;
-        // 発生から10分(600秒)を超えたら描画しない
+        const el = (nt - usgsWaveAnimStartTime) / 1000;
         if (el < 0 || el > 600) return; 
         
-        // グローバルな概算P波/S波速度(km/s)
         const pD = el * 8.0, sD = el * 4.0, dp = d.depth; 
         const pR = pD > dp ? Math.sqrt(pD * pD - dp * dp) : 0;
         const sR = sD > dp ? Math.sqrt(sD * sD - dp * dp) : 0;
@@ -2554,17 +2632,16 @@ function handleUsgsEarthquake(prod) {
     const lon = parseFloat(p.longitude || p.lon);
     const depth = parseFloat(p.depth) || 10;
     
-    // イベント時刻のパース (USGSはISO 8601フォーマット)
     const evtTime = new Date(p.eventtime || p.time).getTime();
 
-    // 15分以上前の古いデータは無視する
-    if (Date.now() - evtTime > 15 * 60 * 1000) return;
-
     const isNew = !usgsActiveEvents.has(id);
-    usgsActiveEvents.set(id, { id, lat, lon, mag, depth, time: evtTime, title: p.title || `M ${mag.toFixed(1)} - USGS` });
-
     if (isNew) {
-        // 新規検知時はピッと音を鳴らすだけ
+        // 新規受信時にマップ上の古い情報をリセットして最新のみを残す
+        usgsActiveEvents.clear();
+        usgsMarkers.forEach(mk => usgsMap.removeLayer(mk));
+        usgsMarkers.clear();
+
+        usgsActiveEvents.set(id, { id, lat, lon, mag, depth, time: evtTime, title: p.title || `M ${mag.toFixed(1)} - USGS` });
         playPippiBeep();
         
         let mk = L.marker([lat, lon], {
@@ -2573,22 +2650,25 @@ function handleUsgsEarthquake(prod) {
         }).addTo(usgsMap);
         
         usgsMarkers.set(id, mk);
+
+        // マップの自動移動（一旦ズームアウトしてズームイン）
+        if (usgsMap) {
+            usgsMap.flyTo([lat, lon], Math.max(1, (userSettings.usgsMapZoom || 2) - 2), {duration: 1.0});
+            setTimeout(() => {
+                usgsMap.flyTo([lat, lon], userSettings.usgsMapZoom || 2, {duration: 1.5});
+            }, 1200);
+        }
+
+        usgsWaveAnimStartTime = Date.now();
+        lastUsgsWaveDrawTime = 0;
         if (!usgsWaveTimer) usgsWaveTimer = requestAnimationFrame(drawUsgsWaves);
+
     } else {
         // 更新時
+        usgsActiveEvents.set(id, { id, lat, lon, mag, depth, time: evtTime, title: p.title || `M ${mag.toFixed(1)} - USGS` });
         let mk = usgsMarkers.get(id);
         if (mk) mk.setLatLng([lat, lon]);
-    }
-
-    // 複数震源位置がある場合はすべてマップ内に収まるように調整、1つの場合は自動ズーム移動
-    if (usgsMap && usgsMarkers.size > 0) {
-        const markers = Array.from(usgsMarkers.values());
-        if (markers.length > 1) {
-            const group = new L.featureGroup(markers);
-            usgsMap.fitBounds(group.getBounds(), { padding: [50, 50], maxZoom: 6 });
-        } else if (markers.length === 1) {
-            usgsMap.setView([lat, lon], userSettings.usgsMapZoom || 2);
-        }
+        usgsMap.flyTo([lat, lon], userSettings.usgsMapZoom || 2, {duration: 1.0});
     }
 
     updateUsgsDetailPanel();
@@ -2623,23 +2703,6 @@ function updateUsgsDetailPanel() {
     ar.innerHTML = html;
 }
 
-// 15分以上経過したUSGSイベントを削除
-setInterval(() => {
-    const now = Date.now();
-    let changed = false;
-    usgsActiveEvents.forEach((ev, id) => {
-        if(now - ev.time > 15 * 60 * 1000) {
-            usgsActiveEvents.delete(id);
-            if(usgsMarkers.has(id)) { 
-                usgsMap.removeLayer(usgsMarkers.get(id)); 
-                usgsMarkers.delete(id); 
-            }
-            changed = true;
-        }
-    });
-    if(changed) updateUsgsDetailPanel();
-}, 60000);
-
 function connectUSGS() {
     usgsWs = new WebSocket("wss://earthquake.usgs.gov/pdl/east/products/notifications/subscribe");
     usgsWs.onopen = () => { addLog("📡 USGS API Connected"); };
@@ -2649,7 +2712,6 @@ function connectUSGS() {
             const d = JSON.parse(e.data);
             if (d.action === "product" && d.product && d.product.properties) {
                 const p = d.product.properties;
-                // originまたはphase-dataで、緯度経度・マグニチュードがあるものを抽出
                 if (p.magnitude && p.latitude && p.longitude && p.eventtime) {
                     handleUsgsEarthquake(d.product);
                 }
@@ -2659,9 +2721,7 @@ function connectUSGS() {
     usgsWs.onclose = () => { addLog("📡 USGS API Disconnected"); setTimeout(connectUSGS, 5000); };
 }
 
-// WebSocket受信がない場合に、USGS REST APIを利用して補完するポーリング関数
 async function pollUsgsApi() {
-    // WebSocket経由での受信が2分以上ない場合にAPIポーリングを実行
     if (Date.now() - lastUsgsWsMessageTime < 120000) return;
     try {
         const rs = await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson");
@@ -2672,7 +2732,6 @@ async function pollUsgsApi() {
                 if (f.properties && f.geometry) {
                     const p = f.properties;
                     const evtTime = p.time;
-                    // 15分以上前のデータは無視
                     if (Date.now() - evtTime > 15 * 60 * 1000) return;
                     const prod = {
                         source: "api_",
@@ -2692,7 +2751,6 @@ async function pollUsgsApi() {
         }
     } catch(e) {}
 }
-// APIポーリングを1分間隔で実行
 setInterval(pollUsgsApi, 60000);
 
 document.getElementById('usgsMapPanel').addEventListener('click', (e) => { 
@@ -2794,7 +2852,6 @@ async function startApp(){
         
         initUsgsMap(); 
         connectUSGS();
-        // 初回起動時にもAPIをポーリングして直近データを取得
         pollUsgsApi();
 
         document.getElementById("startupScreen").style.display="none"; initAudio();
