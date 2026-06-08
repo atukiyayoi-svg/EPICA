@@ -29,49 +29,10 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #startupContent { text-align: center; }
 
 /* --- 起動時アニメーション (サイバークールデザインに一新) --- */
-.loader {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 40px auto;
-    position: relative;
-}
-.loader-inner {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    border-top-color: #00BFFF;
-    border-bottom-color: #00BFFF;
-    animation: spin-cyber 1.5s ease-in-out infinite;
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.4);
-}
-.loader-inner-reverse {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    width: calc(100% - 30px);
-    height: calc(100% - 30px);
-    border-radius: 50%;
-    border: 3px solid transparent;
-    border-left-color: #00FFFF;
-    border-right-color: #00FFFF;
-    animation: spin-cyber-reverse 1s linear infinite;
-}
-.loader-core {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 12px;
-    height: 12px;
-    background: #00FFFF;
-    border-radius: 50%;
-    box-shadow: 0 0 15px #00FFFF;
-    animation: pulse-core 1.2s ease-in-out infinite alternate;
-}
+.loader { width: 80px; height: 80px; margin: 0 auto 40px auto; position: relative; }
+.loader-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; border: 3px solid transparent; border-top-color: #00BFFF; border-bottom-color: #00BFFF; animation: spin-cyber 1.5s ease-in-out infinite; box-shadow: 0 0 20px rgba(0, 191, 255, 0.4); }
+.loader-inner-reverse { position: absolute; top: 15px; left: 15px; width: calc(100% - 30px); height: calc(100% - 30px); border-radius: 50%; border: 3px solid transparent; border-left-color: #00FFFF; border-right-color: #00FFFF; animation: spin-cyber-reverse 1s linear infinite; }
+.loader-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 12px; height: 12px; background: #00FFFF; border-radius: 50%; box-shadow: 0 0 15px #00FFFF; animation: pulse-core 1.2s ease-in-out infinite alternate; }
 @keyframes spin-cyber { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes spin-cyber-reverse { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
 @keyframes pulse-core { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.7; } 100% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; } }
@@ -209,20 +170,10 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .nhk-eew-card.warning .nhk-eew-header { background: #D33838; }
 .nhk-eew-card.cancel { filter: grayscale(80%); }
 
-.nhk-eew-left {
-    width: 35%;
-    background: #000;
-    border-right: 4px solid #FFF;
-    position: relative;
-    min-height: 250px;
-}
-.nhk-eew-right {
-    width: 65%;
-    display: flex;
-    flex-direction: column;
-}
+.nhk-eew-left { width: 35%; background: #000; border-right: 4px solid #FFF; position: relative; min-height: 250px; }
+.nhk-eew-right { width: 65%; display: flex; flex-direction: column; }
 .nhk-eew-header {
-    background: #4B78CC; /* デフォルト青、警報時は赤に上書き */
+    background: #4B78CC;
     color: #FFF;
     font-size: 28px;
     font-weight: 900;
@@ -233,39 +184,10 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     letter-spacing: 0.1em;
 }
-.nhk-eew-body {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    flex: 1;
-}
-.nhk-eew-warning-text {
-    color: #FFFF00;
-    font-size: 26px;
-    font-weight: 900;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-.nhk-eew-areas {
-    color: #FFF;
-    font-size: 32px;
-    font-weight: 900;
-    line-height: 1.4;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-.nhk-eew-details {
-    margin-top: auto;
-    font-size: 20px;
-    color: #FFF;
-    font-weight: bold;
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px dashed rgba(255,255,255,0.5);
-    padding-top: 10px;
-}
+.nhk-eew-body { padding: 20px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
+.nhk-eew-warning-text { color: #FFFF00; font-size: 26px; font-weight: 900; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+.nhk-eew-areas { color: #FFF; font-size: 32px; font-weight: 900; line-height: 1.4; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); display: flex; flex-wrap: wrap; gap: 15px; }
+.nhk-eew-details { margin-top: auto; font-size: 20px; color: #FFF; font-weight: bold; display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.5); padding-top: 10px; }
 .eew-mini-map { width: 100%; height: 100%; position: absolute; top:0; left:0; background: #050505; }
 
 /* --- コメント --- */
@@ -618,7 +540,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
             
             <div class="setting-item"><label>ベースマップ(地図タイル)を表示 <input type="checkbox" id="chkShowMapTile"></label></div>
             <div class="setting-item"><label>メイン2Dマップ 津波沿岸部塗分け <input type="checkbox" id="chkTsunamiPaintMain"></label></div>
-            <div class="setting-item"><label>海のカラー (マップ背景)</label><input type="color" id="mapOceanColorPicker" value="#050505" style="width:100%; height:40px; cursor:pointer; border:none; padding:0; border-radius:4px;"></div>
+            <div class="setting-item"><label>津波沿岸部 線の太さ <span class="setting-value" id="tsunamiWeightVal">14</span></label><input type="range" id="tsunamiWeightSlider" min="2" max="24" step="2" value="14"></div>
+
             <div class="setting-item"><label>陸地のベースカラー (非塗り分け時)</label>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <input type="color" id="mapLandColorPicker" value="#222222" style="flex:1; height:40px; cursor:pointer; border:none; padding:0; border-radius:4px;">
@@ -913,7 +836,7 @@ function handleSimulatedAPI(list) {
             const rp=ls.find(x=>x.issue?.type==="ScalePrompt"&&x.earthquake.time===lE.earthquake.time);
             if(rp){lE.points=rp.points; if(lE.earthquake.maxScale===-1)lE.earthquake.maxScale=rp.earthquake.maxScale;}
         }
-        currentQuakeList = ls.filter(x=>x.issue?.type!=="ScalePrompt"&&x.issue?.type!=="Destination"&&x.earthquake.maxScale!==-1&&x.earthquake.maxScale!=="-1").slice(0,30);
+        currentQuakeList = ls.filter(x=>x.issue?.type!=="ScalePrompt"&&x.issue?.type!=="Destination"&&(x.earthquake.maxScale!==-1||x.earthquake.hypocenter.name==="遠地地震"||x.earthquake.hypocenter.name.includes("遠地"))).slice(0,30);
         if(!isEEWActive){
             window.currentEarthquakeData = lE.earthquake; window.currentEarthquakePoints = lE.points; window.currentEarthquakeIssue = lE.issue;
             renderLatestPanel();
@@ -1008,10 +931,10 @@ let wasTsunamiActive = false; let seaLevelChangeContinues = false;
 window.lpgmDataMap = new Map();
 
 const defaultSettings = {
-    jAlertEnable: true, autoMapSwap: false, tsunamiPaintMain: true,
+    jAlertEnable: true, autoMapSwap: false, tsunamiPaintMain: true, tsunamiWeight: 14,
     pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, bgColor: "#050505", customShindoColors: false, usgsMapZoom: 2,
     shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" },
-    showMapTile: true, mapOceanColor: "#050505", mapLandColor: "#222222", mapLandTransparent: true
+    showMapTile: true, mapLandColor: "#222222", mapLandTransparent: true
 };
 let userSettings = { ...defaultSettings };
 try { const saved = localStorage.getItem('epicaUserSettings'); if(saved) { const parsed = JSON.parse(saved); userSettings = { ...defaultSettings, ...parsed }; userSettings.shindoColors = { ...defaultSettings.shindoColors, ...(parsed.shindoColors || {}) }; } } catch(e){}
@@ -1192,8 +1115,6 @@ document.getElementById('btnCloseXmlDetail').addEventListener('click', ()=>{ doc
 function applyAppearance() {
     document.body.style.backgroundColor = userSettings.bgColor;
     if(document.getElementById('startupScreen')) document.getElementById('startupScreen').style.backgroundColor = userSettings.bgColor;
-    const mapEl = document.getElementById('leafletMap'); if(mapEl) mapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
-    const animMapEl = document.getElementById('tsunamiSubMap'); if(animMapEl) animMapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
     
     let st = document.getElementById('dynamicAppearance'); if(!st){st=document.createElement('style'); st.id='dynamicAppearance'; document.head.appendChild(st);}
     st.innerHTML = `
@@ -1213,9 +1134,8 @@ function updateSubMapGeojsonStyles() {
     let style = getLandDefaultStyle();
     if (tsunamiSubGeojsonLayer) tsunamiSubGeojsonLayer.setStyle(style);
     eewMiniMaps.forEach(obj => {
-        if (obj.map) obj.map.getContainer().style.setProperty('background', userSettings.mapOceanColor, 'important');
         if (userSettings.showMapTile) {
-            if (!obj.tile && obj.map) obj.tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(obj.map);
+            if (!obj.tile && obj.map) obj.tile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap contributors'}).addTo(obj.map);
         } else {
             if (obj.tile) { obj.tile.remove(); obj.tile = null; }
         }
@@ -1228,6 +1148,20 @@ function updateSubMapGeojsonStyles() {
         sl.addEventListener('input', e=>{ userSettings[k]=parseInt(e.target.value); vl.innerText=userSettings[k]+(k!=='usgsMapZoom'?"%":""); saveSettings(); if(k!=='usgsMapZoom')applyAppearance(); }); 
     } 
 });
+
+let tsWeightSlider = document.getElementById('tsunamiWeightSlider');
+let tsWeightVal = document.getElementById('tsunamiWeightVal');
+if(tsWeightSlider && tsWeightVal) {
+    tsWeightSlider.value = userSettings.tsunamiWeight || 14;
+    tsWeightVal.innerText = userSettings.tsunamiWeight || 14;
+    tsWeightSlider.addEventListener('input', e => {
+        userSettings.tsunamiWeight = parseInt(e.target.value);
+        tsWeightVal.innerText = userSettings.tsunamiWeight;
+        saveSettings();
+        updateTsunamiMap();
+    });
+}
+
 document.getElementById('bgColorPicker').value = userSettings.bgColor; document.getElementById('bgColorPicker').addEventListener('input', e=>{userSettings.bgColor=e.target.value; saveSettings(); applyAppearance();});
 const customColorsArea = document.getElementById('customShindoColorsArea');
 ["1","2","3","4","5弱","5強","6弱","6強","7"].forEach(k=>{ const div=document.createElement('div'); div.style.display='flex'; div.style.flexDirection='column'; div.style.alignItems='center'; div.innerHTML=`<span style="font-size:13px; font-weight:700;">${k}</span><input type="color" value="${userSettings.shindoColors[k]}" style="width:40px;height:40px;cursor:pointer;border:none;padding:0;border-radius:4px;">`; customColorsArea.appendChild(div); div.querySelector('input').addEventListener('change', e=>{ userSettings.shindoColors[k]=e.target.value; saveSettings(); applyAppearance(); refreshMapDisplay(); renderHistoryPanel(); renderLatestPanel(); }); });
@@ -1251,9 +1185,6 @@ document.getElementById('chkTsunamiPaintMain').addEventListener('change', e => {
     userSettings.tsunamiPaintMain = e.target.checked; saveSettings();
     updateTsunamiMap();
 });
-
-document.getElementById('mapOceanColorPicker').value = userSettings.mapOceanColor;
-document.getElementById('mapOceanColorPicker').addEventListener('input', e => { userSettings.mapOceanColor = e.target.value; saveSettings(); applyAppearance(); updateSubMapGeojsonStyles(); });
 
 document.getElementById('mapLandColorPicker').value = userSettings.mapLandColor;
 document.getElementById('mapLandColorPicker').addEventListener('input', e => { userSettings.mapLandColor = e.target.value; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); });
@@ -1692,11 +1623,23 @@ async function processXmlString(xt, typ, ovUrl=null){
 async function processXmlUrl(u,t){try{const r=await fetch(u); await processXmlString(await r.text(),t,u);}catch(e){}}
 
 function handleTsunamiXml(doc,hl){
-    if(hl.includes("すべて解除")){xmlTsunamiData={cancelled:true,areas:[]}; if(wasTsunamiActive){speakText("津波警報、および、津波注意報は、すべて解除されました。"); seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{}); wasTsunamiActive=false;}}
-    else{
+    if(hl.includes("すべて解除")){
+        xmlTsunamiData={cancelled:true,areas:[]}; 
+        if(wasTsunamiActive){
+            speakText("津波警報、注意報、予報は、すべて解除されました。"); 
+            sendPushNotification(`津波情報`,{body:`津波警報・注意報・予報はすべて解除されました。`,icon:getPushIconDataURL("解除","#666","#fff"),tag:"tsunami_cancel"});
+            seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{}); 
+            wasTsunamiActive=false;
+        }
+    } else {
         const tE=doc.querySelector('Body > Tsunami'); if(tE){
-            let aM={}; tE.querySelectorAll('Forecast > Item').forEach(i=>{const n=i.querySelector('Area > Name')?.textContent, k=i.querySelector('Category > Kind > Name')?.textContent; let ig="Unknown"; if(k==="大津波警報")ig="MajorWarning"; else if(k==="津波警報")ig="Warning"; else if(k==="津波注意報")ig="Watch"; else if(k?.includes("若干の海面変動"))ig="SlightChange"; const fh=i.querySelector('FirstHeight'); let at=fh?.querySelector('ArrivalTime')?.textContent||"", cd=fh?.querySelector('Condition')?.textContent||"", md=i.querySelector('MaxHeight > jmx_eb\\:TsunamiHeight')?.getAttribute('description')||i.querySelector('MaxHeight > TsunamiHeight')?.getAttribute('description')||"-"; if(n&&k)aM[n]={name:n,grade:ig,immediate:cd==="第１波到達を確認"||cd==="まもなく到達",firstHeight:{arrivalTime:at,condition:cd},maxHeight:{description:md}};});
-            xmlTsunamiData={cancelled:false,areas:Object.values(aM)}; if(xmlTsunamiData.areas.some(a=>["MajorWarning","Warning","Watch"].includes(a.grade))){wasTsunamiActive=true; seTsunami.currentTime=0; seTsunami.play().catch(e=>{});}
+            let aM={}; tE.querySelectorAll('Forecast > Item').forEach(i=>{const n=i.querySelector('Area > Name')?.textContent, k=i.querySelector('Category > Kind > Name')?.textContent; let ig="Unknown"; if(k==="大津波警報")ig="MajorWarning"; else if(k==="津波警報")ig="Warning"; else if(k==="津波注意報")ig="Watch"; else if(k?.includes("若干の海面変動")||k?.includes("津波予報"))ig="SlightChange"; const fh=i.querySelector('FirstHeight'); let at=fh?.querySelector('ArrivalTime')?.textContent||"", cd=fh?.querySelector('Condition')?.textContent||"", md=i.querySelector('MaxHeight > jmx_eb\\:TsunamiHeight')?.getAttribute('description')||i.querySelector('MaxHeight > TsunamiHeight')?.getAttribute('description')||"-"; if(n&&k)aM[n]={name:n,grade:ig,immediate:cd==="第１波到達を確認"||cd==="まもなく到達",firstHeight:{arrivalTime:at,condition:cd},maxHeight:{description:md}};});
+            xmlTsunamiData={cancelled:false,areas:Object.values(aM)}; 
+            let hw = xmlTsunamiData.areas.some(a=>["MajorWarning","Warning","Watch","SlightChange","Unknown"].includes(a.grade));
+            if(hw){
+                if(!wasTsunamiActive){ seTsunami.currentTime=0; seTsunami.play().catch(e=>{}); }
+                wasTsunamiActive=true;
+            }
         }
     } updateTsunamiMap(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
 }
@@ -1754,7 +1697,7 @@ function renderHistoryPanel(){
         d.className="qItem"; if(selectedHistoryQuake&&selectedHistoryQuake.earthquake.time===e.time)d.classList.add("selected"); d.onclick=()=>handleHistoryClick(q); 
         let tN=e.hypocenter.name; if(q.issue?.type==="ScalePrompt")tN="[震度速報]"; 
         let lpgmHtml = q.earthquake.maxLpgmInt ? `<span class="lpgm-badge">長周期 階級${q.earthquake.maxLpgmInt}</span>` : "";
-        d.innerHTML=`<div class="scaleBox" style="background:${b};color:${getContrastColor(b)};font-size:${s.length>1?"28px":"36px"}">${s}</div><div class="qInfo"><div class="qName">${tN}${lpgmHtml}</div><div style="display:flex;align-items:center;gap:6px;"><span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:16px; border:none; padding:5px 10px;">M${e.hypocenter.magnitude!==-1?e.hypocenter.magnitude.toFixed(1):'-.-'}</span><span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:16px; border:none; padding:5px 10px;">${fmt.depth(e.hypocenter.depth)}</span><span style="font-size:14px;opacity:0.8;margin-left:auto;">${e.time.slice(5,16).replace("-","/")}</span></div></div>`; 
+        d.innerHTML=`<div class="scaleBox" style="background:${b};color:${getContrastColor(b)};font-size:${s.length>1?"28px":"36px"}">${s}</div><div class="qInfo"><div class="qName">${tN}${lpgmHtml}</div><div style="display:flex;align-items:center;gap:6px;"><span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:16px; border:none; padding:5px 10px;">M${e.hypocenter.magnitude!==-1?e.hypocenter.magnitude.toFixed(1):'-.-'}</span><span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:16px; border:none; padding:5px 10px;">${e.hypocenter.depth === 0 ? "ごく浅い" : fmt.depth(e.hypocenter.depth)}</span><span style="font-size:14px;opacity:0.8;margin-left:auto;">${e.time.slice(5,16).replace("-","/")}</span></div></div>`; 
         p.appendChild(d);
     }); 
     applyAppearance();
@@ -1798,8 +1741,8 @@ const scrollStates=new Map(); function startAutoScroll(id){const a=document.getE
 
 const lMap=L.map('leafletMap',{preferCanvas:true,zoomControl:false,attributionControl:false,worldCopyJump:true,zoomSnap:0.1,zoomDelta:0.25,wheelPxPerZoomLevel:120}).setView([37.5,137],5.2);
 lMap.on('click', () => { if (isMapSwapped) toggleMapSwap(); });
-const baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
-const animBaseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
+const baseTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution: '© OpenStreetMap contributors'});
+const animBaseTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution: '© OpenStreetMap contributors'});
 
 let geojsonLayer, tsunamiGeojsonLayer=null, tsunamiSubGeojsonLayer=null, latestQuakeMarker=null, epicenterMarkers=new Map(), prefData=null, currentTsunamiData=null; const shakeDetectLayer=L.layerGroup().addTo(lMap); window.jmaStationsJson=null;
 
@@ -1887,8 +1830,9 @@ function updateLeafletMap(e,p,i,skp=false){
         }else if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);
     }
     
+    let hO=isEEWActive||(isRealtimeOnlyMode&&!selectedHistoryQuake);
+    
     if(geojsonLayer&&p){
-        let hO=isEEWActive||(isRealtimeOnlyMode&&!selectedHistoryQuake);
         let scaleColorCache = new Map();
         const getScaleColorFast = (scale) => { if(scaleColorCache.has(scale)) return scaleColorCache.get(scale); const col = scaleColor(fmt.shindo(scale, e?.hypocenter?.depth)); scaleColorCache.set(scale, col); return col; };
         const jmaCache = window.jmaStationsJson ? window.jmaStationsJson.map(s => ({ ...s, cleanName: s.name.replace(/測候所|観測所/g, '') })) : null;
@@ -1914,10 +1858,36 @@ function updateLeafletMap(e,p,i,skp=false){
         applyStyleOptimized(geojsonLayer, getPolygonStyle);
     }
     renderObsCanvas();
-    if(!skp && e?.hypocenter?.latitude && i?.type !== "ScalePrompt"){
+    
+    if(!skp && e?.hypocenter?.latitude && i?.type !== "ScalePrompt" && e.hypocenter.latitude !== -200){
         let zoomLvl = 8; const m = parseFloat(e.hypocenter.magnitude);
         if(!isNaN(m) && m !== -1){ if(m >= 8.0) zoomLvl = 5; else if(m >= 7.0) zoomLvl = 5.5; else if(m >= 6.0) zoomLvl = 6; else if(m >= 5.0) zoomLvl = 7; }
         lMap.flyTo([e.hypocenter.latitude, e.hypocenter.longitude], zoomLvl, {duration:1.5});
+    } else if(!skp && i?.type === "ScalePrompt" && !hO) {
+        if(currentObsPointsToDraw.length > 0) {
+            let latSum = 0, lonSum = 0, count = 0;
+            let maxLat = -90, minLat = 90, maxLon = -180, minLon = 180;
+            currentObsPointsToDraw.forEach(pt => {
+                if(pt.lat && pt.lon) {
+                    latSum += pt.lat; lonSum += pt.lon; count++;
+                    if(pt.lat > maxLat) maxLat = pt.lat;
+                    if(pt.lat < minLat) minLat = pt.lat;
+                    if(pt.lon > maxLon) maxLon = pt.lon;
+                    if(pt.lon < minLon) minLon = pt.lon;
+                }
+            });
+            if(count > 0) {
+                let cLat = latSum / count; let cLon = lonSum / count;
+                let latDiff = maxLat - minLat; let lonDiff = maxLon - minLon;
+                let maxDiff = Math.max(latDiff, lonDiff);
+                let zoomLvl = 7;
+                if(maxDiff > 5) zoomLvl = 5;
+                else if(maxDiff > 2) zoomLvl = 6;
+                else if(maxDiff > 1) zoomLvl = 7;
+                else zoomLvl = 8;
+                lMap.flyTo([cLat, cLon], zoomLvl, {duration: 1.5});
+            }
+        }
     }
 
     const ar=document.getElementById("detailScrollArea"); 
@@ -2006,9 +1976,8 @@ function renderEewCards() {
     const [id, d] = eewArray[currentEewDisplayIndex];
     let cd = document.getElementById(id); 
     
-    // 地図コンテナを破壊しないように要素の存在チェックと作成
     if (!cd) { 
-        cn.innerHTML = ""; // 他のカードをクリア
+        cn.innerHTML = ""; 
         cd = document.createElement("div"); 
         cd.id = id; 
         cn.appendChild(cd); 
@@ -2039,22 +2008,21 @@ function renderEewCards() {
     const ms = d.MaxIntensity || "0"; 
     
     let headerText = d.isCancel ? "緊急地震速報 (取消)" : (d.isWarn ? "緊急地震速報 (気象庁)" : "緊急地震速報 (予報)");
-    let subText = d.isCancel ? "先ほどの緊急地震速報は取り消されました" : `${d.Hypocenter}で地震　強い揺れに警戒`;
+    let subText = d.isCancel ? "先ほどの緊急地震速報は取り消されました" : `${d.Hypocenter}で地震 強い揺れに警戒`;
     if (d.isCancel) subText = `<span style="color:#CCC;">${subText}</span>`;
     
     let ah = "";
     if (d.Forecast?.length && !d.isCancel) {
         let rawAreas = d.Forecast.map(f => formatShortRegionName(f.Name));
-        ah = Array.from(new Set(rawAreas)).join("　");
+        ah = Array.from(new Set(rawAreas)).join(" ");
     } else if (d.WarnArea?.Chiiki && !d.isCancel) {
         let rawAreas = d.WarnArea.Chiiki.split("、").map(formatShortRegionName);
-        ah = Array.from(new Set(rawAreas)).join("　");
+        ah = Array.from(new Set(rawAreas)).join(" ");
     }
 
     const mapId = `eewMiniMap_${id}`;
     let th = ""; if (d.isTraining) th += `[訓練] `; if (d.isAssumption) th += `[PLUM法] `;
 
-    // 情報をテキスト要素に挿入
     document.getElementById(`eewHeader_${id}`).innerHTML = `${th}${headerText}`;
     document.getElementById(`eewSubtext_${id}`).innerHTML = subText;
     document.getElementById(`eewAreas_${id}`).innerHTML = ah;
@@ -2066,8 +2034,7 @@ function renderEewCards() {
         const eL = parseFloat(d.Latitude); const eO = parseFloat(d.Longitude);
         if (!eewMiniMaps.has(id)) {
             let m = L.map(mapId, { preferCanvas: true, zoomControl: false, attributionControl: false, dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false }).setView([eL || 35, eO || 135], 6);
-            m.getContainer().style.setProperty('background', userSettings.mapOceanColor, 'important');
-            let tileLayer = null; if (userSettings.showMapTile !== false) tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(m);
+            let tileLayer = null; if (userSettings.showMapTile !== false) tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap contributors'}).addTo(m);
             let geoLayer = null; 
             if (prefData) {
                 geoLayer = L.geoJSON(prefData, { 
@@ -2170,7 +2137,6 @@ async function updateWolfxEEW(d){
     
     if(d.MaxIntensity==="7" && isN){ seWarning.currentTime=0; seWarning.play().catch(e=>{}); }
     
-    // EEW BGM Logic: 警報時に新規または更新された場合のみ再生
     if(d.isWarn && (isN || isSU)) { 
         seEewWarningBgm.currentTime = 0; 
         seEewWarningBgm.play().catch(e=>{}); 
@@ -2287,7 +2253,7 @@ function updateTsunamiMap(){
     const d=currentTsunamiData;
     
     const styleFn = f => {
-        if(!d||d.cancelled||!d.areas?.length){if(seaLevelChangeContinues)return {color:"#00BFFF",weight:4,opacity:0.5,fillColor:"transparent",fillOpacity:0}; return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};}
+        if(!d||d.cancelled||!d.areas?.length){if(seaLevelChangeContinues)return {color:"#00BFFF",weight:userSettings.tsunamiWeight||14,opacity:0.5,fillColor:"transparent",fillOpacity:0}; return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};}
         let aG={}; d.areas.forEach(a=>aG[a.name]=a.grade);
         const g=aG[f.properties._epica_name || f.properties.name||f.properties.nam_ja||f.properties.code]; 
         if(g){
@@ -2295,9 +2261,9 @@ function updateTsunamiMap(){
             if(g==="MajorWarning"||g==="MajorTsunami")c="#FF00FF"; 
             else if(g==="Warning"||g==="TsunamiWarning")c="#FF0000"; 
             else if(g==="Watch"||g==="TsunamiAdvisory")c="#FFFF00"; 
-            else if(g==="SlightChange"||g==="Unknown")c="#00BFFF"; 
-            return {color:c,weight:14,opacity:0.8,fillColor:c,fillOpacity:0.5};
-        } else if(seaLevelChangeContinues)return {color:"#00BFFF",weight:4,opacity:0.5,fillColor:"transparent",fillOpacity:0}; 
+            else if(g==="SlightChange"||g==="Unknown"||g==="Forecast")c="#00BFFF"; 
+            return {color:c,weight:userSettings.tsunamiWeight||14,opacity:0.8,fillColor:c,fillOpacity:0.5};
+        } else if(seaLevelChangeContinues)return {color:"#00BFFF",weight:userSettings.tsunamiWeight||14,opacity:0.5,fillColor:"transparent",fillOpacity:0}; 
         return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};
     };
 
@@ -2332,8 +2298,8 @@ function updateTsunamiDisplay(d,eD){
         let io=false; 
         if(d?.issue?.time&&eD?.time){ if(new Date(eD.time.replace(/\//g,"-").replace(" ","T")).getTime()>new Date(d.issue.time.replace(/\//g,"-").replace(" ","T")).getTime())io=true; } 
         if(io){ isC=false; d=null; }else{
-            let m="津波警報・注意報は解除されました。<br>現在、津波の心配はありません。"; 
-            if(seaLevelChangeContinues)m="津波警報・注意報は全て解除されました。<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
+            let m="津波警報・注意報・予報は解除されました。<br>現在、津波の心配はありません。"; 
+            if(seaLevelChangeContinues)m="津波警報・注意報・予報は全て解除されました。<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
             ar.innerHTML=`<div class="noTsunami" style="color:#CCC;">${m}</div>`; ar.style.opacity=1; return;
         }
     }
@@ -2458,20 +2424,21 @@ async function loadQuakes(){
                     const gM={"MajorWarning":"大津波警報","MajorTsunami":"大津波警報","Warning":"津波警報","TsunamiWarning":"津波警報","Watch":"津波注意報","TsunamiAdvisory":"津波注意報","Unknown":"津波予報"}; 
                     let tb=td.areas.map(a=>`[${gM[a.grade]||"津波情報"}] ${a.name} / ${a.maxHeight?.description||(a.maxHeight?.value?a.maxHeight.value+'m':'--')}`).join("\n"); 
                     if(tb.length>200)tb=tb.substring(0,197)+"..."; 
-                    let tc="#FF0000", tt="津波"; if(td.areas.some(a=>a.grade==="MajorWarning"||a.grade==="MajorTsunami")){tc="#FF00FF"; tt="大津波";} else if(td.areas.some(a=>a.grade==="Watch"||a.grade==="TsunamiAdvisory")){tc="#FFFF00"; tt="注意報";} 
+                    let tc="#FF0000", tt="津波"; if(td.areas.some(a=>a.grade==="MajorWarning"||a.grade==="MajorTsunami")){tc="#FF00FF"; tt="大津波";} else if(td.areas.some(a=>a.grade==="Watch"||a.grade==="TsunamiAdvisory")){tc="#FFFF00"; tt="注意報";} else if(td.areas.some(a=>a.grade==="Unknown"||a.grade==="SlightChange")){tc="#00BFFF"; tt="予報";}
                     sendPushNotification(`津波情報発表`,{body:tb,icon:getPushIconDataURL(tt,tc,getContrastColor(tc)),tag:"tsunami_"+ct});
+                    speakText("津波情報が更新されました。海岸にいる方は注意してください。");
                 }else if(td.cancelled){
-                    if(wasTsunamiActive){ pTC=true; wasTsunamiActive=false; sendPushNotification(`津波情報`,{body:`津波警報・注意報はすべて解除されました。`,icon:getPushIconDataURL("解除","#666","#fff"),tag:"tsunami_cancel"}); }
+                    if(wasTsunamiActive){ pTC=true; wasTsunamiActive=false; sendPushNotification(`津波情報`,{body:`津波警報・注意報・予報はすべて解除されました。`,icon:getPushIconDataURL("解除","#666","#fff"),tag:"tsunami_cancel"}); }
                 }
             }
         }
         
         if(pT){seTsunami.currentTime=0; seTsunami.play().catch(e=>{});} 
-        if(pTC){speakText("津波警報、および、津波注意報は、すべて解除されました。"); seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});} 
+        if(pTC){speakText("津波警報、注意報、予報は、すべて解除されました。"); seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});} 
         else if(pTN){if(!pU||(lE&&lE.earthquake.domesticTsunami!=="None")){speakText("この地震による津波の心配はありません。"); seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});}} 
         if(pU){seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});}
         
-        currentQuakeList=ls.filter(x=>x.issue?.type!=="ScalePrompt"&&x.issue?.type!=="Destination"&&x.earthquake.maxScale!==-1&&x.earthquake.maxScale!=="-1").slice(0,30); 
+        currentQuakeList=ls.filter(x=>x.issue?.type!=="ScalePrompt"&&x.issue?.type!=="Destination"&&(x.earthquake.maxScale!==-1||x.earthquake.maxScale!=="-1"||x.earthquake.hypocenter.name==="遠地地震"||x.earthquake.hypocenter.name.includes("遠地"))).slice(0,30); 
         
         for (let [oR, lpgm] of window.lpgmDataMap.entries()) {
             let xTime = new Date(oR).getTime(); let minDiff = 300000; let targetQuake = null;
@@ -2482,7 +2449,7 @@ async function loadQuakes(){
         if(lE&&!isEEWActive){
             window.currentEarthquakeData=lE.earthquake; window.currentEarthquakePoints=lE.points; window.currentEarthquakeIssue=lE.issue; 
             renderLatestPanel();
-            let skipMapMove = (lE.issue.type === "ScalePrompt");
+            let skipMapMove = false;
             if(!selectedHistoryQuake) updateLeafletMap(lE.earthquake,lE.points,lE.issue, skipMapMove); 
         }
         if(lE && lE.issue && lE.issue.type !== "ScalePrompt" && lE.issue.type !== "Destination") { animPauseUntil = Date.now() + 5 * 60 * 1000; }
@@ -2504,7 +2471,6 @@ function connectP2P(){
         if(d.code===551||d.code===552){
             addLog(`P2P WS 受信: Code ${d.code}`); 
             if(d.code===551){
-                if(isEEWActive) clearEEWDisplay(); 
                 let pollCount = 0; const prevEqTime = lastEqTime; if(p2pPollTimer) clearInterval(p2pPollTimer);
                 loadQuakes();
                 p2pPollTimer = setInterval(() => { pollCount++; if(lastEqTime !== prevEqTime || pollCount >= 10){ clearInterval(p2pPollTimer); p2pPollTimer = null; } else { loadQuakes(); } }, 3000);
@@ -2602,13 +2568,9 @@ function drawUsgsWaves(timestamp) {
     
     const nt = Date.now();
     usgsActiveEvents.forEach(d => {
-        // d.time (地震の発生時刻) と現在時刻 (nt) との差から経過秒数を計算
         const el = (nt - d.time) / 1000;
-        
-        // 発生時刻が未来（誤差など）または、1時間(3600秒)以上経過した波紋は描画しない
         if (el < 0 || el > 3600) return; 
         
-        // 簡易的な波の速度計算 (P波: 8km/s, S波: 4km/s)
         const pD = el * 8.0, sD = el * 4.0, dp = d.depth; 
         const pR = pD > dp ? Math.sqrt(pD * pD - dp * dp) : 0;
         const sR = sD > dp ? Math.sqrt(sD * sD - dp * dp) : 0;
@@ -2637,7 +2599,6 @@ function handleUsgsEarthquake(prod) {
 
     const isNew = !usgsActiveEvents.has(id);
     if (isNew) {
-        // 新規受信時にマップ上の古い情報をリセットして最新のみを残す
         usgsActiveEvents.clear();
         usgsMarkers.forEach(mk => usgsMap.removeLayer(mk));
         usgsMarkers.clear();
