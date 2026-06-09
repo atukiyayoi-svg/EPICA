@@ -830,13 +830,15 @@ function handleSimulatedAPI(list) {
         const mergedQuakes = [];
         for (let q of ls) {
             if (q.issue?.type === "ScalePrompt" || q.issue?.type === "Destination") continue;
-            if (q.earthquake.maxScale === -1 && q.earthquake.hypocenter.name !== "遠地地震" && !q.earthquake.hypocenter.name.includes("遠地")) continue;
+            // 遠地地震を含めるように修正 (maxScale === -1 であっても、震央名がある場合は追加)
+            if (q.earthquake.maxScale === -1 && (!q.earthquake.hypocenter.name || q.earthquake.hypocenter.name === "調査中" || q.earthquake.hypocenter.name === "")) continue;
 
             let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
             let isDuplicate = false;
             for (let m of mergedQuakes) {
                 let mTime = new Date(m.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
-                if (Math.abs(qTime - mTime) <= 60000 && q.earthquake.hypocenter.name === m.earthquake.hypocenter.name && q.earthquake.hypocenter.magnitude === m.earthquake.hypocenter.magnitude) {
+                // 10分以内の同一震央・同一規模の地震は重複として扱う
+                if (qTime === mTime || (Math.abs(qTime - mTime) <= 600000 && q.earthquake.hypocenter.name === m.earthquake.hypocenter.name && q.earthquake.hypocenter.magnitude === m.earthquake.hypocenter.magnitude)) {
                     isDuplicate = true; break;
                 }
             }
@@ -910,7 +912,11 @@ function getJmaPointIndex(addr) {
 
 window.latestFullQuakeList = []; window.eewOriginalTextList = []; 
 let megaQuakeStatus = { nankaiAlert: null, nankaiAlertTime: null, sanriku: null, sanrikuTime: null }; 
-let wasTsunamiActive = false; let seaLevelChangeContinues = false;
+let wasTsunamiActive = false; 
+// 海面変動の継続フラグを有効期限（タイムスタンプ）の判定に変更
+let seaLevelChangeExpiryTime = 0;
+function isSeaLevelChangeContinuing() { return seaLevelChangeExpiryTime > 0 && Date.now() < seaLevelChangeExpiryTime; }
+
 window.lpgmDataMap = new Map();
 
 const defaultSettings = {
@@ -1121,6 +1127,8 @@ setInterval(()=>{
 const kansuji = ["零","一","二","三","四","五","六","七","八","九","十","十一","十二","十三","十四","十五","十六","十七","十八","十九","二十","二十一","二十二","二十三","二十四"];
 let summaryPlayedForToday = "";
 
+let lastTsunamiState = isSeaLevelChangeContinuing();
+
 setInterval(()=>{
     let n = new Date();
     if(isPlaying && currentPlaybackBaseTime) { n = new Date(currentPlaybackBaseTime + (Date.now() - playbackRealStartTime)); }
@@ -1131,6 +1139,13 @@ setInterval(()=>{
     const ts=n.getTime(); let ch=false; window.eewOriginalTextList=window.eewOriginalTextList.filter(i=>{if(ts>=i.expiry){ch=true;return false;}return true;});
     if(ch) updateCommentDisplay(selectedHistoryQuake||(window.latestFullQuakeList?window.latestFullQuakeList.find(x=>x.code===551):null));
     const tStr=`${y}-${m}-${d}`; if(n.getHours()===23&&n.getMinutes()===50&&n.getSeconds()===0&&summaryPlayedForToday!==tStr){ summaryPlayedForToday=tStr; generateDailySummary(tStr,n); }
+
+    // 海面変動の有効期限確認と自動解除
+    if (lastTsunamiState !== isSeaLevelChangeContinuing()) {
+        lastTsunamiState = isSeaLevelChangeContinuing();
+        updateTsunamiDisplay(currentTsunamiData, window.currentEarthquakeData);
+        updateTsunamiMap();
+    }
 }, 1000);
 
 function checkMegaQuakeExpiry() {
@@ -1279,7 +1294,8 @@ async function pollJmaXml(){
                 tEnts.reverse(); if(f.type==='eqvol')lastFeedUpdateEqvol=nTime;else if(f.type==='extra')lastFeedUpdateExtra=nTime;else lastFeedUpdateEqvolL=nTime;
                 for(let e of tEnts){
                     let u=e.querySelector('link').getAttribute('href'), t=e.querySelector('title')?.textContent||"";
-                    if(f.type==='eqvol_l'&&!(t.includes("南海トラフ")||t.includes("三陸沖")||t.includes("長周期地震動")))continue;
+                    // 長期フィードの場合は対象を拡張 (津波関連も取り込む)
+                    if(f.type==='eqvol_l'&&!(t.includes("南海トラフ")||t.includes("三陸沖")||t.includes("長周期地震動")||t.includes("津波")))continue;
                     if(!processedXmlUrls.has(u)){processedXmlUrls.add(u); await processXmlUrl(u,f.type);}
                 } upd=true;
             }
@@ -1360,7 +1376,20 @@ async function processXmlString(xt, typ, ovUrl=null){
         if(tit==="長周期地震動に関する観測情報")handleLpgmXml(doc);
 
         const tNodes=bdy?.querySelectorAll('EarthquakeInfo > Text, EarthquakeInfo > Appendix, Comments > Text, Text'); let fTxt=hl; if(tNodes?.length)fTxt+="\n"+Array.from(tNodes).map(t=>t.textContent.trim()).filter(t=>t).join('\n\n');
-        const cm=fTxt.match(/若干の海面変動が.*?今後([０-９0-9一二三四五六七八九十]+)(時間|日)程度は継続/); if(cm){let ms=kanjiToNumber(cm[1])*(cm[2]==='日'?86400000:3600000), rawR=hd?.querySelector('ReportDateTime')?.textContent; if(rawR)seaLevelChangeContinues=new Date()<(new Date(new Date(rawR).getTime()+ms));}
+        
+        // 継続期間の自動判定ロジック (XMLからのテキスト抽出による有効期限設定)
+        const cm = fTxt.match(/今後([０-９0-9一二三四五六七八九十]+)(時間|日|ヶ月|年)程度は/);
+        if(cm){
+            let multiplier = 3600000;
+            if(cm[2] === '日') multiplier = 86400000;
+            else if(cm[2] === 'ヶ月') multiplier = 86400000 * 30;
+            let ms = kanjiToNumber(cm[1]) * multiplier; 
+            let rawR = hd?.querySelector('ReportDateTime')?.textContent || doc.querySelector('Control > DateTime')?.textContent; 
+            if(rawR) {
+                seaLevelChangeExpiryTime = new Date(rawR).getTime() + ms;
+                lastTsunamiState = isSeaLevelChangeContinuing(); // 状態を更新
+            }
+        }
         
         const isNankaiAlert = tit.includes("南海トラフ地震臨時情報"); const isNankaiInfo = tit.includes("南海トラフ地震関連解説情報"); const isS = tit.includes("三陸沖");
         const iTyp=hd?.querySelector('InfoType')?.textContent; const pTime = new Date(hd?.querySelector('ReportDateTime')?.textContent || new Date()).getTime(); let isMegaQuakeNewlyIssued = false;
@@ -1490,7 +1519,6 @@ function handleHistoryClick(q){
 }
 
 // --- PART 1 END ---
-// 次のプロンプトで「続きを出力して」とお声がけください。
 
 function renderHistoryPanel(){
     const p=document.getElementById("quakePanel"); if(!p)return; p.innerHTML=""; 
@@ -2046,7 +2074,7 @@ function updateTsunamiMap(){
             else if(g==="Watch"||g==="TsunamiAdvisory")c="#FFFF00"; 
             else if(g==="SlightChange"||g==="Unknown"||g==="Forecast")c="#00BFFF"; 
             return {color:c,weight:userSettings.tsunamiWeight||14,opacity:0.8,fillColor:c,fillOpacity:0.5};
-        } else if(seaLevelChangeContinues) { return {color:"#00BFFF",weight:userSettings.tsunamiWeight||14,opacity:0.5,fillColor:"transparent",fillOpacity:0}; }
+        } else if(isSeaLevelChangeContinuing()) { return {color:"#00BFFF",weight:userSettings.tsunamiWeight||14,opacity:0.5,fillColor:"transparent",fillOpacity:0}; }
         return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};
     };
 
@@ -2079,7 +2107,7 @@ function updateTsunamiDisplay(d,eD){
         if(d?.issue?.time&&eD?.time){ if(new Date(eD.time.replace(/\//g,"-").replace(" ","T")).getTime()>new Date(d.issue.time.replace(/\//g,"-").replace(" ","T")).getTime())io=true; } 
         if(io){ isC=false; d=null; }else{
             let m="津波警報・注意報・予報は解除されました。<br>現在、津波の心配はありません。"; 
-            if(seaLevelChangeContinues)m="津波警報・注意報・予報は全て解除されました。<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
+            if(isSeaLevelChangeContinuing())m="津波警報・注意報・予報は全て解除されました。<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
             ar.innerHTML=`<div class="noTsunami" style="color:#CCC;">${m}</div>`; ar.style.opacity=1; return;
         }
     }
@@ -2108,13 +2136,13 @@ function updateTsunamiDisplay(d,eD){
             if(fm){ if(dt==="None"||!dt){m="この地震による津波の心配はありません。<br>"+fm; c="#CCC";} else m+="<br><br>"+fm; }
         } 
         if(!m)m="国内での津波の心配はありません。<br>海外での津波の影響は不明です。"; 
-        if(seaLevelChangeContinues&&dt==="None")m+="<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
+        if(isSeaLevelChangeContinuing()&&dt==="None")m+="<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
         ar.innerHTML=`<div class="noTsunami" style="color:${c};">${m}</div>`; ar.style.opacity=1; return;
     }
     
     if(!hA&&!xA){
         let m="国内での津波の心配はありません。<br>海外での津波の影響は不明です。"; 
-        if(seaLevelChangeContinues)m+="<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
+        if(isSeaLevelChangeContinuing())m+="<br><span style='color:#00BFFF'>※若干の海面変動が継続している可能性があります。</span>"; 
         ar.innerHTML=`<div class="noTsunami">${m}</div>`; ar.style.opacity=1; return;
     }
     
@@ -2225,12 +2253,15 @@ async function loadQuakes(){
         const mergedQuakes = [];
         for (let q of ls) {
             if (q.issue?.type === "ScalePrompt" || q.issue?.type === "Destination") continue;
-            if (q.earthquake.maxScale === -1 && q.earthquake.hypocenter.name !== "遠地地震" && !q.earthquake.hypocenter.name.includes("遠地")) continue;
+            // 遠地地震を含めるように修正 (maxScale === -1 であっても、震央名がある場合は追加)
+            if (q.earthquake.maxScale === -1 && (!q.earthquake.hypocenter.name || q.earthquake.hypocenter.name === "調査中" || q.earthquake.hypocenter.name === "")) continue;
+
             let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
             let isDuplicate = false;
             for (let m of mergedQuakes) {
                 let mTime = new Date(m.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
-                if (Math.abs(qTime - mTime) <= 60000 && q.earthquake.hypocenter.name === m.earthquake.hypocenter.name && q.earthquake.hypocenter.magnitude === m.earthquake.hypocenter.magnitude) {
+                // 同一時刻または、10分以内の同一震源・同一規模の地震は重複として扱う
+                if (qTime === mTime || (Math.abs(qTime - mTime) <= 600000 && q.earthquake.hypocenter.name === m.earthquake.hypocenter.name && q.earthquake.hypocenter.magnitude === m.earthquake.hypocenter.magnitude)) {
                     isDuplicate = true; break;
                 }
             }
@@ -2431,8 +2462,6 @@ async function pollUsgsApi() {
         }
     } catch(e) {}
 } setInterval(pollUsgsApi, 60000);
-
-document.getElementById('usgsMapPanel').addEventListener('click', (e) => { if(e.target.id === 'usgsMapPanel' || e.target.closest('.axisHeader')) { toggleMapSwap(); } }); 
 
 const API_AREA_URL = "https://www.jma.go.jp/bosai/common/const/area.json";
 const API_FORECAST_BASE = "https://www.jma.go.jp/bosai/forecast/data/forecast/";
