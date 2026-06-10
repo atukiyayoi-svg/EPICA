@@ -552,6 +552,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
             <div class="setting-item"><label>背景カラー</label><input type="color" id="bgColorPicker" value="#050505" style="width:100%; height:40px; cursor:pointer; border:none; padding:0; border-radius:4px;"></div>
             
             <div class="setting-item"><label>ベースマップ(地図タイル)を表示 <input type="checkbox" id="chkShowMapTile"></label></div>
+            <div class="setting-item"><label>リアルタイム揺れ(強震モニタ)を表示 <input type="checkbox" id="chkShowRealtimeKyoshin"></label></div>
             <div class="setting-item"><label>メイン2Dマップ 津波沿岸部塗分け <input type="checkbox" id="chkTsunamiPaintMain"></label></div>
             <div class="setting-item"><label>津波予報(若干の海面変動)を表示 <input type="checkbox" id="chkShowTsunamiForecast"></label></div>
             <div class="setting-item"><label>メインマップ津波線の太さ <span class="setting-value" id="tsunamiWeightMainVal">14</span></label><input type="range" id="tsunamiWeightMainSlider" min="2" max="24" step="2" value="14"></div>
@@ -934,7 +935,7 @@ const defaultSettings = {
     jAlertEnable: true, autoMapSwap: false, tsunamiPaintMain: true, tsunamiWeightMain: 14, tsunamiWeightSub: 14, showTsunamiForecast: true,
     pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, bgColor: "#050505", customShindoColors: false, usgsMapZoom: 2,
     shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" },
-    showMapTile: true, mapLandColor: "#222222", mapLandTransparent: true,
+    showMapTile: true, mapLandColor: "#222222", mapLandTransparent: true, showRealtimeKyoshin: true,
     ewsEnable: true // EWS緊急警報信号の設定
 };
 let userSettings = { ...defaultSettings };
@@ -1106,6 +1107,18 @@ let chkShowTsunamiForecastEl = document.getElementById('chkShowTsunamiForecast')
 if(chkShowTsunamiForecastEl) {
     chkShowTsunamiForecastEl.checked = userSettings.showTsunamiForecast;
     chkShowTsunamiForecastEl.addEventListener('change', e => { userSettings.showTsunamiForecast = e.target.checked; saveSettings(); updateTsunamiMap(); updateTsunamiDisplay(currentTsunamiData, window.currentEarthquakeData); });
+}
+
+let chkShowRealtimeKyoshinEl = document.getElementById('chkShowRealtimeKyoshin');
+if(chkShowRealtimeKyoshinEl) {
+    chkShowRealtimeKyoshinEl.checked = userSettings.showRealtimeKyoshin;
+    chkShowRealtimeKyoshinEl.addEventListener('change', e => { 
+        userSettings.showRealtimeKyoshin = e.target.checked; 
+        saveSettings(); 
+        if(!userSettings.showRealtimeKyoshin && typeof kyoshinCanvas !== 'undefined' && kyoshinCanvas) {
+            kyoshinCanvas.getContext('2d').clearRect(0,0,kyoshinCanvas.width,kyoshinCanvas.height);
+        }
+    });
 }
 
 document.getElementById('bgColorPicker').value = userSettings.bgColor; document.getElementById('bgColorPicker').addEventListener('input', e=>{userSettings.bgColor=e.target.value; saveSettings(); applyAppearance();});
@@ -1513,7 +1526,8 @@ async function processXmlString(xt, typ, ovUrl=null){
         const doc=new DOMParser().parseFromString(xt,"application/xml"), hd=doc.querySelector('Head'), tit=hd?.querySelector('Title')?.textContent||doc.querySelector('Control > Title')?.textContent||"不明", iKind=hd?.querySelector('InfoKind')?.textContent||"", rTime=formatTimeXml(hd?.querySelector('ReportDateTime')?.textContent||doc.querySelector('Control > DateTime')?.textContent), hl=doc.querySelector('Headline > Text')?.textContent||"", bdy=doc.querySelector('Body');
 
         if(tit==="顕著な地震の震源要素更新のお知らせ")handleHypocenterUpdateXml(doc); 
-        if(iKind==="津波警報・注意報・予報a"||tit.includes("津波"))handleTsunamiXml(doc,hl);
+        // --- 変更: typを引数として渡すことで長期フィードの津波予報除外に対応 ---
+        if(iKind==="津波警報・注意報・予報a"||tit.includes("津波"))handleTsunamiXml(doc,hl,typ);
         if(tit==="長周期地震動に関する観測情報")handleLpgmXml(doc);
 
         const tNodes=bdy?.querySelectorAll('EarthquakeInfo > Text, EarthquakeInfo > Appendix, Comments > Text, Text'); let fTxt=hl; if(tNodes?.length)fTxt+="\n"+Array.from(tNodes).map(t=>t.textContent.trim()).filter(t=>t).join('\n\n');
@@ -1620,7 +1634,7 @@ async function processXmlString(xt, typ, ovUrl=null){
 }
 async function processXmlUrl(u,t){try{const r=await fetch(u); await processXmlString(await r.text(),t,u);}catch(e){}}
 
-function handleTsunamiXml(doc,hl){
+function handleTsunamiXml(doc,hl,typ){
     const tE=doc.querySelector('Body > Tsunami'); 
     let aM={}; 
     let hasActiveWarning = false;
@@ -1636,6 +1650,11 @@ function handleTsunamiXml(doc,hl){
             else if(k==="津波注意報"){ig="Watch"; hasActiveWarning=true;} 
             else if(k?.includes("若干の海面変動")||k?.includes("津波予報")){ig="SlightChange"; hasForecast=true;} 
             
+            // --- 変更: 長期フィード (eqvol_l) かつ 津波予報レベルの場合は除外して描画させない ---
+            if (typ === 'eqvol_l' && ig !== 'MajorWarning' && ig !== 'Warning' && ig !== 'Watch') {
+                return;
+            }
+
             const fh=i.querySelector('FirstHeight'); 
             let at=fh?.querySelector('ArrivalTime')?.textContent||"", cd=fh?.querySelector('Condition')?.textContent||"", md=i.querySelector('MaxHeight > jmx_eb\\:TsunamiHeight')?.getAttribute('description')||i.querySelector('MaxHeight > TsunamiHeight')?.getAttribute('description')||"-"; 
             
@@ -1645,10 +1664,10 @@ function handleTsunamiXml(doc,hl){
 
     if(hl.includes("すべて解除") || (hl.includes("解除しました") && !hasActiveWarning)){
         xmlTsunamiData={cancelled:true,areas:Object.values(aM)}; 
-        if (!hasForecast || !userSettings.showTsunamiForecast) {
-            tsunamiObsData.clear();
-            updateTsunamiObsMap(); 
-        }
+        // --- 変更: すべて解除されたら観測点マーカーも確実にクリアして非表示にする ---
+        tsunamiObsData.clear();
+        updateTsunamiObsMap(); 
+        
         if(wasTsunamiActive){
             speakText("津波警報、注意報は、すべて解除されました。"); 
             sendPushNotification(`津波情報`,{body:`津波警報・注意報は解除されました。`,icon:getPushIconDataURL("解除","#666","#fff"),tag:"tsunami_cancel"});
@@ -2249,7 +2268,11 @@ function renderKyoshinCanvas(d){
         const cS=KYOSHIN_COLORS[Math.floor(Math.min(Math.max(0,lv),KYOSHIN_COLORS.length-1))||0]; if(!cS)continue;
         let al=1.0; if(!isEEWActive){if(isRealtimeOnlyMode)al=1.0; else{al=Math.max(0.05,Math.min(1.0,lv/8)); if(al<0.1)continue;}}
         const pt=lMap.latLngToContainerPoint([sites[i].lat,sites[i].lng]); if(pt.x<-bR||pt.x>kyoshinCanvas.width+bR||pt.y<-bR||pt.y>kyoshinCanvas.height+bR)continue;
-        ctx.beginPath(); ctx.arc(pt.x,pt.y,bR,0,Math.PI*2); ctx.fillStyle=hexToRgba(cS,al); ctx.fill();
+        
+        // --- 変更: 設定ONのときだけ描画 (処理自体は維持して揺れ検知を動かす) ---
+        if (userSettings.showRealtimeKyoshin) {
+            ctx.beginPath(); ctx.arc(pt.x,pt.y,bR,0,Math.PI*2); ctx.fillStyle=hexToRgba(cS,al); ctx.fill();
+        }
     }
     if(userSettings.shakeDetect){
         aS.forEach(trg=>{let asg=false; for(let ev of shakeEvents){let mD=Infinity; for(let st of ev.sites){let ds=getDistance(trg.lat,trg.lng,st.lat,st.lng); if(ds<mD)mD=ds;} if(mD<50){let ex=ev.sites.find(s=>s.idx===trg.idx); if(!ex)ev.sites.push(trg); else ex.lv=Math.max(ex.lv,trg.lv); ev.lastUpdate=cT; asg=true; break;}} if(!asg)shakeEvents.push({id:cT+"_"+trg.idx,sites:[trg],startTime:cT,lastUpdate:cT,maxLv:trg.lv});});
@@ -2434,6 +2457,16 @@ async function loadQuakes(){
         let pU=false, pT=false, pTC=false, pTN=false;
         
         if(lE&&(lE.earthquake.time!==lastEqTime || lE.issue.time !== lastEqIssueTime)){
+            // --- 追加: EEW待機中(全件最終報)にP2P更新が入ったらEEWを即時終了する ---
+            if(isEEWActive) {
+                let allFinalOrCancel = true;
+                activeEEWs.forEach(ew => { if (!ew.isFinal && !ew.isCancel) allFinalOrCancel = false; });
+                if (allFinalOrCancel) {
+                    addLog("EEW待機中: P2P地震情報を受信したため、EEW表示を即時終了します。");
+                    clearEEWDisplay(); // EEWをクリアして描画可能にする
+                }
+            }
+            
             lastEqTime=lE.earthquake.time; lastEqIssueTime=lE.issue.time; 
             if(!isInitialLoad){
                 pU=true; 
