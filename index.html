@@ -198,13 +198,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .commentBody { padding: 14px 20px; font-size: 15px; line-height: 1.5; font-weight: 700; white-space: pre-wrap; word-wrap: break-word; color: #fff; }
 .noComment { height: 100%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 16px; font-weight: 700; }
 
-/* --- JMA XML ウィンドウ --- */
-#xmlPanel { display: flex; flex-direction: column; border-top: 8px solid #00BFFF; }
-#xmlPanel .xmlHeader { background: #111; padding: 12px 20px; font-size: 15px; font-weight: 700; color: #00BFFF; border-bottom: 2px solid #333; }
-#xmlScrollArea { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-#xmlScrollArea::-webkit-scrollbar { display: none; }
-#btnXmlDetail { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; color: #fff; background: #003366; border: none; cursor: pointer; transition: all 0.2s; border-top: 2px solid #333; }
-#btnXmlDetail:hover { background: #005599; }
+/* --- 気象警報マップ ウィンドウ --- */
+#weatherWarningPanel { display: flex; flex-direction: column; border-top: 8px solid #00BFFF; }
 
 /* --- XML等内部スタイル --- */
 .p-info-section { background: #111; border: 2px solid #333; padding: 18px; border-radius: 4px; margin-bottom: 18px; color:#fff; }
@@ -404,11 +399,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     <iframe id="siyouIframe" class="modalIframe" src=""></iframe>
 </div>
 
-<div id="xmlDetailModal" class="iframeModal">
-    <div class="modalHeader">気象庁防災情報XML 詳細 <button id="btnCloseXmlDetail">×</button></div>
-    <iframe id="xmlDetailIframe" class="modalIframe" src=""></iframe>
-</div>
-
 <div id="leftSidebar">
     <div id="detailPanel" class="base-panel"><div id="detailScrollArea"></div></div>
     <div id="tsunamiPanel" class="base-panel">
@@ -465,15 +455,14 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div class="mega-quake-header">重大な地震情報 (MEGA QUAKE ALERT)</div>
         <div id="megaQuakeAlertScrollArea" class="mega-quake-scroll"><div class="info-text" style="text-align:center;padding-top:20px;">現在発表されている情報はありません</div></div>
     </div>
-    <div id="xmlPanel" class="base-panel" style="position: relative;">
+    <div id="weatherWarningPanel" class="base-panel" style="position: relative; display: flex; flex-direction: column;">
         <div id="eqUpdatePanel">
             <div class="axisHeader" style="background: #111; color: #FFD700; font-size: 16px; padding: 10px 16px; border-bottom: 2px solid #555; font-weight: bold;">震源要素更新のお知らせ</div>
             <div id="eqUpdateText" style="padding: 12px; font-size: 14px; line-height: 1.5; color: #FFF; overflow-y: auto; flex: 1;"></div>
         </div>
 
-        <div class="xmlHeader">気象庁防災情報XML (JMA XML) - 総合</div>
-        <div id="xmlScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
-        <button id="btnXmlDetail">詳細を見る</button>
+        <div class="axisHeader" style="color: #00FF00; flex-shrink: 0; background: #111; padding: 12px 20px; font-size: 15px; font-weight: 700; border-bottom: 2px solid #333;">気象警報・注意報マップ</div>
+        <div id="weatherWarningMap" style="flex: 1; background:#050505; width: 100%;"></div>
     </div>
 </div>
 
@@ -545,7 +534,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
             <div class="setting-item"><label>津波パネル <span class="setting-value" id="fsTsunamiVal">100%</span></label><input type="range" id="fsTsunamiSlider" min="80" max="150" step="5" value="100"></div>
             <div class="setting-item"><label>履歴パネル <span class="setting-value" id="fsHistoryVal">100%</span></label><input type="range" id="fsHistorySlider" min="80" max="150" step="5" value="100"></div>
             <div class="setting-item"><label>コメントパネル <span class="setting-value" id="fsCommentVal">100%</span></label><input type="range" id="fsCommentSlider" min="80" max="150" step="5" value="100"></div>
-            <div class="setting-item"><label>XMLパネル <span class="setting-value" id="fsXmlVal">100%</span></label><input type="range" id="fsXmlSlider" min="80" max="150" step="5" value="100"></div>
+            <div class="setting-item"><label>XML等情報パネル <span class="setting-value" id="fsXmlVal">100%</span></label><input type="range" id="fsXmlSlider" min="80" max="150" step="5" value="100"></div>
         </div>
         <div class="setting-group">
             <div class="setting-group-title">外観・津波設定</div>
@@ -841,18 +830,15 @@ function handleSimulatedAPI(list) {
             if(rp){lE.points=rp.points; if(lE.earthquake.maxScale===-1)lE.earthquake.maxScale=rp.earthquake.maxScale;}
         }
         
-        // 模擬API時の履歴も重複を排除する処理
         const mergedQuakes = [];
         for (let q of ls) {
             if (q.issue?.type === "ScalePrompt" || q.issue?.type === "Destination") continue;
-            // 遠地地震を含めるように修正 (maxScale === -1 であっても、震央名がある場合は追加)
             if (q.earthquake.maxScale === -1 && (!q.earthquake.hypocenter.name || q.earthquake.hypocenter.name === "調査中" || q.earthquake.hypocenter.name === "")) continue;
 
             let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
             let isDuplicate = false;
             for (let m of mergedQuakes) {
                 let mTime = new Date(m.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
-                // 10分以内の同一震央・同一規模の地震は重複として扱う
                 if (qTime === mTime || (Math.abs(qTime - mTime) <= 600000 && q.earthquake.hypocenter.name === m.earthquake.hypocenter.name && q.earthquake.hypocenter.magnitude === m.earthquake.hypocenter.magnitude)) {
                     isDuplicate = true; break;
                 }
@@ -928,7 +914,6 @@ function getJmaPointIndex(addr) {
 window.latestFullQuakeList = []; window.eewOriginalTextList = []; 
 let megaQuakeStatus = { nankaiAlert: null, nankaiAlertTime: null, sanriku: null, sanrikuTime: null }; 
 let wasTsunamiActive = false; 
-// 海面変動の継続フラグを有効期限（タイムスタンプ）の判定に変更
 let seaLevelChangeExpiryTime = 0;
 
 const defaultSettings = {
@@ -936,7 +921,7 @@ const defaultSettings = {
     pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, bgColor: "#050505", customShindoColors: false, usgsMapZoom: 2,
     shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" },
     showMapTile: true, mapLandColor: "#222222", mapLandTransparent: true, showRealtimeKyoshin: true,
-    ewsEnable: true // EWS緊急警報信号の設定
+    ewsEnable: true
 };
 let userSettings = { ...defaultSettings };
 try { const saved = localStorage.getItem('epicaUserSettings'); if(saved) { const parsed = JSON.parse(saved); userSettings = { ...defaultSettings, ...parsed }; userSettings.shindoColors = { ...defaultSettings.shindoColors, ...(parsed.shindoColors || {}) }; } } catch(e){}
@@ -947,8 +932,7 @@ function isSeaLevelChangeContinuing() {
     return seaLevelChangeExpiryTime > 0 && Date.now() < seaLevelChangeExpiryTime; 
 }
 
-// === 津波観測地点のデータ管理用変数 ===
-let tsunamiObsData = new Map(); // key: 観測所名, value: { height: 説明, color: 色, lat, lon }
+let tsunamiObsData = new Map();
 let tsunamiObsLayerGroup = null;
 let tsubObsLayerGroup = null;
 
@@ -1052,8 +1036,6 @@ function updateSeVolumes(){
 
 document.getElementById('btnSettings').addEventListener('click', ()=>document.getElementById('settingsModal').style.display='block');
 document.getElementById('btnCloseSettings').addEventListener('click', ()=>document.getElementById('settingsModal').style.display='none');
-document.getElementById('btnXmlDetail').addEventListener('click', ()=>{ document.getElementById("xmlDetailIframe").src="p.html"; document.getElementById("xmlDetailModal").style.display="flex"; });
-document.getElementById('btnCloseXmlDetail').addEventListener('click', ()=>{ document.getElementById("xmlDetailModal").style.display="none"; document.getElementById("xmlDetailIframe").src=""; });
 
 function applyAppearance() {
     document.body.style.backgroundColor = userSettings.bgColor;
@@ -1067,7 +1049,7 @@ function applyAppearance() {
         .tsunamiInfo { font-size: calc(18px * ${userSettings.fsTsunami / 100}) !important; }
         .qName { font-size: calc(20px * ${userSettings.fsHistory / 100}) !important; }
         .commentBody { font-size: calc(15px * ${userSettings.fsComment / 100}) !important; }
-        #xmlPanel .p-info-section { font-size: calc(15px * ${userSettings.fsXml / 100}) !important; }
+        #weatherWarningPanel .p-info-section { font-size: calc(15px * ${userSettings.fsXml / 100}) !important; }
         .eewEpicenter { font-size: calc(24px * ${userSettings.fsLatest / 100}) !important; }
     `;
     document.querySelectorAll('.legendItem').forEach(el=>{ let s=el.innerText; const cols=userSettings.customShindoColors?userSettings.shindoColors:defaultSettings.shindoColors; if(cols[s]){el.style.backgroundColor=cols[s]; el.style.color=getContrastColor(cols[s]);} });
@@ -1129,17 +1111,17 @@ document.getElementById('chkCustomShindoColors').checked=userSettings.customShin
 document.getElementById('chkShowMapTile').checked = userSettings.showMapTile;
 document.getElementById('chkShowMapTile').addEventListener('change', e => {
     userSettings.showMapTile = e.target.checked; saveSettings();
-    if(userSettings.showMapTile) { baseTileLayer.addTo(lMap); if(tsubMap) animBaseTileLayer.addTo(tsubMap); } 
-    else { baseTileLayer.remove(); if(tsubMap) animBaseTileLayer.remove(); }
+    if(userSettings.showMapTile) { baseTileLayer.addTo(lMap); if(tsubMap) animBaseTileLayer.addTo(tsubMap); if(wwMap) L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap contributors'}).addTo(wwMap); } 
+    else { baseTileLayer.remove(); if(tsubMap) animBaseTileLayer.remove(); if(wwMap) wwMap.eachLayer(layer => { if(layer instanceof L.TileLayer) wwMap.removeLayer(layer); }); }
     updateSubMapGeojsonStyles();
 });
 
 document.getElementById('chkTsunamiPaintMain').checked = userSettings.tsunamiPaintMain;
 document.getElementById('chkTsunamiPaintMain').addEventListener('change', e => { userSettings.tsunamiPaintMain = e.target.checked; saveSettings(); updateTsunamiMap(); });
 document.getElementById('mapLandColorPicker').value = userSettings.mapLandColor;
-document.getElementById('mapLandColorPicker').addEventListener('input', e => { userSettings.mapLandColor = e.target.value; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); });
+document.getElementById('mapLandColorPicker').addEventListener('input', e => { userSettings.mapLandColor = e.target.value; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); updateWeatherWarningStyles(); });
 document.getElementById('chkMapLandTransparent').checked = userSettings.mapLandTransparent;
-document.getElementById('chkMapLandTransparent').addEventListener('change', e => { userSettings.mapLandTransparent = e.target.checked; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); });
+document.getElementById('chkMapLandTransparent').addEventListener('change', e => { userSettings.mapLandTransparent = e.target.checked; saveSettings(); if(geojsonLayer) { geojsonLayer.setStyle(getLandDefaultStyle()); } refreshMapDisplay(); updateEewGeojsonStyles(); updateSubMapGeojsonStyles(); updateWeatherWarningStyles(); });
 
 let chkEwsEl = document.getElementById('chkEws');
 if(chkEwsEl) {
@@ -1189,7 +1171,6 @@ setInterval(()=>{
     if(ch) updateCommentDisplay(selectedHistoryQuake||(window.latestFullQuakeList?window.latestFullQuakeList.find(x=>x.code===551):null));
     const tStr=`${y}-${m}-${d}`; if(n.getHours()===23&&n.getMinutes()===50&&n.getSeconds()===0&&summaryPlayedForToday!==tStr){ summaryPlayedForToday=tStr; generateDailySummary(tStr,n); }
 
-    // 海面変動の有効期限確認と自動解除
     if (lastTsunamiState !== isSeaLevelChangeContinuing()) {
         lastTsunamiState = isSeaLevelChangeContinuing();
         updateTsunamiDisplay(currentTsunamiData, window.currentEarthquakeData);
@@ -1201,7 +1182,7 @@ function checkMegaQuakeExpiry() {
     const now = Date.now(); const expiry = 7 * 24 * 60 * 60 * 1000; let changed = false;
     if (megaQuakeStatus.nankaiAlert && megaQuakeStatus.nankaiAlertTime) { if (now - megaQuakeStatus.nankaiAlertTime > expiry) { megaQuakeStatus.nankaiAlert = null; megaQuakeStatus.nankaiAlertTime = null; changed = true; } }
     if (megaQuakeStatus.sanriku && megaQuakeStatus.sanrikuTime) { if (now - megaQuakeStatus.sanrikuTime > expiry) { megaQuakeStatus.sanriku = null; megaQuakeStatus.sanrikuTime = null; changed = true; } }
-    if (changed) { updateMegaQuakeAlertPanel(); updateMegaQuakeTelop(); renderXmlPanels(); }
+    if (changed) { updateMegaQuakeAlertPanel(); updateMegaQuakeTelop(); }
 } setInterval(checkMegaQuakeExpiry, 60000);
 
 async function generateDailySummary(tStr, n){
@@ -1411,18 +1392,11 @@ async function pollJmaXml(){
             }
         }catch(e){}
     }
-    if(upd)renderXmlPanels();
 } setInterval(pollJmaXml, 30000);
 
 function formatTimeXml(s){if(!s)return '-'; const d=new Date(s); if(isNaN(d.getTime()))return s; return `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
 function getHeightDescXml(p){if(!p)return '-'; const t=p.firstElementChild||p; return t.getAttribute('description')||t.textContent.trim();}
-function renderXmlPanels(){
-    const now = Date.now(); const expiry = 7 * 24 * 60 * 60 * 1000;
-    const filterValid = arr => arr.filter(item => { if (!item.isMega) return true; return (now - item.time) <= expiry; }).map(item => item.html);
-    let cx = filterValid(xmlBuffer.eqvol).concat(filterValid(xmlBuffer.extra)).join('<hr style="border:0;border-top:2px dashed #444;margin:16px 0;">'); 
-    if(!cx)cx='<div class="info-text" style="text-align:center;padding-top:20px;">最新の情報はありません</div>'; 
-    updatePanelScroll("xmlScrollArea",cx); applyAppearance();
-}
+
 function kanjiToNumber(s){const m={'〇':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10}; let r=0; for(let i=0;i<s.length;i++){let n=m[s[i]]; if(n!==undefined){if(n===10)r+=(r===0?1:0)*10;else r+=n;}else{let c=s.charCodeAt(i); if(c>=0xFF10&&c<=0xFF19)r=r*10+(c-0xFF10); else if(c>=0x30&&c<=0x39)r=r*10+(c-0x30);}} return r>0?r:1;}
 
 let eqUpdateTimeout = null;
@@ -1526,7 +1500,6 @@ async function processXmlString(xt, typ, ovUrl=null){
         const doc=new DOMParser().parseFromString(xt,"application/xml"), hd=doc.querySelector('Head'), tit=hd?.querySelector('Title')?.textContent||doc.querySelector('Control > Title')?.textContent||"不明", iKind=hd?.querySelector('InfoKind')?.textContent||"", rTime=formatTimeXml(hd?.querySelector('ReportDateTime')?.textContent||doc.querySelector('Control > DateTime')?.textContent), hl=doc.querySelector('Headline > Text')?.textContent||"", bdy=doc.querySelector('Body');
 
         if(tit==="顕著な地震の震源要素更新のお知らせ")handleHypocenterUpdateXml(doc); 
-        // --- 変更: typを引数として渡すことで長期フィードの津波予報除外に対応 ---
         if(iKind==="津波警報・注意報・予報a"||tit.includes("津波"))handleTsunamiXml(doc,hl,typ);
         if(tit==="長周期地震動に関する観測情報")handleLpgmXml(doc);
 
@@ -1564,33 +1537,10 @@ async function processXmlString(xt, typ, ovUrl=null){
         }
         updateMegaQuakeAlertPanel(); updateMegaQuakeTelop();
 
-        let ht=`<div style="border-bottom:2px solid #333; margin-bottom:12px; padding-bottom:8px;"><div class="p-info-title">${tit}</div><div style="font-size:13px; color:#CCC;">発表時刻: ${rTime}</div></div>`;
-        if(hl)ht+=`<div style="background:#221100; border:2px solid #FF9900; padding:14px; margin-bottom:14px; font-weight:700; font-size:15px; color:#FFFF00; border-radius:4px;">${hl.replace(/\n/g,'<br>')}</div>`;
-        let cFnd=false;
-        
-        const isMega = isNankaiAlert || isNankaiInfo || isS;
-        if(isMega){
-            cFnd=true; ht+=`<div class="p-info-section" style="border-color:${isS?'#00BFFF':'#FF00FF'};"><h3 style="color:${isS?'#00BFFF':'#FF66FF'};">⚠️ ${tit}</h3>`; 
-            if(tNodes?.length)ht+=`<div style="font-size:15px; line-height:1.6; white-space:pre-wrap; padding:16px; background:#0A0A0A; border:1px solid #333; border-radius:4px;">${Array.from(tNodes).map(t=>t.textContent.trim()).filter(t=>t).join('\n\n')}</div>`; 
-            ht+=`</div>`;
-        }
-
         const tEl=bdy?.querySelector('Tsunami');
         if(tEl){
-            cFnd=true; ht+=`<div class="p-info-section p-section-tsunami"><h3>🌊 津波情報</h3>`;
-            const fc=tEl.querySelectorAll('Forecast > Item'); 
-            if(fc.length){
-                ht+=`<h4>予報・警報</h4><table class="p-table"><tr><th>予報区</th><th>種別</th><th>到達予想</th><th>高さ</th></tr>`; 
-                fc.forEach(i=>{
-                    const aN=i.querySelector('Area > Name')?.textContent, k=i.querySelector('Category > Kind > Name')?.textContent, fh=i.querySelector('FirstHeight'); 
-                    let ar='-'; if(fh){ar=formatTimeXml(fh.querySelector('ArrivalTime')?.textContent)||fh.querySelector('Condition')?.textContent;} 
-                    ht+=`<tr><td>${aN}</td><td><strong>${k}</strong></td><td>${formatTimeXml(i.querySelector('MaxHeight > ArrivalTime')?.textContent)}</td><td>${getHeightDescXml(i.querySelector('MaxHeight'))}</td></tr>`;
-                }); 
-                ht+=`</table>`;
-            }
             const ob=tEl.querySelectorAll('Observation > Item'); 
-            if(ob.length){
-                ht+=`<h4>観測実績</h4><table class="p-table"><tr><th>地域</th><th>観測所</th><th>時刻</th><th>最大波</th></tr>`; 
+            if(ob.length && typ !== 'eqvol_l'){ 
                 ob.forEach(i=>{
                     const aN=i.querySelector('Area > Name')?.textContent; 
                     i.querySelectorAll('Station').forEach(s=>{
@@ -1598,7 +1548,6 @@ async function processXmlString(xt, typ, ovUrl=null){
                         let sTime = formatTimeXml(s.querySelector('Time')?.textContent);
                         let sDesc = getHeightDescXml(s.querySelector('MaxHeight'));
                         let sVal = s.querySelector('MaxHeight > jmx_eb\\:TsunamiHeight')?.textContent || s.querySelector('MaxHeight > TsunamiHeight')?.textContent || "";
-                        ht+=`<tr><td>${aN}</td><td>${sName}</td><td>${sTime}</td><td>${sDesc}</td></tr>`;
                         
                         let lat = null, lon = null;
                         let cNode = s.querySelector('Sensor > Coordinate, Coordinate');
@@ -1612,24 +1561,9 @@ async function processXmlString(xt, typ, ovUrl=null){
                         if (sName) tsunamiObsData.set(sName, { height: sDesc, val: sVal, lat: lat, lon: lon });
                     });
                 }); 
-                ht+=`</table>`;
                 updateTsunamiObsMap();
-            } 
-            ht+=`</div>`;
+            }
         }
-
-        const eEl=bdy?.querySelector('Earthquake'), intEl=bdy?.querySelector('Intensity');
-        if(eEl||intEl){
-            cFnd=true; ht+=`<div class="p-info-section p-section-earthquake"><h3>📳 地震情報</h3>`;
-            if(eEl){const cd=eEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate'); ht+=`<div style="background:#0A0A0A; padding:16px; border:1px solid #444; border-radius:4px; margin-bottom:14px;"><strong>発生時刻:</strong> ${formatTimeXml(eEl.querySelector('OriginTime')?.textContent)}<br><strong>震央:</strong> ${eEl.querySelector('Hypocenter > Area > Name')?.textContent}<br><strong>深さ・座標:</strong> ${cd?cd.getAttribute('description'):'不明'}<br><strong>規模:</strong> <span style="font-size:1.3em; color:#FF5555; font-weight:700;">${eEl.querySelector('Magnitude, jmx_eb\\:Magnitude')?.getAttribute('description')||'M'+eEl.querySelector('Magnitude')?.textContent}</span></div>`;}
-            if(intEl){const mx=intEl.querySelector('Observation > MaxInt')?.textContent; if(mx)ht+=`<p><strong>最大震度:</strong> <span style="font-size:1.5em; color:#FF5555; font-weight:700;">${mx}</span></p>`; const pr=intEl.querySelectorAll('Pref'); if(pr.length){ht+=`<h4>各地の震度</h4><div class="p-data-list">`; pr.forEach(p=>{ht+=`<div style="margin-bottom:10px;"><strong>${p.querySelector('Name')?.textContent} (最大 ${p.querySelector('MaxInt')?.textContent})</strong><ul style="list-style:none; margin:6px 0 0 14px; padding:0;">`; p.querySelectorAll('Area').forEach(a=>ht+=`<li>・${a.querySelector('Name')?.textContent} (震度 ${a.querySelector('MaxInt')?.textContent})</li>`); ht+=`</ul></div>`;}); ht+=`</div>`;}} ht+=`</div>`;
-        }
-
-        if(!cFnd&&!eEl&&!intEl){const ga=Array.from(doc.querySelectorAll('Body > Area')); if(ga.length){ht+=`<div class="p-info-section"><h3>その他の情報</h3><table class="p-table"><tr><th>地域</th><th>詳細</th></tr>`; ga.slice(0,30).forEach(a=>ht+=`<tr><td>${a.querySelector('Name')?.textContent||"不明"}</td><td>${a.querySelector('MaxInt')?.textContent||a.querySelector('Kind > Name')?.textContent||"-"}</td></tr>`); ht+=`</table>`; if(ga.length>30)ht+=`<p><small>※他 ${ga.length-30} 件省略</small></p>`; ht+=`</div>`;}}
-        const cmts=bdy?.querySelector('Comments'); if(cmts){const ts=Array.from(cmts.querySelectorAll('Text')).map(t=>t.textContent); if(ts.length)ht+=`<div class="p-info-section" style="background:#0A0A0A; border-style:dashed;"><h4 style="margin-top:0;">📝 付加事項</h4><p style="margin:0; white-space:pre-wrap;">${ts.join('\n')}</p></div>`;}
-        
-        const entry = { html: ht, time: pTime, isMega: isMega };
-        if(typ==='eqvol'||typ==='eqvol_l'){xmlBuffer.eqvol.unshift(entry); xmlBuffer.eqvol=xmlBuffer.eqvol.slice(0,15);} else if(typ==='extra'){if(!(iKind==="気象警報・注意報")) {if(cFnd||cmts||ht.includes('その他の情報')){xmlBuffer.extra.unshift(entry); xmlBuffer.extra=xmlBuffer.extra.slice(0,15);}}}
     }catch(e){}
 }
 async function processXmlUrl(u,t){try{const r=await fetch(u); await processXmlString(await r.text(),t,u);}catch(e){}}
@@ -1650,7 +1584,6 @@ function handleTsunamiXml(doc,hl,typ){
             else if(k==="津波注意報"){ig="Watch"; hasActiveWarning=true;} 
             else if(k?.includes("若干の海面変動")||k?.includes("津波予報")){ig="SlightChange"; hasForecast=true;} 
             
-            // --- 変更: 長期フィード (eqvol_l) かつ 津波予報レベルの場合は除外して描画させない ---
             if (typ === 'eqvol_l' && ig !== 'MajorWarning' && ig !== 'Warning' && ig !== 'Watch') {
                 return;
             }
@@ -1664,7 +1597,6 @@ function handleTsunamiXml(doc,hl,typ){
 
     if(hl.includes("すべて解除") || (hl.includes("解除しました") && !hasActiveWarning)){
         xmlTsunamiData={cancelled:true,areas:Object.values(aM)}; 
-        // --- 変更: すべて解除されたら観測点マーカーも確実にクリアして非表示にする ---
         tsunamiObsData.clear();
         updateTsunamiObsMap(); 
         
@@ -1677,6 +1609,12 @@ function handleTsunamiXml(doc,hl,typ){
     } else {
         xmlTsunamiData={cancelled:false,areas:Object.values(aM)}; 
         let hw = xmlTsunamiData.areas.some(a=>["MajorWarning","Warning","Watch","SlightChange","Unknown"].includes(a.grade));
+        
+        if (!hasActiveWarning) {
+            tsunamiObsData.clear();
+            updateTsunamiObsMap();
+        }
+
         if(hw && hasActiveWarning){
             if(!wasTsunamiActive){ seTsunami.currentTime=0; seTsunami.play().catch(e=>{}); }
             wasTsunamiActive=true;
@@ -2269,7 +2207,6 @@ function renderKyoshinCanvas(d){
         let al=1.0; if(!isEEWActive){if(isRealtimeOnlyMode)al=1.0; else{al=Math.max(0.05,Math.min(1.0,lv/8)); if(al<0.1)continue;}}
         const pt=lMap.latLngToContainerPoint([sites[i].lat,sites[i].lng]); if(pt.x<-bR||pt.x>kyoshinCanvas.width+bR||pt.y<-bR||pt.y>kyoshinCanvas.height+bR)continue;
         
-        // --- 変更: 設定ONのときだけ描画 (処理自体は維持して揺れ検知を動かす) ---
         if (userSettings.showRealtimeKyoshin) {
             ctx.beginPath(); ctx.arc(pt.x,pt.y,bR,0,Math.PI*2); ctx.fillStyle=hexToRgba(cS,al); ctx.fill();
         }
@@ -2457,13 +2394,12 @@ async function loadQuakes(){
         let pU=false, pT=false, pTC=false, pTN=false;
         
         if(lE&&(lE.earthquake.time!==lastEqTime || lE.issue.time !== lastEqIssueTime)){
-            // --- 追加: EEW待機中(全件最終報)にP2P更新が入ったらEEWを即時終了する ---
             if(isEEWActive) {
                 let allFinalOrCancel = true;
                 activeEEWs.forEach(ew => { if (!ew.isFinal && !ew.isCancel) allFinalOrCancel = false; });
                 if (allFinalOrCancel) {
                     addLog("EEW待機中: P2P地震情報を受信したため、EEW表示を即時終了します。");
-                    clearEEWDisplay(); // EEWをクリアして描画可能にする
+                    clearEEWDisplay(); 
                 }
             }
             
@@ -2587,6 +2523,172 @@ let tsubMap = null;
 function initTsunamiSubMap() {
     tsubMap = L.map('tsunamiSubMap', { zoomControl: false, attributionControl: false, dragging: true, touchZoom: false, scrollWheelZoom: true, doubleClickZoom: false }).setView([37.5, 137], 4);
     if (userSettings.showMapTile !== false) animBaseTileLayer.addTo(tsubMap);
+}
+
+// =====================================================================
+// 気象警報・注意報マップ 機能
+// =====================================================================
+
+let wwMap = null;
+let wwGeojsonLayer = null;
+let weatherWarningActiveSets = {};
+const WW_WARNING_CODES = {
+    "02": { name: "暴風雪警報", level: 3 }, "03": { name: "大雨警報", level: 3 }, "04": { name: "洪水警報", level: 3 },
+    "05": { name: "暴風警報", level: 3 }, "06": { name: "大雪警報", level: 3 }, "07": { name: "波浪警報", level: 3 },
+    "08": { name: "高潮警報", level: 3 }, "09": { name: "土砂災害警報", level: 3 }, "10": { name: "大雨注意報", level: 2 },
+    "12": { name: "大雪注意報", level: 2 }, "13": { name: "風雪注意報", level: 2 }, "14": { name: "雷注意報", level: 2 },
+    "15": { name: "強風注意報", level: 2 }, "16": { name: "波浪注意報", level: 2 }, "17": { name: "融雪注意報", level: 2 },
+    "18": { name: "洪水注意報", level: 2 }, "19": { name: "高潮注意報", level: 2 }, "20": { name: "濃霧注意報", level: 2 },
+    "21": { name: "乾燥注意報", level: 2 }, "22": { name: "なだれ注意報", level: 2 }, "23": { name: "低温注意報", level: 2 },
+    "24": { name: "霜注意報", level: 2 }, "25": { name: "着氷注意報", level: 2 }, "26": { name: "着雪注意報", level: 2 },
+    "27": { name: "その他の注意報", level: 2 }, "29": { name: "土砂災害注意報", level: 2 }, "32": { name: "暴風雪特別警報", level: 5 },
+    "33": { name: "大雨特別警報", level: 5 }, "35": { name: "暴風特別警報", level: 5 }, "36": { name: "大雪特別警報", level: 5 },
+    "37": { name: "波浪特別警報", level: 5 }, "38": { name: "高潮特別警報", level: 5 }, "39": { name: "土砂災害特別警報", level: 5 },
+    "42": { name: "暴風雪特別警報", level: 5 }, "43": { name: "大雨危険警報", level: 4 }, "45": { name: "暴風特別警報", level: 5 },
+    "46": { name: "大雪特別警報", level: 5 }, "47": { name: "波浪特別警報", level: 5 }, "48": { name: "高潮危険警報", level: 4 },
+    "49": { name: "土砂災害危険警報", level: 4 }
+};
+let jmaAreaMaster = null;
+
+function initWeatherWarningMap() {
+    const container = document.getElementById('weatherWarningMap');
+    if (!container) return;
+    wwMap = L.map('weatherWarningMap', { zoomControl: false, attributionControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: false }).setView([37.5, 137], 4);
+    if (userSettings.showMapTile !== false) {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(wwMap);
+    }
+    if (prefData) {
+        wwGeojsonLayer = L.geoJSON(prefData, {
+            style: () => ({ color: MAP_BORDER_COLOR, weight: 1, fillColor: userSettings.mapLandColor, fillOpacity: userSettings.mapLandTransparent ? 0 : 0.5 })
+        }).addTo(wwMap);
+    }
+    fetchWeatherWarnings();
+    setInterval(fetchWeatherWarnings, 300000);
+}
+
+function updateWeatherWarningStyles() {
+    if (!wwGeojsonLayer) return;
+    wwGeojsonLayer.setStyle(f => {
+        let code = f.properties.code;
+        let level = 0;
+        
+        const checkLevel = (c) => {
+            if (weatherWarningActiveSets[c]) {
+                weatherWarningActiveSets[c].forEach(wCode => {
+                    if (WW_WARNING_CODES[wCode] && WW_WARNING_CODES[wCode].level > level) {
+                        level = WW_WARNING_CODES[wCode].level;
+                    }
+                });
+            }
+        };
+        
+        checkLevel(code);
+        
+        if (level === 0 && jmaAreaMaster && jmaAreaMaster.class10s) {
+            for (const [c10, info] of Object.entries(jmaAreaMaster.class10s)) {
+                if (info.name === f.properties._epica_name) {
+                    checkLevel(c10);
+                    break;
+                }
+            }
+        }
+
+        let color = MAP_BORDER_COLOR, fillColor = userSettings.mapLandColor, fillOpacity = userSettings.mapLandTransparent ? 0 : 0.5;
+        if (level === 5) { fillColor = '#1A1A1A'; fillOpacity = 0.8; }
+        else if (level === 4) { fillColor = '#B020B0'; fillOpacity = 0.8; }
+        else if (level === 3) { fillColor = '#FF2800'; fillOpacity = 0.8; }
+        else if (level === 2) { fillColor = '#FFE200'; fillOpacity = 0.8; }
+        
+        return { color: color, weight: 1, fillColor: fillColor, fillOpacity: fillOpacity };
+    });
+}
+
+async function fetchWeatherWarnings() {
+    try {
+        if (!jmaAreaMaster) {
+            const areaRes = await fetch("https://www.jma.go.jp/bosai/common/const/area.json");
+            jmaAreaMaster = await areaRes.json();
+        }
+        const offices = Object.keys(jmaAreaMaster.offices);
+        let newActiveWarningsSets = {};
+
+        const fetchPromises = offices.map(async (officeCode) => {
+            try {
+                const fetchBase = fetch(`https://www.jma.go.jp/bosai/warning/data/warning/${officeCode}.json`).then(r => r.ok ? r.json() : null).catch(() => null);
+                const fetchR8 = fetch(`https://www.jma.go.jp/bosai/warning/data/r8/${officeCode}.json`).then(r => r.ok ? r.json() : null).catch(() => null);
+                
+                const [dataBase, dataR8] = await Promise.all([fetchBase, fetchR8]);
+
+                const getLatestTime = (data) => {
+                    if (!data) return 0;
+                    const arr = Array.isArray(data) ? data : [data];
+                    if (arr.length === 0) return 0;
+                    return Math.max(...arr.map(r => new Date(r.reportDatetime || 0).getTime()));
+                };
+
+                const timeBase = getLatestTime(dataBase);
+                const timeR8 = getLatestTime(dataR8);
+
+                let targetData = null;
+                if (timeBase >= timeR8 && dataBase) { targetData = dataBase; } 
+                else if (dataR8) { targetData = dataR8; }
+
+                if (targetData) {
+                    const arr = Array.isArray(targetData) ? targetData : [targetData];
+                    arr.forEach(report => {
+                        const processKinds = (areaCode, kinds) => {
+                            kinds.forEach(kind => {
+                                const status = kind.status || "";
+                                const code = kind.code ? String(kind.code).padStart(2, '0') : null;
+                                const isCanceled = status.includes("解除") || status.includes("なし");
+                                
+                                if (!isCanceled && code && code !== "00") {
+                                    if (!newActiveWarningsSets[areaCode]) { newActiveWarningsSets[areaCode] = new Set(); }
+                                    newActiveWarningsSets[areaCode].add(code);
+                                }
+                            });
+                        };
+
+                        if (report.warning) {
+                            ['class10Items', 'class20Items'].forEach(itemKey => {
+                                if (report.warning[itemKey]) {
+                                    report.warning[itemKey].forEach(item => {
+                                        if (item.kinds) processKinds(item.areaCode, item.kinds);
+                                    });
+                                }
+                            });
+                        }
+                        
+                        if (report.areaTypes) {
+                            report.areaTypes.forEach(areaType => {
+                                if (areaType.areas) {
+                                    areaType.areas.forEach(area => {
+                                        if (area.warnings) processKinds(area.code, area.warnings);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            } catch (e) {}
+        });
+
+        await Promise.all(fetchPromises);
+
+        for (const [class10Code, class10Info] of Object.entries(jmaAreaMaster.class10s)) {
+            if (!newActiveWarningsSets[class10Code]) { newActiveWarningsSets[class10Code] = new Set(); }
+            if (class10Info.children) {
+                class10Info.children.forEach(class20Code => {
+                    const childWarnings = newActiveWarningsSets[class20Code];
+                    if (childWarnings) { childWarnings.forEach(code => newActiveWarningsSets[class10Code].add(code)); }
+                });
+            }
+        }
+
+        weatherWarningActiveSets = newActiveWarningsSets;
+        updateWeatherWarningStyles();
+
+    } catch (error) { console.error("Weather warnings fetch error:", error); }
 }
 
 // =====================================================================
@@ -2804,6 +2906,7 @@ async function startApp(){
         updateStartupStatus("地図データ読み込み中..."); 
         initTsunamiSubMap();
         await initLeaflet(); 
+        initWeatherWarningMap();
         
         updateStartupStatus("天気予報データ取得中..."); await initTicker(); 
         updateStartupStatus("地震情報取得中..."); await loadQuakes(); 
