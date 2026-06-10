@@ -365,6 +365,18 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     
     #eqUpdatePanel { position: fixed !important; top: 10vh !important; bottom: auto !important; left: 5vw !important; right: 5vw !important; width: 90vw !important; transform: none !important; }
 }
+/* 津波観測点のマーカー用CSS追加 */
+.tsunami-obs-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid #FFF;
+    box-shadow: 0 0 5px rgba(0,0,0,0.8);
+    font-size: 10px;
+    font-weight: bold;
+    color: #000;
+}
 </style>
 </head>
 <body>
@@ -917,6 +929,11 @@ let wasTsunamiActive = false;
 let seaLevelChangeExpiryTime = 0;
 function isSeaLevelChangeContinuing() { return seaLevelChangeExpiryTime > 0 && Date.now() < seaLevelChangeExpiryTime; }
 
+// === 津波観測地点のデータ管理用変数 ===
+let tsunamiObsData = new Map(); // key: 観測所名, value: { height: 説明, color: 色, lat, lon }
+let tsunamiObsLayerGroup = null;
+let tsubObsLayerGroup = null;
+
 window.lpgmDataMap = new Map();
 
 const defaultSettings = {
@@ -1233,6 +1250,8 @@ function playEWS(grade) {
     ewsTimeout = setTimeout(() => { ewsPlaying = false; ewsOsc = null; }, (time - startTime) * 1000);
 }
 
+// --- PART 1 END ---
+
 let activeJAlerts = new Map(); let jalertHashList = new Set();
 async function fetchJAlert() {
     if (!userSettings.jAlertEnable) { if(activeJAlerts.size > 0) { activeJAlerts.clear(); renderJAlerts(); } return; }
@@ -1366,6 +1385,50 @@ function handleLpgmXml(doc) {
     }
 }
 
+function updateTsunamiObsMap() {
+    if (!tsunamiObsLayerGroup && typeof lMap !== 'undefined' && lMap) {
+        tsunamiObsLayerGroup = L.layerGroup().addTo(lMap);
+    }
+    if (!tsubObsLayerGroup && typeof tsubMap !== 'undefined' && tsubMap) {
+        tsubObsLayerGroup = L.layerGroup().addTo(tsubMap);
+    }
+    
+    if (tsunamiObsLayerGroup) tsunamiObsLayerGroup.clearLayers();
+    if (tsubObsLayerGroup) tsubObsLayerGroup.clearLayers();
+
+    if (xmlTsunamiData && xmlTsunamiData.cancelled) return; // 解除時は表示しない
+
+    tsunamiObsData.forEach((data, stationName) => {
+        if (!data.lat || !data.lon) return;
+        
+        let color = "#FFF";
+        let val = parseFloat(data.val);
+        if (!isNaN(val)) {
+            if (val >= 3.0) color = "#FF00FF";      // 大津波警報相当
+            else if (val >= 1.0) color = "#FF0000"; // 津波警報相当
+            else if (val >= 0.2) color = "#FFFF00"; // 津波注意報相当
+            else color = "#00BFFF";                 // 若干の海面変動
+        } else if (data.height.includes("微弱") || data.height.includes("観測中")) {
+            color = "#00BFFF";
+        } else if (data.height.includes("上昇中")) {
+            color = "#FFFF00";
+        }
+
+        let iconHtml = `<div class="tsunami-obs-icon" style="background:${color}; width:16px; height:16px; border-radius:50%; border:2px solid #FFF; box-shadow:0 0 5px rgba(0,0,0,0.8);"></div>`;
+        let icon = L.divIcon({ className: 'custom-obs-icon', html: iconHtml, iconSize: [20, 20], iconAnchor: [10, 10] });
+
+        if (tsunamiObsLayerGroup) {
+            let mk = L.marker([data.lat, data.lon], { icon: icon }).bindTooltip(`${stationName}: ${data.height}`, {direction: 'top', offset: [0, -10]});
+            tsunamiObsLayerGroup.addLayer(mk);
+        }
+        
+        if (tsubObsLayerGroup) {
+            let mkSub = L.marker([data.lat, data.lon], { icon: icon }).bindTooltip(`${stationName}: ${data.height}`, {direction: 'top', offset: [0, -10]});
+            tsubObsLayerGroup.addLayer(mkSub);
+        }
+    });
+}
+
 async function processXmlString(xt, typ, ovUrl=null){
     try{
         if(Recorder.isRecording && !isPlaying) Recorder.triggerXML(xt, typ);
@@ -1424,8 +1487,45 @@ async function processXmlString(xt, typ, ovUrl=null){
         const tEl=bdy?.querySelector('Tsunami');
         if(tEl){
             cFnd=true; ht+=`<div class="p-info-section p-section-tsunami"><h3>🌊 津波情報</h3>`;
-            const fc=tEl.querySelectorAll('Forecast > Item'); if(fc.length){ht+=`<h4>予報・警報</h4><table class="p-table"><tr><th>予報区</th><th>種別</th><th>到達予想</th><th>高さ</th></tr>`; fc.forEach(i=>{const aN=i.querySelector('Area > Name')?.textContent, k=i.querySelector('Category > Kind > Name')?.textContent, fh=i.querySelector('FirstHeight'); let ar='-'; if(fh){ar=formatTimeXml(fh.querySelector('ArrivalTime')?.textContent)||fh.querySelector('Condition')?.textContent;} ht+=`<tr><td>${aN}</td><td><strong>${k}</strong></td><td>${formatTimeXml(i.querySelector('MaxHeight > ArrivalTime')?.textContent)}</td><td>${getHeightDescXml(i.querySelector('MaxHeight'))}</td></tr>`;}); ht+=`</table>`;}
-            const ob=tEl.querySelectorAll('Observation > Item'); if(ob.length){ht+=`<h4>観測実績</h4><table class="p-table"><tr><th>地域</th><th>観測所</th><th>時刻</th><th>最大波</th></tr>`; ob.forEach(i=>{const aN=i.querySelector('Area > Name')?.textContent; i.querySelectorAll('Station').forEach(s=>{ht+=`<tr><td>${aN}</td><td>${s.querySelector('Name')?.textContent}</td><td>${formatTimeXml(s.querySelector('Time')?.textContent)}</td><td>${getHeightDescXml(s.querySelector('MaxHeight'))}</td></tr>`;});}); ht+=`</table>`;} ht+=`</div>`;
+            const fc=tEl.querySelectorAll('Forecast > Item'); 
+            if(fc.length){
+                ht+=`<h4>予報・警報</h4><table class="p-table"><tr><th>予報区</th><th>種別</th><th>到達予想</th><th>高さ</th></tr>`; 
+                fc.forEach(i=>{
+                    const aN=i.querySelector('Area > Name')?.textContent, k=i.querySelector('Category > Kind > Name')?.textContent, fh=i.querySelector('FirstHeight'); 
+                    let ar='-'; if(fh){ar=formatTimeXml(fh.querySelector('ArrivalTime')?.textContent)||fh.querySelector('Condition')?.textContent;} 
+                    ht+=`<tr><td>${aN}</td><td><strong>${k}</strong></td><td>${formatTimeXml(i.querySelector('MaxHeight > ArrivalTime')?.textContent)}</td><td>${getHeightDescXml(i.querySelector('MaxHeight'))}</td></tr>`;
+                }); 
+                ht+=`</table>`;
+            }
+            const ob=tEl.querySelectorAll('Observation > Item'); 
+            if(ob.length){
+                ht+=`<h4>観測実績</h4><table class="p-table"><tr><th>地域</th><th>観測所</th><th>時刻</th><th>最大波</th></tr>`; 
+                ob.forEach(i=>{
+                    const aN=i.querySelector('Area > Name')?.textContent; 
+                    i.querySelectorAll('Station').forEach(s=>{
+                        let sName = s.querySelector('Name')?.textContent;
+                        let sTime = formatTimeXml(s.querySelector('Time')?.textContent);
+                        let sDesc = getHeightDescXml(s.querySelector('MaxHeight'));
+                        let sVal = s.querySelector('MaxHeight > jmx_eb\\:TsunamiHeight')?.textContent || s.querySelector('MaxHeight > TsunamiHeight')?.textContent || "";
+                        ht+=`<tr><td>${aN}</td><td>${sName}</td><td>${sTime}</td><td>${sDesc}</td></tr>`;
+                        
+                        // 観測地点データ抽出・マーカー情報登録
+                        let lat = null, lon = null;
+                        let cNode = s.querySelector('Sensor > Coordinate, Coordinate');
+                        if (cNode && cNode.textContent) {
+                            let m = cNode.textContent.match(/([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)/);
+                            if (m) { lat = parseFloat(m[1]); lon = parseFloat(m[2]); }
+                        } else if (window.jmaStationsJson) {
+                            let st = window.jmaStationsJson.find(x => x.name === sName || sName.includes(x.name));
+                            if (st) { lat = st.lat; lon = st.lon; }
+                        }
+                        if (sName) tsunamiObsData.set(sName, { height: sDesc, val: sVal, lat: lat, lon: lon });
+                    });
+                }); 
+                ht+=`</table>`;
+                updateTsunamiObsMap();
+            } 
+            ht+=`</div>`;
         }
 
         const eEl=bdy?.querySelector('Earthquake'), intEl=bdy?.querySelector('Intensity');
@@ -1447,6 +1547,8 @@ async function processXmlUrl(u,t){try{const r=await fetch(u); await processXmlSt
 function handleTsunamiXml(doc,hl){
     if(hl.includes("すべて解除")){
         xmlTsunamiData={cancelled:true,areas:[]}; 
+        tsunamiObsData.clear();
+        updateTsunamiObsMap(); // マーカーの描画もリセット（非表示）
         if(wasTsunamiActive){
             speakText("津波警報、注意報、予報は、すべて解除されました。"); 
             sendPushNotification(`津波情報`,{body:`津波警報・注意報・予報はすべて解除されました。`,icon:getPushIconDataURL("解除","#666","#fff"),tag:"tsunami_cancel"});
@@ -1517,8 +1619,6 @@ function handleHistoryClick(q){
     } 
     renderHistoryPanel(); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);
 }
-
-// --- PART 1 END ---
 
 function renderHistoryPanel(){
     const p=document.getElementById("quakePanel"); if(!p)return; p.innerHTML=""; 
